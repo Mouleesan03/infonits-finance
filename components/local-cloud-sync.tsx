@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Check, Cloud, CloudOff, LoaderCircle, LogOut, Mail, X } from 'lucide-react';
+import { Cloud, CloudOff, LoaderCircle } from 'lucide-react';
 import { browserClient } from '@/lib/supabase/browser';
 
 const financeKey = 'infonits-finance-local-v1';
@@ -109,13 +108,11 @@ export function LocalCloudSync() {
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   );
   const [status, setStatus] = useState<SyncStatus>('checking');
-  const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
-  const [open, setOpen] = useState(false);
-  const [connectedEmail, setConnectedEmail] = useState('');
   const [lastSyncedAt, setLastSyncedAt] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncNow = useRef<() => void>(() => undefined);
+  const ready = useRef(false);
 
   useEffect(() => {
     if (!configured) {
@@ -133,7 +130,6 @@ export function LocalCloudSync() {
         if (active) setStatus('offline');
         return;
       }
-      setConnectedEmail(user.email ?? 'Connected');
       setStatus('syncing');
       const { data, error } = await db
         .from('local_workspaces')
@@ -162,6 +158,7 @@ export function LocalCloudSync() {
         return;
       }
       rememberSynced(resolved);
+      ready.current = true;
       setMessage('');
       setStatus('synced');
       setLastSyncedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
@@ -193,6 +190,7 @@ export function LocalCloudSync() {
     }
 
     const schedulePush = () => {
+      if (!ready.current) return;
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => void pushLocal(), 250);
     };
@@ -217,7 +215,7 @@ export function LocalCloudSync() {
     } = db.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN') void pullAndMerge();
       if (event === 'SIGNED_OUT') {
-        setConnectedEmail('');
+        ready.current = false;
         setStatus('offline');
       }
     });
@@ -234,145 +232,27 @@ export function LocalCloudSync() {
     };
   }, [configured]);
 
-  async function sendLink(event: React.FormEvent) {
-    event.preventDefault();
-    if (!configured || !email.trim()) return;
-    setStatus('syncing');
-    setMessage('');
-    const db = browserClient();
-    const { error } = await db.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        shouldCreateUser: false,
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/local`,
-      },
-    });
-    if (error) {
-      setStatus('offline');
-      setMessage('Unable to send the sign-in link. Check the email and try again.');
-      return;
-    }
-    setStatus('offline');
-    setMessage('Sign-in link sent. Open it on this device to start cloud sync.');
-  }
-
-  async function signOut() {
-    await browserClient().auth.signOut();
-    setOpen(false);
-  }
-
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [open]);
-
-  const modal = open ? (
-    <div className="local-modal-layer" role="presentation" onMouseDown={() => setOpen(false)}>
-      <section
-        className="local-modal local-sync-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="cloud-sync-title"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header>
-          <div>
-            <span className="local-modal-icon">
-              <Cloud size={19} />
-            </span>
-            <div>
-              <h2 id="cloud-sync-title">Cloud sync</h2>
-              <p>One Supabase workspace for mobile and laptop.</p>
-            </div>
-          </div>
-          <button aria-label="Close cloud sync" onClick={() => setOpen(false)}>
-            <X size={19} />
-          </button>
-        </header>
-        {status === 'synced' ? (
-          <div className="local-sync-connected">
-            <span>
-              <Check size={20} />
-            </span>
-            <div>
-              <strong>Supabase cloud is connected</strong>
-              <p>{connectedEmail}</p>
-              <small>{lastSyncedAt ? `Last saved ${lastSyncedAt}` : 'Checking cloud data…'}</small>
-            </div>
-            <div className="local-sync-actions">
-              <button className="button button-primary" onClick={() => syncNow.current()}>
-                <Cloud size={15} /> Sync now
-              </button>
-              <button className="button button-outline" onClick={() => void signOut()}>
-                <LogOut size={15} /> Disconnect
-              </button>
-            </div>
-          </div>
-        ) : (
-          <form className="local-sync-form" onSubmit={sendLink}>
-            <div className="local-sync-callout">
-              <Cloud size={17} />
-              <p>
-                Connect this device once. After login, every change saves to Supabase and updates
-                automatically on your other devices.
-              </p>
-            </div>
-            <label>
-              <span>Email address</span>
-              <div>
-                <Mail size={17} />
-                <input
-                  type="email"
-                  required
-                  autoComplete="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="you@example.com"
-                />
-              </div>
-            </label>
-            {message && (
-              <p className={status === 'error' ? 'local-sync-error' : 'local-sync-message'}>
-                {message}
-              </p>
-            )}
-            <button className="button button-primary" disabled={status === 'syncing'} type="submit">
-              {status === 'syncing' ? (
-                <LoaderCircle size={16} className="spin" />
-              ) : (
-                <Mail size={16} />
-              )}{' '}
-              Email sign-in link
-            </button>
-          </form>
-        )}
-      </section>
-    </div>
-  ) : null;
-
   return (
-    <>
-      <button className={`local-cloud-button ${status}`} onClick={() => setOpen(true)}>
-        {status === 'syncing' || status === 'checking' ? (
-          <LoaderCircle size={15} className="spin" />
-        ) : status === 'synced' ? (
-          <Cloud size={15} />
-        ) : (
-          <CloudOff size={15} />
-        )}
-        <span>
-          {status === 'synced'
-            ? 'Cloud synced'
-            : status === 'syncing' || status === 'checking'
-              ? 'Syncing'
-              : 'Connect cloud'}
-        </span>
-      </button>
-      {modal && createPortal(modal, document.body)}
-    </>
+    <button
+      className={`local-cloud-button ${status}`}
+      disabled={status === 'checking' || status === 'syncing'}
+      title={message || (lastSyncedAt ? `Saved at ${lastSyncedAt}` : 'Supabase cloud status')}
+      onClick={() => syncNow.current()}
+    >
+      {status === 'syncing' || status === 'checking' ? (
+        <LoaderCircle size={15} className="spin" />
+      ) : status === 'synced' ? (
+        <Cloud size={15} />
+      ) : (
+        <CloudOff size={15} />
+      )}
+      <span>
+        {status === 'synced'
+          ? 'Saved to cloud'
+          : status === 'syncing' || status === 'checking'
+            ? 'Saving…'
+            : 'Cloud unavailable'}
+      </span>
+    </button>
   );
 }

@@ -11,5 +11,7 @@ export async function GET(request: NextRequest) {
     if (!error) return NextResponse.redirect(new URL(next, request.url));
   }
 
-  return NextResponse.redirect(new URL('/login?error=invitation', request.url));
+  return NextResponse.redirect(
+    new URL(next === '/local' ? '/local?login=failed' : '/login?error=invitation', request.url),
+  );
 }

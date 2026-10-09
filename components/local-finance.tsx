@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowDownRight,
@@ -676,6 +675,39 @@ export function LocalFinance() {
             />
           )}
         </main>
+        <nav className="local-mobile-nav" aria-label="Mobile workspace navigation">
+          <button
+            className={section === 'dashboard' ? 'active' : ''}
+            onClick={() => changeSection('dashboard')}
+          >
+            <LayoutDashboard size={20} />
+            <span>Home</span>
+          </button>
+          <button
+            className={section === 'projects' ? 'active' : ''}
+            onClick={() => changeSection('projects')}
+          >
+            <BriefcaseBusiness size={20} />
+            <span>Projects</span>
+          </button>
+          <button className="add" aria-label="Add project" onClick={openProjectForm}>
+            <Plus size={24} />
+          </button>
+          <button
+            className={section === 'clients' ? 'active' : ''}
+            onClick={() => changeSection('clients')}
+          >
+            <Users size={20} />
+            <span>Clients</span>
+          </button>
+          <button
+            className={section === 'expenses' ? 'active' : ''}
+            onClick={() => changeSection('expenses')}
+          >
+            <ReceiptText size={20} />
+            <span>Expenses</span>
+          </button>
+        </nav>
       </div>
     </div>
   );
@@ -990,14 +1022,14 @@ function ProjectTable({
               localValue(row.value, row.exchangeRate) - row.advance - row.workDue - row.workPaid;
             return (
               <tr key={row.id}>
-                <td>
+                <td data-label="Project">
                   <input
                     aria-label="Project details"
                     value={row.project}
                     onChange={(event) => onUpdate(row.id, { project: event.target.value })}
                   />
                 </td>
-                <td>
+                <td data-label="Client">
                   <select
                     aria-label="Client"
                     value={row.clientId}
@@ -1011,7 +1043,7 @@ function ProjectTable({
                     ))}
                   </select>
                 </td>
-                <td className="local-money-cell">
+                <td className="local-money-cell" data-label="Amount">
                   <input
                     aria-label="Project amount"
                     type="number"
@@ -1021,7 +1053,7 @@ function ProjectTable({
                     onChange={(event) => onUpdate(row.id, { value: Number(event.target.value) })}
                   />
                 </td>
-                <td className="local-currency-cell">
+                <td className="local-currency-cell" data-label="Currency / rate">
                   <select
                     aria-label="Currency"
                     value={row.currency}
@@ -1054,6 +1086,13 @@ function ProjectTable({
                   <td
                     key={field}
                     className={`local-money-cell ${field === 'advance' ? 'income-cell' : 'outcome-cell'}`}
+                    data-label={
+                      field === 'advance'
+                        ? 'Advance received'
+                        : field === 'workDue'
+                          ? 'Pay for work'
+                          : 'Paid for work'
+                    }
                   >
                     <input
                       aria-label={field}
@@ -1068,7 +1107,7 @@ function ProjectTable({
                     />
                   </td>
                 ))}
-                <td>
+                <td data-label="Status">
                   <select
                     aria-label="Payment status"
                     value={row.status}
@@ -1081,8 +1120,10 @@ function ProjectTable({
                     <option>Paid</option>
                   </select>
                 </td>
-                <td className="local-mine">{money(mine)}</td>
-                <td>
+                <td className="local-mine" data-label="For me">
+                  {money(mine)}
+                </td>
+                <td className="local-card-actions" data-label="Actions">
                   <button
                     className="local-row-action"
                     aria-label={`Create invoice for ${row.project}`}
