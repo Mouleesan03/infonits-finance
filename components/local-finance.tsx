@@ -366,7 +366,7 @@ export function LocalFinance() {
             <X size={20} />
           </button>
         </div>
-        <div className="local-mode-chip">Browser workspace</div>
+        <div className="local-mode-chip">Personal cloud</div>
         <nav className="local-nav" aria-label="Workspace navigation">
           <span className="local-nav-label">Overview</span>
           <button
@@ -479,7 +479,7 @@ export function LocalFinance() {
           <LockKeyhole size={17} />
           <div>
             <strong>Automatic backup</strong>
-            <small>Connect once, then every change saves to Supabase.</small>
+            <small>Every change saves securely to Supabase.</small>
           </div>
         </div>
       </aside>

@@ -747,6 +747,7 @@
     width: 100%;
   }
 }
+
 .local-sidebar-note strong,
 .local-sidebar-note small {
   display: block;
@@ -5910,6 +5911,135 @@ tfoot td {
   }
   .mobile-project small,
   .mobile-project dt {
+    font-size: 11px;
+  }
+}
+
+/* Readable workspace typography across desktop and mobile. */
+.local-mode-chip,
+.local-nav-label {
+  font-size: 11px;
+}
+.local-sidebar-note strong {
+  font-size: 13px;
+}
+.local-sidebar-note small {
+  font-size: 11px;
+  line-height: 1.55;
+}
+.local-titlebar p {
+  font-size: 14px;
+  line-height: 1.55;
+}
+.local-eyebrow {
+  font-size: 10px;
+}
+.local-summary article > span:first-child {
+  font-size: 11px;
+  line-height: 1.45;
+}
+.local-summary strong {
+  line-height: 1.35;
+}
+.local-card-heading strong {
+  font-size: 14px;
+}
+.local-card-heading small {
+  font-size: 11px;
+  line-height: 1.45;
+}
+.local-fx-badge {
+  font-size: 10px;
+}
+.local-bar-value,
+.local-bar-column > span {
+  font-size: 10px;
+}
+.local-activity-list > button {
+  min-height: 66px;
+}
+.local-activity-list strong {
+  font-size: 13px;
+  line-height: 1.4;
+}
+.local-activity-list small,
+.local-activity-list b {
+  font-size: 11px;
+  line-height: 1.4;
+}
+.local-entry-form label > span,
+.local-client-form label,
+.local-sheet-toolbar small,
+.local-rate-preview small,
+.local-expense-list article small,
+.local-client-details p,
+.local-client-details > div,
+.local-client-stats span {
+  font-size: 11px;
+  line-height: 1.45;
+}
+.local-entry-form input,
+.local-entry-form select,
+.local-client-form input,
+.local-sheet input,
+.local-sheet select {
+  font-size: 13px;
+}
+.local-sheet,
+.local-sheet thead th {
+  font-size: 12px;
+}
+.local-client-details h2,
+.local-expense-list article strong {
+  font-size: 13px;
+}
+.office-form label > span,
+.office-toolbar,
+.office-search input,
+.office-table,
+.office-table td strong,
+.office-status,
+.office-status-button,
+.office-pill,
+.office-report-card span,
+.office-report-card strong,
+.office-calendar p {
+  font-size: 11px;
+  line-height: 1.45;
+}
+.office-table th {
+  font-size: 10px;
+}
+.office-table td small {
+  font-size: 10px;
+  line-height: 1.45;
+}
+.office-form input,
+.office-form select,
+.office-form textarea {
+  font-size: 13px;
+}
+.office-metric strong,
+.office-report-card h2,
+.office-calendar h3 {
+  font-size: 14px;
+}
+
+@media (max-width: 580px) {
+  .local-nav button,
+  .local-titlebar p,
+  .local-card-heading strong,
+  .office-titlebar p {
+    font-size: 13px;
+  }
+  .local-activity-list strong {
+    font-size: 13px;
+  }
+  .local-activity-list small,
+  .local-activity-list b,
+  .local-bar-value,
+  .local-bar-column > span,
+  .local-fx-badge {
     font-size: 11px;
   }
 }

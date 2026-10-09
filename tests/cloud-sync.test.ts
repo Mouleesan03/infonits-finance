@@ -29,4 +29,17 @@ describe('cloud workspace conflict resolution', () => {
       { id: '2', name: 'Laptop project' },
     ]);
   });
+
+  it('does not treat JSON object key order as a data change', () => {
+    const baseline: CloudSnapshot = {
+      finance: { rows: [], month: '2026-10' },
+      office: { documents: [], users: [] },
+    };
+    const remote: CloudSnapshot = {
+      office: { users: [], documents: [] },
+      finance: { month: '2026-10', rows: [] },
+    };
+
+    expect(resolveCloudSnapshot(remote, baseline, baseline)).toEqual(baseline);
+  });
 });

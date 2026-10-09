@@ -37,8 +37,20 @@ function rememberSynced(snapshot: Snapshot) {
   localStorage.setItem(cloudBaselineKey, JSON.stringify(snapshot));
 }
 
+function stableValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, stableValue(item)]),
+    );
+  }
+  return value;
+}
+
 function sameSnapshot(left: Snapshot, right: Snapshot) {
-  return JSON.stringify(left) === JSON.stringify(right);
+  return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
 }
 
 function mergeArrays(remote: unknown, local: unknown) {
@@ -113,6 +125,7 @@ export function LocalCloudSync() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncNow = useRef<() => void>(() => undefined);
   const ready = useRef(false);
+  const pulling = useRef(false);
 
   useEffect(() => {
     if (!configured) {
@@ -123,14 +136,16 @@ export function LocalCloudSync() {
     let active = true;
 
     async function pullAndMerge() {
+      if (pulling.current) return;
+      pulling.current = true;
       const {
         data: { user },
       } = await db.auth.getUser();
       if (!active || !user) {
         if (active) setStatus('offline');
+        pulling.current = false;
         return;
       }
-      setStatus('syncing');
       const { data, error } = await db
         .from('local_workspaces')
         .select('data, updated_at')
@@ -139,6 +154,7 @@ export function LocalCloudSync() {
       if (error) {
         setStatus('error');
         setMessage('Cloud table is not ready yet. Apply the latest Supabase migration.');
+        pulling.current = false;
         return;
       }
       const local = localSnapshot();
@@ -151,10 +167,14 @@ export function LocalCloudSync() {
             .from('local_workspaces')
             .upsert({ user_id: user.id, data: resolved }, { onConflict: 'user_id' })
         : { error: null };
-      if (!active) return;
+      if (!active) {
+        pulling.current = false;
+        return;
+      }
       if (saved.error) {
         setStatus('error');
         setMessage('Unable to save to Supabase.');
+        pulling.current = false;
         return;
       }
       rememberSynced(resolved);
@@ -162,6 +182,7 @@ export function LocalCloudSync() {
       setMessage('');
       setStatus('synced');
       setLastSyncedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      pulling.current = false;
       if (localChanged) {
         saveSnapshot(resolved);
         window.location.reload();
@@ -209,7 +230,7 @@ export function LocalCloudSync() {
     document.addEventListener('visibilitychange', onVisible);
     const refresh = window.setInterval(() => {
       if (document.visibilityState === 'visible') void pullAndMerge();
-    }, 20_000);
+    }, 60_000);
     const {
       data: { subscription },
     } = db.auth.onAuthStateChange((event) => {
