@@ -1,9 +1,22 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getWorkspace } from '@/lib/data';
 import { Workspace } from '@/components/workspace';
 export const dynamic = 'force-dynamic';
-export default async function Page({ params }: { params: Promise<{ section?: string[] }> }) {
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ section?: string[] }>;
+  searchParams: Promise<{ code?: string; token_hash?: string; type?: string }>;
+}) {
   const { section = [] } = await params;
+  const query = await searchParams;
+  if (query.code) redirect(`/auth/callback?code=${encodeURIComponent(query.code)}`);
+  if (query.token_hash && (query.type === 'invite' || query.type === 'recovery')) {
+    redirect(
+      `/auth/confirm?token_hash=${encodeURIComponent(query.token_hash)}&type=${query.type}`,
+    );
+  }
   const allowed = ['dashboard', 'projects', 'clients', 'payments', 'costs', 'expenses', 'settings'];
   if (
     section.length > 2 ||
