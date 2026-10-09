@@ -896,10 +896,17 @@
 .sidebar-collapsed .local-brand img,
 .sidebar-collapsed .local-mode-chip,
 .sidebar-collapsed .local-nav-label,
-.sidebar-collapsed .local-nav button span,
 .sidebar-collapsed .local-nav b,
 .sidebar-collapsed .local-sidebar-note {
   display: none;
+}
+.sidebar-collapsed .local-nav button span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 .sidebar-collapsed .local-brand-compact {
   display: grid;
@@ -1780,6 +1787,14 @@
   .sidebar-collapsed .local-nav button span,
   .sidebar-collapsed .local-nav b {
     display: initial;
+  }
+  .sidebar-collapsed .local-nav button span {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
   }
   .sidebar-collapsed .local-mode-chip {
     display: inline-block;
