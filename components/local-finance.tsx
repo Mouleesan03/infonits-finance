@@ -20,6 +20,8 @@ import {
   LockKeyhole,
   Menu,
   MessagesSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
   PieChart,
   Plus,
   ReceiptText,
@@ -138,6 +140,8 @@ export function LocalFinance() {
   const [fxStatus, setFxStatus] = useState<'loading' | 'live' | 'saved'>('loading');
   const [section, setSection] = useState<Section>('dashboard');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarPreferenceLoaded, setSidebarPreferenceLoaded] = useState(false);
   const [projectFormOpen, setProjectFormOpen] = useState(false);
   const [clientFormOpen, setClientFormOpen] = useState(false);
   const [expenseFormOpen, setExpenseFormOpen] = useState(false);
@@ -252,6 +256,17 @@ export function LocalFinance() {
       window.removeEventListener('storage', refreshOfficeOverview);
     };
   }, []);
+
+  useEffect(() => {
+    setSidebarCollapsed(localStorage.getItem('infonits-sidebar-collapsed') === 'true');
+    setSidebarPreferenceLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (sidebarPreferenceLoaded) {
+      localStorage.setItem('infonits-sidebar-collapsed', String(sidebarCollapsed));
+    }
+  }, [sidebarCollapsed, sidebarPreferenceLoaded]);
 
   const totals = useMemo(() => {
     const projects = rows.reduce(
@@ -443,7 +458,7 @@ export function LocalFinance() {
   if (!loaded) return <main className="local-loading">Opening your finance workspace…</main>;
 
   return (
-    <div className="local-app">
+    <div className={`local-app ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       {menuOpen && (
         <button
           className="local-overlay"
@@ -454,8 +469,23 @@ export function LocalFinance() {
       <aside className={`local-sidebar ${menuOpen ? 'is-open' : ''}`}>
         <div className="local-brand">
           <img src="/infonits-logo.png" alt="infonits" width={154} height={36} />
-          <button aria-label="Close menu" onClick={() => setMenuOpen(false)}>
+          <span className="local-brand-compact" aria-hidden="true">
+            IN
+          </span>
+          <button
+            className="local-sidebar-close"
+            aria-label="Close menu"
+            onClick={() => setMenuOpen(false)}
+          >
             <X size={20} />
+          </button>
+          <button
+            className="local-sidebar-toggle"
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Minimize sidebar'}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Minimize sidebar'}
+            onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+          >
+            {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
         </div>
         <div className="local-mode-chip">Personal cloud</div>

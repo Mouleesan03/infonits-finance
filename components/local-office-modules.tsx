@@ -32,7 +32,13 @@ export type OfficeSection =
   | 'reports'
   | 'users';
 
-type ClientRef = { id: string; name: string; company: string };
+type ClientRef = {
+  id: string;
+  name: string;
+  company: string;
+  email?: string;
+  phone?: string;
+};
 type ProjectRef = {
   id: string;
   project: string;
@@ -448,6 +454,7 @@ function SalesDocuments({
   });
   const [preview, setPreview] = useState<SalesDocument | null>(null);
   const names = new Map(clients.map((client) => [client.id, client.name]));
+  const clientDetails = new Map(clients.map((client) => [client.id, client]));
   const projectNames = new Map(projects.map((project) => [project.id, project.project]));
 
   useEffect(() => {
@@ -709,7 +716,7 @@ function SalesDocuments({
                           onClick={() =>
                             void downloadInvoicePdf(
                               item,
-                              names.get(item.clientId) ?? 'Client',
+                              clientDetails.get(item.clientId),
                               projectNames.get(item.projectId) ?? 'Professional services',
                             )
                           }
@@ -735,7 +742,7 @@ function SalesDocuments({
       {preview && (
         <InvoicePreview
           item={preview}
-          client={names.get(preview.clientId) ?? 'Client'}
+          client={clientDetails.get(preview.clientId)}
           project={projectNames.get(preview.projectId) ?? 'Professional services'}
           onClose={() => setPreview(null)}
         />
@@ -744,61 +751,137 @@ function SalesDocuments({
   );
 }
 
-async function downloadInvoicePdf(item: SalesDocument, client: string, project: string) {
+async function downloadInvoicePdf(
+  item: SalesDocument,
+  client: ClientRef | undefined,
+  project: string,
+) {
   const { jsPDF } = await import('jspdf');
   const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
   const subtotal = item.amount;
   const tax = subtotal * ((item.taxRate ?? 0) / 100);
   const total = documentTotal(item);
-  pdf.setFillColor(13, 64, 112);
-  pdf.rect(0, 0, 210, 38, 'F');
+  const currency = (value: number) =>
+    `${item.currency} ${value.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+  const clientName = client?.name ?? 'Client';
+
+  pdf.setFillColor(10, 49, 86);
+  pdf.rect(0, 0, 210, 44, 'F');
+  pdf.setFillColor(255, 105, 45);
+  pdf.rect(0, 0, 6, 44, 'F');
   pdf.setTextColor(255, 255, 255);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(22);
-  pdf.text('INFONITS', 18, 20);
-  pdf.setFontSize(10);
-  pdf.text('INVOICE', 166, 20);
+  pdf.setFontSize(24);
+  pdf.text('infonits', 18, 21);
   pdf.setFontSize(8);
-  pdf.text('infonits Pvt Ltd.', 18, 28);
-  pdf.text('Jaffna, Sri Lanka | hello@infonits.com | +94 77 607 9157', 18, 33);
-  pdf.setTextColor(35, 51, 73);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('Digital solutions & creative technology', 18, 29);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(17);
+  pdf.text('INVOICE', 192, 18, { align: 'right' });
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(item.number, 192, 27, { align: 'right' });
+  pdf.setFillColor(255, 255, 255);
+  pdf.roundedRect(164, 31, 28, 7, 2, 2, 'F');
+  pdf.setTextColor(10, 49, 86);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(7);
+  pdf.text(item.status.toUpperCase(), 178, 35.5, { align: 'center' });
+
+  pdf.setFillColor(247, 249, 252);
+  pdf.roundedRect(18, 54, 82, 43, 3, 3, 'F');
+  pdf.roundedRect(110, 54, 82, 43, 3, 3, 'F');
+  pdf.setFontSize(8);
+  pdf.setTextColor(102, 117, 138);
+  pdf.text('FROM', 24, 63);
+  pdf.text('BILL TO', 116, 63);
+  pdf.setTextColor(31, 47, 68);
+  pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Infonits Pvt Ltd.', 24, 72);
+  pdf.text(clientName, 116, 72);
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(82, 98, 119);
+  pdf.text('Jaffna, Sri Lanka', 24, 79);
+  pdf.text('hello@infonits.com', 24, 85);
+  pdf.text('+94 77 607 9157', 24, 91);
+  if (client?.company) pdf.text(client.company, 116, 79);
+  if (client?.email) pdf.text(client.email, 116, client.company ? 85 : 79);
+  if (client?.phone) pdf.text(client.phone, 116, client.company || client.email ? 91 : 85);
+
+  pdf.setFillColor(237, 244, 252);
+  pdf.roundedRect(18, 104, 174, 18, 2, 2, 'F');
+  pdf.setFontSize(7);
+  pdf.setTextColor(100, 116, 137);
+  pdf.text('ISSUE DATE', 24, 111);
+  pdf.text('DUE DATE', 82, 111);
+  pdf.text('CURRENCY', 140, 111);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(31, 47, 68);
+  pdf.setFontSize(9);
+  pdf.text(item.issueDate, 24, 117);
+  pdf.text(item.dueDate, 82, 117);
+  pdf.text(item.currency, 140, 117);
+
+  pdf.setFillColor(10, 49, 86);
+  pdf.rect(18, 132, 174, 11, 'F');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('DESCRIPTION', 23, 139);
+  pdf.text('AMOUNT', 187, 139, { align: 'right' });
+  pdf.setTextColor(37, 53, 74);
   pdf.setFontSize(10);
-  pdf.text(`Invoice: ${item.number}`, 18, 52);
-  pdf.text(`Issue date: ${item.issueDate}`, 18, 59);
-  pdf.text(`Due date: ${item.dueDate}`, 18, 66);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('BILL TO', 130, 52);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(client, 130, 59);
+  pdf.text(project, 23, 154, { maxWidth: 112 });
+  pdf.text(currency(subtotal), 187, 154, { align: 'right' });
   pdf.setDrawColor(220, 227, 235);
-  pdf.line(18, 80, 192, 80);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Description', 18, 91);
-  pdf.text('Amount', 165, 91);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(project, 18, 103);
-  pdf.text(`${item.currency} ${subtotal.toLocaleString()}`, 165, 103);
-  pdf.line(18, 112, 192, 112);
+  pdf.line(18, 164, 192, 164);
+
+  const summaryRows = [
+    ['Subtotal', currency(subtotal)],
+    [`Tax (${item.taxRate ?? 0}%)`, currency(tax)],
+    ['Discount', `- ${currency(item.discount ?? 0)}`],
+    ['Advance paid', `- ${currency(item.advance ?? 0)}`],
+  ];
   pdf.setFontSize(9);
-  pdf.text('Subtotal', 130, 122);
-  pdf.text(`${item.currency} ${subtotal.toLocaleString()}`, 165, 122);
-  pdf.text(`Tax (${item.taxRate ?? 0}%)`, 130, 129);
-  pdf.text(`${item.currency} ${tax.toLocaleString()}`, 165, 129);
-  pdf.text('Discount', 130, 136);
-  pdf.text(`${item.currency} ${(item.discount ?? 0).toLocaleString()}`, 165, 136);
-  pdf.text('Advance paid', 130, 143);
-  pdf.text(`${item.currency} ${(item.advance ?? 0).toLocaleString()}`, 165, 143);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(13);
-  pdf.text('Grand total', 130, 155);
-  pdf.text(`${item.currency} ${total.toLocaleString()}`, 165, 155);
-  pdf.setFontSize(9);
-  pdf.setTextColor(100, 114, 133);
-  pdf.text(`LKR value at recorded rate: ${money(lkr(total, item.exchangeRate))}`, 18, 169);
-  pdf.text(item.notes || 'Payment is due within 10 days of the invoice date.', 18, 183, {
-    maxWidth: 170,
+  summaryRows.forEach(([label, value], index) => {
+    const y = 176 + index * 8;
+    pdf.setTextColor(100, 114, 133);
+    pdf.text(label, 128, y);
+    pdf.setTextColor(40, 55, 75);
+    pdf.text(value, 187, y, { align: 'right' });
   });
-  pdf.text('Thank you for working with Infonits.', 18, 275);
+  pdf.setFillColor(10, 49, 86);
+  pdf.roundedRect(122, 207, 70, 18, 3, 3, 'F');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(8);
+  pdf.text('AMOUNT DUE', 128, 214);
+  pdf.setFontSize(13);
+  pdf.text(currency(total), 187, 219, { align: 'right' });
+
+  pdf.setTextColor(72, 88, 109);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(8);
+  pdf.text('NOTES & PAYMENT', 18, 215);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(item.notes || 'Payment is due within 10 days of the invoice date.', 18, 223, {
+    maxWidth: 92,
+  });
+  pdf.text(`Use ${item.number} as the payment reference.`, 18, 239, { maxWidth: 92 });
+  pdf.setTextColor(111, 125, 143);
+  pdf.text(`Recorded LKR value: ${money(lkr(total, item.exchangeRate))}`, 122, 232, {
+    maxWidth: 70,
+  });
+
+  pdf.setDrawColor(224, 230, 237);
+  pdf.line(18, 270, 192, 270);
+  pdf.setTextColor(105, 119, 138);
+  pdf.text('Thank you for choosing Infonits.', 18, 278);
+  pdf.text('infonits.com', 192, 278, { align: 'right' });
   pdf.save(`${item.number}.pdf`);
 }
 
@@ -809,7 +892,7 @@ function InvoicePreview({
   onClose,
 }: {
   item: SalesDocument;
-  client: string;
+  client?: ClientRef;
   project: string;
   onClose: () => void;
 }) {
@@ -842,17 +925,22 @@ function InvoicePreview({
         <div className="invoice-paper">
           <div className="invoice-brand">
             <div>
-              <strong>INFONITS</strong>
+              <strong>infonits</strong>
               <small>
-                infonits Pvt Ltd. · Jaffna, Sri Lanka
+                Digital solutions & creative technology
                 <br />
-                hello@infonits.com · +94 77 607 9157
+                Jaffna, Sri Lanka · hello@infonits.com · +94 77 607 9157
               </small>
             </div>
-            <span>INVOICE</span>
+            <div className="invoice-brand-title">
+              <span>INVOICE</span>
+              <small>
+                {item.number} · {item.status}
+              </small>
+            </div>
           </div>
           <div className="invoice-meta">
-            <div>
+            <div className="invoice-meta-card">
               <span>Invoice</span>
               <strong>{item.number}</strong>
               <span>Issue date</span>
@@ -860,9 +948,12 @@ function InvoicePreview({
               <span>Due date</span>
               <strong>{item.dueDate}</strong>
             </div>
-            <div>
+            <div className="invoice-bill-card">
               <span>Bill to</span>
-              <strong>{client}</strong>
+              <strong>{client?.name ?? 'Client'}</strong>
+              {client?.company ? <small>{client.company}</small> : null}
+              {client?.email ? <small>{client.email}</small> : null}
+              {client?.phone ? <small>{client.phone}</small> : null}
             </div>
           </div>
           <div className="invoice-line">
@@ -873,34 +964,37 @@ function InvoicePreview({
               {item.currency} {subtotal.toLocaleString()}
             </span>
           </div>
-          <div className="invoice-notes">
-            <strong>Notes</strong>
-            <p>{item.notes || 'Payment is due within 10 days of the invoice date.'}</p>
+          <div className="invoice-summary-row">
+            <div className="invoice-notes">
+              <strong>Notes & payment</strong>
+              <p>{item.notes || 'Payment is due within 10 days of the invoice date.'}</p>
+              <p>Use {item.number} as the payment reference.</p>
+            </div>
+            <div className="invoice-total">
+              <span>Subtotal</span>
+              <b>
+                {item.currency} {subtotal.toLocaleString()}
+              </b>
+              <span>Tax ({item.taxRate ?? 0}%)</span>
+              <b>
+                {item.currency} {tax.toLocaleString()}
+              </b>
+              <span>Discount</span>
+              <b>
+                {item.currency} {(item.discount ?? 0).toLocaleString()}
+              </b>
+              <span>Advance paid</span>
+              <b>
+                {item.currency} {(item.advance ?? 0).toLocaleString()}
+              </b>
+              <span className="grand">Amount due</span>
+              <strong>
+                {item.currency} {total.toLocaleString()}
+              </strong>
+              <small>{money(lkr(total, item.exchangeRate))} at recorded exchange rate</small>
+            </div>
           </div>
-          <div className="invoice-total">
-            <span>Subtotal</span>
-            <b>
-              {item.currency} {subtotal.toLocaleString()}
-            </b>
-            <span>Tax ({item.taxRate ?? 0}%)</span>
-            <b>
-              {item.currency} {tax.toLocaleString()}
-            </b>
-            <span>Discount</span>
-            <b>
-              {item.currency} {(item.discount ?? 0).toLocaleString()}
-            </b>
-            <span>Advance paid</span>
-            <b>
-              {item.currency} {(item.advance ?? 0).toLocaleString()}
-            </b>
-            <span className="grand">Grand total</span>
-            <strong>
-              {item.currency} {total.toLocaleString()}
-            </strong>
-            <small>{money(lkr(total, item.exchangeRate))} at recorded exchange rate</small>
-          </div>
-          <p>Thank you for working with Infonits.</p>
+          <p>Thank you for choosing Infonits.</p>
         </div>
         <footer className="invoice-preview-actions">
           <button className="button button-outline" onClick={onClose}>

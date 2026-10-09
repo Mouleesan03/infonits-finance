@@ -139,10 +139,10 @@
   position: fixed;
   inset: 0 auto 0 0;
   z-index: 30;
-  width: 252px;
+  width: 218px;
   display: flex;
   flex-direction: column;
-  padding: 24px 18px;
+  padding: 20px 12px;
   background: #fff;
   border-right: 1px solid #e4e9f0;
   box-shadow: 8px 0 30px rgba(32, 50, 79, 0.04);
@@ -153,7 +153,7 @@
   align-items: center;
   gap: 8px;
   min-height: 40px;
-  padding: 0 8px;
+  padding: 0 5px;
   color: #0d4070;
   font-weight: 800;
 }
@@ -164,9 +164,27 @@
   display: none;
   margin-left: auto;
 }
+.local-brand-compact {
+  display: none;
+}
+.local-sidebar-toggle {
+  display: grid !important;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+}
+.local-sidebar-toggle:hover {
+  background: #edf4fb;
+  color: #1769d9;
+}
 .local-mode-chip {
   align-self: flex-start;
-  margin: 19px 8px 8px;
+  margin: 14px 8px 6px;
   padding: 6px 9px;
   border: 1px solid #d7e6f5;
   border-radius: 999px;
@@ -179,11 +197,11 @@
 }
 .local-nav {
   display: grid;
-  gap: 6px;
-  margin-top: 15px;
+  gap: 3px;
+  margin-top: 10px;
 }
 .local-nav-label {
-  margin: 14px 12px 2px;
+  margin: 10px 12px 2px;
   color: #9aa7b7;
   font-size: 9px;
   font-weight: 800;
@@ -196,7 +214,7 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  min-height: 46px;
+  min-height: 42px;
   padding: 0 12px;
   border-radius: 9px;
   color: #627087;
@@ -222,8 +240,8 @@
 .local-sidebar-note {
   display: flex;
   gap: 10px;
-  margin-top: 22px;
-  padding: 13px;
+  margin-top: 14px;
+  padding: 11px;
   border: 1px solid #e5eaf0;
   border-radius: 10px;
   background: #f8fafc;
@@ -748,6 +766,81 @@
   }
 }
 
+/* Unified readable type scale for the personal workspace. */
+.local-app .button {
+  font-size: 13px;
+}
+.local-nav button {
+  font-size: 13px;
+}
+.local-nav-label,
+.local-mode-chip,
+.local-eyebrow {
+  font-size: 10px;
+}
+.local-titlebar h1,
+.office-titlebar h1 {
+  line-height: 1.2;
+}
+.local-titlebar p,
+.office-titlebar p {
+  font-size: 14px;
+}
+.local-summary article > span:first-child,
+.office-metric span {
+  font-size: 11px;
+}
+.local-summary strong {
+  font-size: clamp(17px, 1.35vw, 21px);
+}
+.local-card-heading small,
+.local-action-list small,
+.local-activity-list small,
+.local-activity-list b {
+  font-size: 12px;
+}
+.local-action-list strong,
+.local-activity-list strong,
+.local-client-details h2,
+.local-expense-list article strong {
+  font-size: 13px;
+}
+.local-sheet,
+.local-sheet thead th,
+.local-sheet input,
+.local-sheet select {
+  font-size: 13px;
+}
+.office-form label > span,
+.office-toolbar,
+.office-search input,
+.office-table,
+.office-table td strong,
+.office-status,
+.office-status-button,
+.office-pill,
+.office-report-card span,
+.office-calendar p {
+  font-size: 12px;
+}
+.office-table th,
+.office-table td small,
+.office-titlebar .office-month,
+.office-month {
+  font-size: 11px;
+}
+.office-form input,
+.office-form select,
+.office-form textarea {
+  font-size: 14px;
+}
+.office-empty strong {
+  font-size: 15px;
+}
+.office-empty p {
+  font-size: 12px;
+}
+
 .local-sidebar-note strong,
 .local-sidebar-note small {
   display: block;
@@ -780,7 +873,59 @@
 }
 .local-content {
   min-height: 100vh;
-  margin-left: 252px;
+  margin-left: 218px;
+  transition: margin-left 0.2s ease;
+}
+.local-sidebar {
+  transition:
+    width 0.2s ease,
+    transform 0.22s ease;
+}
+.sidebar-collapsed .local-sidebar {
+  width: 76px;
+  padding-inline: 10px;
+  overflow-x: hidden;
+}
+.sidebar-collapsed .local-content {
+  margin-left: 76px;
+}
+.sidebar-collapsed .local-brand {
+  justify-content: center;
+  padding: 0;
+}
+.sidebar-collapsed .local-brand img,
+.sidebar-collapsed .local-mode-chip,
+.sidebar-collapsed .local-nav-label,
+.sidebar-collapsed .local-nav button span,
+.sidebar-collapsed .local-nav b,
+.sidebar-collapsed .local-sidebar-note {
+  display: none;
+}
+.sidebar-collapsed .local-brand-compact {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: #0d4070;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.sidebar-collapsed .local-sidebar-toggle {
+  position: absolute;
+  top: 66px;
+  margin: 0;
+}
+.sidebar-collapsed .local-nav {
+  margin-top: 54px;
+}
+.sidebar-collapsed .local-nav button {
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: center;
+  padding: 0;
 }
 .local-topbar {
   height: 65px;
@@ -1607,15 +1752,59 @@
 }
 @media (max-width: 820px) {
   .local-sidebar {
+    width: min(88vw, 310px);
+    padding: 20px 16px;
     transform: translateX(-105%);
     transition: transform 0.22s ease;
   }
   .local-sidebar.is-open {
     transform: translateX(0);
   }
-  .local-brand button {
-    display: grid;
+  .local-sidebar-toggle {
+    display: none !important;
+  }
+  .local-sidebar-close {
+    display: grid !important;
     place-items: center;
+  }
+  .sidebar-collapsed .local-sidebar {
+    width: min(88vw, 310px);
+    padding: 20px 16px;
+    overflow-y: auto;
+  }
+  .sidebar-collapsed .local-brand {
+    justify-content: flex-start;
+    padding: 0 5px;
+  }
+  .sidebar-collapsed .local-brand img,
+  .sidebar-collapsed .local-nav button span,
+  .sidebar-collapsed .local-nav b {
+    display: initial;
+  }
+  .sidebar-collapsed .local-mode-chip {
+    display: inline-block;
+  }
+  .sidebar-collapsed .local-nav-label {
+    display: block;
+  }
+  .sidebar-collapsed .local-sidebar-note {
+    display: flex;
+  }
+  .sidebar-collapsed .local-brand img {
+    display: block;
+  }
+  .sidebar-collapsed .local-brand-compact {
+    display: none;
+  }
+  .sidebar-collapsed .local-nav {
+    margin-top: 10px;
+  }
+  .sidebar-collapsed .local-nav button {
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    place-items: initial;
+    align-items: center;
+    padding: 0 12px;
   }
   .local-overlay {
     position: fixed;
@@ -5531,12 +5720,13 @@ tr:hover .cell-edit,
   justify-content: space-between;
   margin: -38px -38px 30px;
   padding: 27px 38px;
-  background: #0d4070;
+  border-left: 6px solid #ff692d;
+  background: #0a3156;
   color: #fff;
 }
 .invoice-brand strong {
-  font-size: 22px;
-  letter-spacing: 0.04em;
+  font-size: 24px;
+  letter-spacing: -0.04em;
 }
 .invoice-brand small {
   display: block;
@@ -5546,18 +5736,33 @@ tr:hover .cell-edit,
   font-weight: 500;
   line-height: 1.55;
 }
-.invoice-brand span {
+.invoice-brand-title {
+  text-align: right;
+}
+.invoice-brand-title span {
+  display: block;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.12em;
 }
+.invoice-brand-title small {
+  margin-top: 7px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 8px;
+}
 .invoice-meta {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 30px;
+  gap: 12px;
   margin-bottom: 32px;
 }
-.invoice-meta div {
+.invoice-meta > div {
+  min-height: 108px;
+  padding: 16px;
+  border-radius: 10px;
+  background: #f7f9fc;
+}
+.invoice-meta-card {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 7px 12px;
@@ -5571,6 +5776,21 @@ tr:hover .cell-edit,
   color: #2a3a4f;
   font-size: 11px;
   text-align: right;
+}
+.invoice-bill-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.invoice-bill-card strong {
+  margin: 3px 0 1px;
+  font-size: 13px;
+  text-align: left;
+}
+.invoice-bill-card small {
+  color: #65758b;
+  font-size: 9px;
 }
 .invoice-line {
   display: grid;
@@ -5591,8 +5811,11 @@ tr:hover .cell-edit,
   text-align: right;
 }
 .invoice-notes {
-  max-width: 290px;
-  margin-top: 24px;
+  max-width: none;
+  margin-top: 0;
+  padding: 15px;
+  border-radius: 10px;
+  background: #f7f9fc;
 }
 .invoice-notes strong {
   color: #637187;
@@ -5605,12 +5828,19 @@ tr:hover .cell-edit,
   font-size: 9px;
   line-height: 1.6;
 }
+.invoice-summary-row {
+  display: grid;
+  grid-template-columns: 1fr minmax(240px, 0.9fr);
+  align-items: start;
+  gap: 24px;
+  margin-top: 24px;
+}
 .invoice-total {
   width: min(280px, 100%);
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 7px 15px;
-  margin: 24px 0 0 auto;
+  margin: 0 0 0 auto;
   text-align: right;
 }
 .invoice-total span {
@@ -5624,14 +5854,14 @@ tr:hover .cell-edit,
 .invoice-total .grand {
   padding-top: 7px;
   border-top: 1px solid #dfe5ec;
-  color: #1f3148;
+  color: #0a3156;
   font-weight: 800;
   text-transform: uppercase;
 }
 .invoice-total strong {
   padding-top: 7px;
   border-top: 1px solid #dfe5ec;
-  color: #1f3148;
+  color: #0a3156;
   font-size: 15px;
 }
 .invoice-total small {
@@ -5640,7 +5870,9 @@ tr:hover .cell-edit,
   font-size: 8px;
 }
 .invoice-paper > p {
-  margin-top: 300px;
+  margin-top: 150px;
+  padding-top: 14px;
+  border-top: 1px solid #e2e8ef;
   color: #708095;
   font-size: 10px;
 }
@@ -6436,5 +6668,87 @@ tfoot td {
   }
   .local-project-detail > footer .button {
     flex: 1;
+  }
+}
+
+/* Final workspace type scale: keep records readable without making the layout heavy. */
+.local-app .button,
+.local-nav button {
+  font-size: 13px;
+}
+.local-nav-label,
+.local-mode-chip,
+.local-eyebrow {
+  font-size: 10px;
+}
+.local-titlebar p,
+.office-titlebar p {
+  font-size: 14px;
+}
+.local-summary article > span:first-child,
+.office-metric span {
+  font-size: 11px;
+}
+.local-summary strong {
+  font-size: clamp(17px, 1.35vw, 21px);
+}
+.local-card-heading small,
+.local-action-list small,
+.local-activity-list small,
+.local-activity-list b {
+  font-size: 12px;
+}
+.local-action-list strong,
+.local-activity-list strong,
+.local-client-details h2,
+.local-expense-list article strong {
+  font-size: 13px;
+}
+.local-sheet,
+.local-sheet thead th,
+.local-sheet input,
+.local-sheet select {
+  font-size: 13px;
+}
+.office-form label > span,
+.office-toolbar,
+.office-search input,
+.office-table,
+.office-table td strong,
+.office-status,
+.office-status-button,
+.office-pill,
+.office-report-card span,
+.office-calendar p {
+  font-size: 12px;
+}
+.office-table th,
+.office-table td small,
+.office-titlebar .office-month,
+.office-month {
+  font-size: 11px;
+}
+.office-form input,
+.office-form select,
+.office-form textarea {
+  font-size: 14px;
+}
+.office-empty strong {
+  font-size: 15px;
+}
+.office-empty p {
+  font-size: 12px;
+}
+
+@media (max-width: 580px) {
+  .invoice-summary-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .invoice-total {
+    width: 100%;
+  }
+  .invoice-paper > p {
+    margin-top: 70px;
   }
 }
