@@ -8,6 +8,9 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   CircleDollarSign,
+  Clock3,
+  CreditCard,
+  Eye,
   FileCheck2,
   FilePlus2,
   FileText,
@@ -59,8 +62,38 @@ type LocalExpense = {
   date: string;
 };
 type FxRate = { date: string; base: string; quote: string; rate: number };
+type OfficeOverview = {
+  documents: Array<{
+    id: string;
+    kind: 'Invoice' | 'Quotation';
+    number: string;
+    projectId: string;
+    dueDate: string;
+    status: string;
+    amount: number;
+    currency: string;
+    exchangeRate: number;
+  }>;
+  payments: Array<{
+    id: string;
+    note: string;
+    category: string;
+    date: string;
+    status: string;
+    amount: number;
+    currency: string;
+    exchangeRate: number;
+  }>;
+  renewals: Array<{
+    id: string;
+    website: string;
+    domainDue: string;
+    hostingDue: string;
+  }>;
+};
 
 const storageKey = 'infonits-finance-local-v1';
+const officeStorageKey = 'infonits-finance-office-v1';
 const currencies = ['LKR', 'USD', 'GBP', 'EUR', 'AUD', 'CAD', 'INR', 'AED', 'SGD', 'JPY'];
 const today = () => new Date().toISOString().slice(0, 10);
 const emptyClient = { name: '', company: '', email: '', phone: '' };
@@ -80,6 +113,21 @@ const money = (value: number) =>
   }).format(value);
 const localValue = (value: number, rate: number) => value * rate;
 
+function readOfficeOverview(): OfficeOverview {
+  try {
+    const saved = JSON.parse(
+      localStorage.getItem(officeStorageKey) ?? '{}',
+    ) as Partial<OfficeOverview>;
+    return {
+      documents: saved.documents ?? [],
+      payments: saved.payments ?? [],
+      renewals: saved.renewals ?? [],
+    };
+  } catch {
+    return { documents: [], payments: [], renewals: [] };
+  }
+}
+
 export function LocalFinance() {
   const [month, setMonth] = useState(() => today().slice(0, 7));
   const [rows, setRows] = useState<LocalRow[]>([]);
@@ -96,6 +144,14 @@ export function LocalFinance() {
   const [projectDraft, setProjectDraft] = useState(emptyProject);
   const [clientDraft, setClientDraft] = useState(emptyClient);
   const [expenseDraft, setExpenseDraft] = useState(emptyExpense);
+  const [officeOverview, setOfficeOverview] = useState<OfficeOverview>({
+    documents: [],
+    payments: [],
+    renewals: [],
+  });
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [officeFormSignal, setOfficeFormSignal] = useState(0);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -140,6 +196,7 @@ export function LocalFinance() {
       setFxRates(parsed?.fxRates ?? { LKR: 1 });
       setFxDate(savedDate);
       setFxStatus(savedDate ? 'saved' : 'loading');
+      setOfficeOverview(readOfficeOverview());
     } catch {
       setRows([]);
     } finally {
@@ -186,6 +243,16 @@ export function LocalFinance() {
     window.dispatchEvent(new Event('infonits:local-change'));
   }, [clients, expenses, fxDate, fxRates, loaded, month, rows]);
 
+  useEffect(() => {
+    const refreshOfficeOverview = () => setOfficeOverview(readOfficeOverview());
+    window.addEventListener('infonits:local-change', refreshOfficeOverview);
+    window.addEventListener('storage', refreshOfficeOverview);
+    return () => {
+      window.removeEventListener('infonits:local-change', refreshOfficeOverview);
+      window.removeEventListener('storage', refreshOfficeOverview);
+    };
+  }, []);
+
   const totals = useMemo(() => {
     const projects = rows.reduce(
       (sum, row) => {
@@ -217,6 +284,11 @@ export function LocalFinance() {
     { label: 'Expenses', value: totals.expenses, tone: 'orange' },
   ];
   const chartMax = Math.max(...chart.map((item) => item.value), 1);
+  const selectedProject = rows.find((row) => row.id === selectedProjectId);
+  const selectedProjectClient = clients.find((client) => client.id === selectedProject?.clientId);
+  const selectedProjectInvoices = officeOverview.documents.filter(
+    (document) => document.kind === 'Invoice' && document.projectId === selectedProjectId,
+  );
 
   function changeSection(next: Section) {
     setSection(next);
@@ -292,6 +364,26 @@ export function LocalFinance() {
     setProjectFormOpen(true);
     setSection('projects');
     setMenuOpen(false);
+  }
+
+  function quickAdd(type: 'project' | 'client' | 'expense' | 'invoice') {
+    setQuickAddOpen(false);
+    if (type === 'project') {
+      openProjectForm();
+      return;
+    }
+    if (type === 'client') {
+      setSection('clients');
+      setClientFormOpen(true);
+      return;
+    }
+    if (type === 'expense') {
+      setSection('expenses');
+      setExpenseFormOpen(true);
+      return;
+    }
+    setSection('invoices');
+    setOfficeFormSignal((current) => current + 1);
   }
 
   function createInvoice(row: LocalRow) {
@@ -507,6 +599,7 @@ export function LocalFinance() {
               expenses={expenses}
               fxDate={fxDate}
               fxStatus={fxStatus}
+              office={officeOverview}
               onAddProject={openProjectForm}
               onSection={changeSection}
             />
@@ -594,6 +687,7 @@ export function LocalFinance() {
                   clients={clients}
                   rates={fxRates}
                   onUpdate={updateProject}
+                  onView={setSelectedProjectId}
                   onInvoice={createInvoice}
                   onDelete={(id) => setRows((current) => current.filter((row) => row.id !== id))}
                 />
@@ -672,6 +766,7 @@ export function LocalFinance() {
               clients={clients}
               projects={rows}
               rates={fxRates}
+              openFormSignal={officeFormSignal}
             />
           )}
         </main>
@@ -690,7 +785,7 @@ export function LocalFinance() {
             <BriefcaseBusiness size={20} />
             <span>Projects</span>
           </button>
-          <button className="add" aria-label="Add project" onClick={openProjectForm}>
+          <button className="add" aria-label="Quick add" onClick={() => setQuickAddOpen(true)}>
             <Plus size={24} />
           </button>
           <button
@@ -709,6 +804,21 @@ export function LocalFinance() {
           </button>
         </nav>
       </div>
+      {quickAddOpen ? (
+        <QuickAddMenu onClose={() => setQuickAddOpen(false)} onAdd={quickAdd} />
+      ) : null}
+      {selectedProject ? (
+        <ProjectDetail
+          row={selectedProject}
+          client={selectedProjectClient}
+          invoices={selectedProjectInvoices}
+          onClose={() => setSelectedProjectId('')}
+          onInvoice={(row) => {
+            setSelectedProjectId('');
+            createInvoice(row);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -736,6 +846,162 @@ function PageHeading({
   );
 }
 
+function QuickAddMenu({
+  onClose,
+  onAdd,
+}: {
+  onClose: () => void;
+  onAdd: (type: 'project' | 'client' | 'expense' | 'invoice') => void;
+}) {
+  const actions = [
+    { id: 'project' as const, label: 'Project', hint: 'Start new work', icon: BriefcaseBusiness },
+    { id: 'client' as const, label: 'Client', hint: 'Add contact', icon: Users },
+    { id: 'expense' as const, label: 'Expense', hint: 'Record a cost', icon: ReceiptText },
+    { id: 'invoice' as const, label: 'Invoice', hint: 'Create a bill', icon: CreditCard },
+  ];
+  return (
+    <div className="local-modal-layer" role="presentation" onMouseDown={onClose}>
+      <section
+        className="local-modal local-quick-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="quick-add-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <h2 id="quick-add-title">Quick add</h2>
+            <p>What do you want to create?</p>
+          </div>
+          <button type="button" aria-label="Close quick add" onClick={onClose}>
+            <X size={20} />
+          </button>
+        </header>
+        <div className="local-quick-grid">
+          {actions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <button key={action.id} type="button" onClick={() => onAdd(action.id)}>
+                <span>
+                  <Icon size={21} />
+                </span>
+                <strong>{action.label}</strong>
+                <small>{action.hint}</small>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ProjectDetail({
+  row,
+  client,
+  invoices,
+  onClose,
+  onInvoice,
+}: {
+  row: LocalRow;
+  client?: LocalClient;
+  invoices: OfficeOverview['documents'];
+  onClose: () => void;
+  onInvoice: (row: LocalRow) => void;
+}) {
+  const value = localValue(row.value, row.exchangeRate);
+  const work = row.workDue + row.workPaid;
+  const remaining = value - row.advance - work;
+  return (
+    <div className="local-modal-layer" role="presentation" onMouseDown={onClose}>
+      <section
+        className="local-modal local-project-detail"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="project-detail-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <span className="local-eyebrow">PROJECT DETAILS</span>
+            <h2 id="project-detail-title">{row.project}</h2>
+            <p>{client?.name || 'No client assigned'}</p>
+          </div>
+          <button type="button" aria-label="Close project details" onClick={onClose}>
+            <X size={20} />
+          </button>
+        </header>
+        <div className="local-detail-stats">
+          <article>
+            <span>Project value</span>
+            <strong>{money(value)}</strong>
+          </article>
+          <article className="income">
+            <span>Received</span>
+            <strong>{money(row.advance)}</strong>
+          </article>
+          <article className="outcome">
+            <span>Work cost</span>
+            <strong>{money(work)}</strong>
+          </article>
+          <article className="highlight">
+            <span>For me</span>
+            <strong>{money(remaining)}</strong>
+          </article>
+        </div>
+        <dl className="local-detail-list">
+          <div>
+            <dt>Status</dt>
+            <dd>
+              <span className={`local-detail-status ${row.status.toLowerCase()}`}>
+                {row.status}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt>Original amount</dt>
+            <dd>
+              {row.currency} {row.value.toLocaleString()}
+            </dd>
+          </div>
+          <div>
+            <dt>Exchange rate</dt>
+            <dd>
+              1 {row.currency} = {row.exchangeRate.toLocaleString()} LKR
+            </dd>
+          </div>
+          <div>
+            <dt>Created</dt>
+            <dd>{row.createdAt}</dd>
+          </div>
+          <div>
+            <dt>Invoices</dt>
+            <dd>{invoices.length}</dd>
+          </div>
+          <div>
+            <dt>Contact</dt>
+            <dd>{client?.email || client?.phone || 'Not added'}</dd>
+          </div>
+        </dl>
+        {row.note ? (
+          <div className="local-detail-note">
+            <span>Note</span>
+            <p>{row.note}</p>
+          </div>
+        ) : null}
+        <footer>
+          <button type="button" className="button button-outline" onClick={onClose}>
+            Close
+          </button>
+          <button type="button" className="button button-primary" onClick={() => onInvoice(row)}>
+            <FilePlus2 size={16} /> Create invoice
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
 function Dashboard({
   totals,
   chart,
@@ -744,6 +1010,7 @@ function Dashboard({
   expenses,
   fxDate,
   fxStatus,
+  office,
   onAddProject,
   onSection,
 }: {
@@ -754,9 +1021,63 @@ function Dashboard({
   expenses: LocalExpense[];
   fxDate: string;
   fxStatus: string;
+  office: OfficeOverview;
   onAddProject: () => void;
   onSection: (section: Section) => void;
 }) {
+  const now = new Date(`${today()}T00:00:00`).getTime();
+  const day = 86_400_000;
+  const actions = [
+    ...office.documents
+      .filter((item) => item.kind === 'Invoice' && item.status !== 'Paid')
+      .map((item) => {
+        const due = item.dueDate ? new Date(`${item.dueDate}T00:00:00`).getTime() : now;
+        const overdue = item.status === 'Overdue' || due < now;
+        return {
+          id: `invoice-${item.id}`,
+          title: `${item.number} ${overdue ? 'is overdue' : 'needs payment'}`,
+          meta: `${item.currency} ${item.amount.toLocaleString()} · ${item.dueDate || 'No due date'}`,
+          tone: overdue ? 'urgent' : 'waiting',
+          date: due,
+          section: 'invoices' as Section,
+        };
+      }),
+    ...office.payments
+      .filter((item) => item.status === 'Pending')
+      .map((item) => ({
+        id: `payment-${item.id}`,
+        title: item.note || item.category || 'Pending payment',
+        meta: `${item.currency} ${item.amount.toLocaleString()} · ${item.date}`,
+        tone: 'waiting',
+        date: item.date ? new Date(`${item.date}T00:00:00`).getTime() : now,
+        section: 'payments' as Section,
+      })),
+    ...office.renewals.flatMap((item) =>
+      [
+        { type: 'Domain', date: item.domainDue },
+        { type: 'Hosting', date: item.hostingDue },
+      ]
+        .filter(({ date }) => {
+          if (!date) return false;
+          const due = new Date(`${date}T00:00:00`).getTime();
+          return due - now <= 30 * day;
+        })
+        .map(({ type, date }) => {
+          const due = new Date(`${date}T00:00:00`).getTime();
+          return {
+            id: `renewal-${item.id}-${type}`,
+            title: `${item.website} ${type.toLowerCase()} renewal`,
+            meta: due < now ? `Overdue · ${date}` : `Due ${date}`,
+            tone: due < now ? 'urgent' : 'renewal',
+            date: due,
+            section: 'renewals' as Section,
+          };
+        }),
+    ),
+  ]
+    .toSorted((left, right) => left.date - right.date)
+    .slice(0, 5);
+
   return (
     <>
       <PageHeading
@@ -789,6 +1110,36 @@ function Dashboard({
           <strong>{money(totals.net)}</strong>
           <TrendingUp size={18} />
         </article>
+      </section>
+      <section className="local-action-center" aria-label="Action center">
+        <div className="local-card-heading">
+          <div>
+            <Clock3 size={18} />
+            <div>
+              <strong>Action center</strong>
+              <small>Payments, invoices and renewals that need attention</small>
+            </div>
+          </div>
+          <b>{actions.length}</b>
+        </div>
+        {actions.length ? (
+          <div className="local-action-list">
+            {actions.map((item) => (
+              <button key={item.id} onClick={() => onSection(item.section)}>
+                <span className={item.tone} />
+                <div>
+                  <strong>{item.title}</strong>
+                  <small>{item.meta}</small>
+                </div>
+                <span>Open</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="local-action-empty">
+            <ShieldCheck size={19} /> Everything is up to date.
+          </div>
+        )}
       </section>
       <section className="local-dashboard-grid">
         <article className="local-chart-card">
@@ -966,6 +1317,7 @@ function ProjectTable({
   clients,
   rates,
   onUpdate,
+  onView,
   onInvoice,
   onDelete,
 }: {
@@ -973,6 +1325,7 @@ function ProjectTable({
   clients: LocalClient[];
   rates: Record<string, number>;
   onUpdate: (id: string, patch: Partial<LocalRow>) => void;
+  onView: (id: string) => void;
   onInvoice: (row: LocalRow) => void;
   onDelete: (id: string) => void;
 }) {
@@ -1124,6 +1477,14 @@ function ProjectTable({
                   {money(mine)}
                 </td>
                 <td className="local-card-actions" data-label="Actions">
+                  <button
+                    className="local-row-action neutral"
+                    aria-label={`View ${row.project} details`}
+                    title="Project details"
+                    onClick={() => onView(row.id)}
+                  >
+                    <Eye size={15} />
+                  </button>
                   <button
                     className="local-row-action"
                     aria-label={`Create invoice for ${row.project}`}

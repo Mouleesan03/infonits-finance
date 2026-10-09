@@ -193,11 +193,13 @@ export function LocalOfficeModule({
   clients,
   projects,
   rates,
+  openFormSignal = 0,
 }: {
   section: OfficeSection;
   clients: ClientRef[];
   projects: ProjectRef[];
   rates: Record<string, number>;
+  openFormSignal?: number;
 }) {
   const [store, setStore] = useState<Store>(emptyStore);
   const [loaded, setLoaded] = useState(false);
@@ -226,6 +228,10 @@ export function LocalOfficeModule({
     setFormOpen(false);
     setSearch('');
   }, [section]);
+
+  useEffect(() => {
+    if (openFormSignal > 0) setFormOpen(true);
+  }, [openFormSignal]);
 
   function update<K extends keyof Store>(key: K, value: Store[K]) {
     setStore((current) => ({ ...current, [key]: value }));
