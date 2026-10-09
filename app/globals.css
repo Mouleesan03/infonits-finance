@@ -6382,3 +6382,59 @@ tfoot td {
     font-size: 11px;
   }
 }
+
+/* Keep new workspace panels full-width and easy to tap on phones. */
+@media (max-width: 580px) {
+  .local-action-center {
+    padding: 15px;
+  }
+  .local-action-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .local-action-list > button {
+    width: 100%;
+    min-height: 68px;
+  }
+  .local-quick-grid {
+    gap: 9px;
+    padding: 16px;
+  }
+  .local-quick-grid > button {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 5px;
+    min-height: 126px;
+    padding: 13px;
+  }
+  .local-quick-grid > button > span {
+    grid-row: auto;
+    width: 39px;
+    height: 39px;
+  }
+  .local-detail-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 16px 16px 10px;
+  }
+  .local-detail-list {
+    grid-template-columns: 1fr;
+    margin-inline: 16px;
+  }
+  .local-detail-list > div,
+  .local-detail-list > div:nth-child(odd),
+  .local-detail-list > div:nth-last-child(-n + 2) {
+    border-right: 0;
+    border-bottom: 1px solid #e8edf2;
+  }
+  .local-detail-list > div:last-child {
+    border-bottom: 0;
+  }
+  .local-detail-note {
+    margin-inline: 16px;
+  }
+  .local-project-detail > footer {
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  }
+  .local-project-detail > footer .button {
+    flex: 1;
+  }
+}
