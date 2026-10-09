@@ -26,6 +26,7 @@
   background: #fff;
   border-right: 1px solid #e4e9f0;
   box-shadow: 8px 0 30px rgba(32, 50, 79, 0.04);
+  overflow-y: auto;
 }
 .local-brand {
   display: flex;
@@ -61,6 +62,14 @@
   gap: 6px;
   margin-top: 15px;
 }
+.local-nav-label {
+  margin: 14px 12px 2px;
+  color: #9aa7b7;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
 .local-nav button {
   display: grid;
   grid-template-columns: 22px 1fr auto;
@@ -93,12 +102,527 @@
 .local-sidebar-note {
   display: flex;
   gap: 10px;
-  margin-top: auto;
+  margin-top: 22px;
   padding: 13px;
   border: 1px solid #e5eaf0;
   border-radius: 10px;
   background: #f8fafc;
   color: #607086;
+}
+
+/* Compact office modules: all legacy workflows with one visual language. */
+.office-loading {
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  color: #6d7b8f;
+  font-size: 13px;
+}
+.office-titlebar .office-month,
+.office-month {
+  min-height: 40px;
+  padding: 0 11px;
+  border: 1px solid #dce4ed;
+  border-radius: 9px;
+  background: #fff;
+  color: #354760;
+  font: inherit;
+  font-size: 11px;
+}
+.office-due-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: #fff5d9;
+  color: #966500;
+  font-size: 10px;
+  font-weight: 800;
+}
+.office-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 17px;
+  padding: 18px;
+  border: 1px solid #dce5ee;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(32, 50, 79, 0.04);
+}
+.office-form label {
+  display: grid;
+  gap: 6px;
+}
+.office-form label.wide {
+  grid-column: span 2;
+}
+.office-form label > span {
+  color: #66768b;
+  font-size: 10px;
+  font-weight: 700;
+}
+.office-form input,
+.office-form select,
+.office-form textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid #dce3eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #25364c;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+.office-form textarea {
+  resize: vertical;
+}
+.office-form input:focus,
+.office-form select:focus,
+.office-form textarea:focus {
+  border-color: #4b8ed2;
+  box-shadow: 0 0 0 3px rgba(45, 124, 204, 0.1);
+}
+.office-form .button {
+  align-self: end;
+  min-height: 42px;
+}
+.office-panel,
+.office-calendar {
+  overflow: hidden;
+  border: 1px solid #e0e6ed;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 6px 20px rgba(32, 50, 79, 0.04);
+}
+.office-toolbar {
+  min-height: 63px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 14px;
+  border-bottom: 1px solid #e8edf2;
+  color: #728096;
+  font-size: 10px;
+  font-weight: 700;
+}
+.office-search {
+  width: min(360px, 65%);
+  min-height: 39px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  border: 1px solid #dfe6ee;
+  border-radius: 9px;
+  color: #8190a3;
+}
+.office-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  color: #263950;
+  font: inherit;
+  font-size: 11px;
+}
+.office-table-wrap {
+  overflow-x: auto;
+}
+.office-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.office-table th,
+.office-table td {
+  padding: 13px 15px;
+  border-bottom: 1px solid #edf0f4;
+  text-align: left;
+  vertical-align: middle;
+}
+.office-table th {
+  background: #f8fafc;
+  color: #7c899b;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.office-table td {
+  color: #536176;
+}
+.office-table td strong,
+.office-table td small {
+  display: block;
+}
+.office-table td strong {
+  color: #24364c;
+  font-size: 11px;
+}
+.office-table td small {
+  margin-top: 3px;
+  color: #95a0af;
+  font-size: 9px;
+}
+.office-table tbody tr:hover {
+  background: #fafcff;
+}
+.office-status,
+.office-status-button {
+  min-height: 29px;
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff3cf;
+  color: #8c6200;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+}
+.office-status.paid,
+.office-status.accepted,
+.office-status-button.paid,
+.office-status-button.active {
+  background: #e5f7ef;
+  color: #147555;
+}
+.office-status.overdue,
+.office-status.declined,
+.office-status-button.inactive {
+  background: #ffeded;
+  color: #bd3c3c;
+}
+.office-pill {
+  display: inline-flex;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #eef3f8;
+  color: #526981;
+  font-size: 9px;
+  font-weight: 800;
+}
+.office-pill.income {
+  background: #e5f7ef;
+  color: #147555;
+}
+.office-pill.expense {
+  background: #ffeded;
+  color: #bd3c3c;
+}
+.office-pill.saving,
+.office-pill.gold {
+  background: #eaf3ff;
+  color: #246bb1;
+}
+.office-pill.loan {
+  background: #fff1dc;
+  color: #a55d00;
+}
+.office-positive {
+  color: #12805e !important;
+}
+.office-negative {
+  color: #be4444 !important;
+}
+.office-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 17px;
+}
+.office-metric {
+  min-height: 90px;
+  padding: 17px;
+  border: 1px solid #e2e8ef;
+  border-top: 3px solid #7893ae;
+  border-radius: 11px;
+  background: #fff;
+}
+.office-metric.green {
+  border-top-color: #18a273;
+}
+.office-metric.red {
+  border-top-color: #e25454;
+}
+.office-metric.blue {
+  border-top-color: #397cd1;
+}
+.office-metric.amber {
+  border-top-color: #e6a01b;
+}
+.office-metric span,
+.office-metric strong {
+  display: block;
+}
+.office-metric span {
+  color: #758399;
+  font-size: 10px;
+  font-weight: 700;
+}
+.office-metric strong {
+  margin-top: 10px;
+  color: #263950;
+  font-size: 18px;
+}
+.office-empty {
+  min-height: 290px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  padding: 30px;
+  text-align: center;
+}
+.office-empty > span {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: #edf5fd;
+  color: #2d75bc;
+}
+.office-empty strong {
+  color: #2c3d54;
+  font-size: 14px;
+}
+.office-empty p {
+  color: #7b899c;
+  font-size: 10px;
+}
+.office-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 15px;
+}
+.office-person {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto 34px;
+  align-items: center;
+  gap: 11px;
+  padding: 15px;
+  border: 1px solid #e7ebf0;
+  border-radius: 10px;
+}
+.office-avatar {
+  width: 43px;
+  height: 43px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: #e9f3fd;
+  color: #246caf;
+  font-size: 10px;
+  font-weight: 800;
+}
+.office-person h3 {
+  color: #293a50;
+  font-size: 12px;
+}
+.office-person p {
+  margin-top: 3px;
+  color: #6f7c8e;
+  font-size: 10px;
+}
+.office-person small {
+  display: block;
+  margin-top: 5px;
+  color: #909bad;
+  font-size: 9px;
+}
+.office-number {
+  width: 68px;
+  min-height: 33px;
+  padding: 5px 8px;
+  border: 1px solid #dce4ec;
+  border-radius: 7px;
+}
+.office-progress {
+  width: 130px;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9eef3;
+}
+.office-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #1da879;
+}
+.office-link {
+  color: #1769d9;
+  font-weight: 700;
+}
+.office-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.office-row-actions > button:not(.local-delete) {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #eef5fc;
+  color: #3276b8;
+}
+.office-security-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 15px 15px;
+  padding: 11px 13px;
+  border-radius: 9px;
+  background: #eef7f3;
+  color: #267058;
+  font-size: 10px;
+}
+.office-calendar {
+  display: grid;
+  gap: 0;
+}
+.office-calendar > article {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 15px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #edf0f3;
+}
+.office-calendar time {
+  width: 55px;
+  height: 55px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  border-radius: 12px;
+  background: #eef5fc;
+  color: #246aac;
+}
+.office-calendar time strong {
+  font-size: 18px;
+  line-height: 1;
+}
+.office-calendar time span {
+  margin-top: 3px;
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.office-calendar h3 {
+  margin-top: 5px;
+  color: #263950;
+  font-size: 12px;
+}
+.office-calendar p {
+  margin-top: 3px;
+  color: #8c98a8;
+  font-size: 9px;
+}
+.office-report-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.office-report-card {
+  padding: 19px;
+  border: 1px solid #e1e7ee;
+  border-radius: 12px;
+  background: #fff;
+}
+.office-report-card h2 {
+  margin-bottom: 13px;
+  color: #25364c;
+  font-size: 13px;
+}
+.office-report-card div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid #edf0f3;
+}
+.office-report-card span {
+  color: #738197;
+  font-size: 10px;
+}
+.office-report-card strong {
+  color: #293b52;
+  font-size: 10px;
+  text-align: right;
+}
+
+@media (max-width: 1050px) {
+  .office-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .office-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .office-report-grid {
+    grid-template-columns: 1fr;
+  }
+  .office-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 580px) {
+  .office-titlebar .local-actions {
+    flex-wrap: wrap;
+  }
+  .office-titlebar .office-month,
+  .office-titlebar .office-due-chip {
+    flex: 1 1 130px;
+  }
+  .office-form {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+  .office-form label.wide {
+    grid-column: 1;
+  }
+  .office-form .button {
+    width: 100%;
+  }
+  .office-metrics {
+    gap: 8px;
+  }
+  .office-metric {
+    min-height: 80px;
+    padding: 13px;
+  }
+  .office-metric strong {
+    font-size: 14px;
+  }
+  .office-card-grid {
+    padding: 10px;
+  }
+  .office-person {
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    padding: 12px;
+  }
+  .office-person > .local-delete {
+    grid-column: 3;
+  }
+  .office-calendar > article {
+    grid-template-columns: 55px minmax(0, 1fr) 34px;
+    padding: 12px;
+    gap: 10px;
+  }
+  .office-calendar time {
+    width: 50px;
+    height: 50px;
+  }
+  .office-search {
+    width: 100%;
+  }
 }
 .local-sidebar-note strong,
 .local-sidebar-note small {

@@ -7,23 +7,32 @@ import {
   ArrowUpRight,
   BarChart3,
   BriefcaseBusiness,
-  Building2,
+  CalendarDays,
+  CircleDollarSign,
+  FileCheck2,
+  FileText,
+  Globe2,
   Download,
   LayoutDashboard,
   LockKeyhole,
   Menu,
+  MessagesSquare,
+  PieChart,
   Plus,
   ReceiptText,
   RefreshCw,
+  ShieldCheck,
   Trash2,
   TrendingUp,
   UserPlus,
   Users,
+  UsersRound,
   WalletCards,
   X,
 } from 'lucide-react';
+import { LocalOfficeModule, type OfficeSection } from './local-office-modules';
 
-type Section = 'dashboard' | 'projects' | 'clients' | 'expenses';
+type Section = 'dashboard' | 'projects' | 'clients' | 'expenses' | OfficeSection;
 type LocalClient = { id: string; name: string; company: string; email: string; phone: string };
 type LocalRow = {
   id: string;
@@ -344,6 +353,7 @@ export function LocalFinance() {
         </div>
         <div className="local-mode-chip">Browser workspace</div>
         <nav className="local-nav" aria-label="Workspace navigation">
+          <span className="local-nav-label">Overview</span>
           <button
             className={section === 'dashboard' ? 'active' : ''}
             onClick={() => changeSection('dashboard')}
@@ -352,13 +362,13 @@ export function LocalFinance() {
             <span>Dashboard</span>
           </button>
           <button
-            className={section === 'projects' ? 'active' : ''}
-            onClick={() => changeSection('projects')}
+            className={section === 'calendar' ? 'active' : ''}
+            onClick={() => changeSection('calendar')}
           >
-            <BriefcaseBusiness size={19} />
-            <span>Projects</span>
-            <b>{rows.length}</b>
+            <CalendarDays size={19} />
+            <span>Calendar</span>
           </button>
+          <span className="local-nav-label">Sales</span>
           <button
             className={section === 'clients' ? 'active' : ''}
             onClick={() => changeSection('clients')}
@@ -368,12 +378,86 @@ export function LocalFinance() {
             <b>{clients.length}</b>
           </button>
           <button
+            className={section === 'invoices' ? 'active' : ''}
+            onClick={() => changeSection('invoices')}
+          >
+            <FileText size={19} />
+            <span>Invoices</span>
+          </button>
+          <button
+            className={section === 'quotations' ? 'active' : ''}
+            onClick={() => changeSection('quotations')}
+          >
+            <FileCheck2 size={19} />
+            <span>Quotations</span>
+          </button>
+          <span className="local-nav-label">Work</span>
+          <button
+            className={section === 'projects' ? 'active' : ''}
+            onClick={() => changeSection('projects')}
+          >
+            <BriefcaseBusiness size={19} />
+            <span>Projects</span>
+            <b>{rows.length}</b>
+          </button>
+          <button
+            className={section === 'team' ? 'active' : ''}
+            onClick={() => changeSection('team')}
+          >
+            <UsersRound size={19} />
+            <span>Team</span>
+          </button>
+          <button
+            className={section === 'posts' ? 'active' : ''}
+            onClick={() => changeSection('posts')}
+          >
+            <MessagesSquare size={19} />
+            <span>Post tracker</span>
+          </button>
+          <span className="local-nav-label">Finance</span>
+          <button
+            className={section === 'payments' ? 'active' : ''}
+            onClick={() => changeSection('payments')}
+          >
+            <CircleDollarSign size={19} />
+            <span>Payments</span>
+          </button>
+          <button
             className={section === 'expenses' ? 'active' : ''}
             onClick={() => changeSection('expenses')}
           >
             <ReceiptText size={19} />
             <span>Expenses</span>
             <b>{expenses.length}</b>
+          </button>
+          <button
+            className={section === 'reports' ? 'active' : ''}
+            onClick={() => changeSection('reports')}
+          >
+            <PieChart size={19} />
+            <span>Reports</span>
+          </button>
+          <span className="local-nav-label">Admin</span>
+          <button
+            className={section === 'renewals' ? 'active' : ''}
+            onClick={() => changeSection('renewals')}
+          >
+            <Globe2 size={19} />
+            <span>Renewals</span>
+          </button>
+          <button
+            className={section === 'documents' ? 'active' : ''}
+            onClick={() => changeSection('documents')}
+          >
+            <FileText size={19} />
+            <span>Documents</span>
+          </button>
+          <button
+            className={section === 'users' ? 'active' : ''}
+            onClick={() => changeSection('users')}
+          >
+            <ShieldCheck size={19} />
+            <span>Users & roles</span>
           </button>
         </nav>
         <div className="local-sidebar-note">
@@ -537,6 +621,15 @@ export function LocalFinance() {
                 }
               />
             </>
+          )}
+
+          {!['dashboard', 'projects', 'clients', 'expenses'].includes(section) && (
+            <LocalOfficeModule
+              section={section as OfficeSection}
+              clients={clients}
+              projects={rows}
+              rates={fxRates}
+            />
           )}
         </main>
       </div>
