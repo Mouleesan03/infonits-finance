@@ -5956,11 +5956,15 @@ tfoot td {
   font-size: 10px;
 }
 .local-activity-list > button {
-  min-height: 66px;
+  min-height: 74px;
 }
 .local-activity-list strong {
   font-size: 13px;
   line-height: 1.4;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .local-activity-list small,
 .local-activity-list b {
