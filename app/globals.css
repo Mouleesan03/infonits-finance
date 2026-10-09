@@ -8,6 +8,51 @@
   --color-border: #e7ebf1;
   --radius-lg: 12px;
 }
+
+/* Temporary browser-only sheet used while account recovery is unavailable. */
+.local-page { min-height: 100vh; background: #f6f8fb; color: #172033; padding: 24px; }
+.local-header, .local-titlebar { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.local-header { max-width: 1500px; margin: 0 auto 24px; }
+.local-header > div:first-child { display: flex; align-items: center; gap: 10px; font-weight: 800; color: #0d4070; }
+.local-actions { display: flex; gap: 10px; }
+.local-titlebar { max-width: 1500px; margin: 0 auto 14px; }
+.local-titlebar h1 { margin: 0 0 4px; font-size: 30px; }
+.local-titlebar p, .local-footnote { margin: 0; color: #64748b; font-size: 14px; }
+.local-titlebar input { min-height: 42px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; font: inherit; }
+.local-sheet-wrap { max-width: 1500px; margin: 0 auto; overflow: auto; border: 1px solid #9aa8ba; background: white; box-shadow: 0 8px 30px rgba(31, 50, 81, .07); }
+.local-sheet { width: 100%; min-width: 1180px; border-collapse: collapse; font-size: 15px; }
+.local-sheet th, .local-sheet td { border: 1px solid #aeb8c5; padding: 0; height: 46px; }
+.local-sheet thead tr:last-child th { padding: 11px 9px; background: #dce9f2; color: #111827; font-size: 14px; text-align: center; }
+.local-sheet thead tr:last-child th:nth-child(2) { background: #f5dadd; }
+.local-sheet thead tr:last-child th:nth-child(3) { background: #d9e8ee; }
+.local-sheet thead tr:last-child th:nth-child(4) { background: #fff1c2; }
+.local-sheet thead tr:last-child th:nth-child(5) { background: #cfe5bf; }
+.local-sheet thead tr:last-child th:nth-child(6) { background: #ead6df; }
+.local-sheet thead tr:last-child th:nth-child(7) { background: #dce6f8; }
+.local-sheet thead tr:last-child th:nth-child(8) { background: #a84879; color: white; }
+.local-month-row th { height: 56px; background: #103f6c; color: white; font-size: 23px; letter-spacing: .01em; }
+.local-sheet input, .local-sheet select { width: 100%; height: 45px; border: 0; outline: 0; padding: 8px 10px; background: transparent; color: #111827; font: 600 14px/1.2 inherit; }
+.local-sheet input:focus, .local-sheet select:focus { box-shadow: inset 0 0 0 2px #2c7bc7; background: #f8fbff; }
+.local-sheet td:first-child { min-width: 230px; }
+.local-sheet td:nth-child(3) { min-width: 180px; background: #f3f8fa; }
+.local-money-cell { min-width: 145px; background: #fff7f0; }
+.local-money-cell input { text-align: right; }
+.local-mine { min-width: 150px; padding: 0 10px !important; text-align: right; font-weight: 800; background: #fff4c9; white-space: nowrap; }
+.local-delete { display: grid; place-items: center; width: 42px; height: 44px; border: 0; background: transparent; color: #94a3b8; cursor: pointer; }
+.local-delete:hover { color: #dc2626; background: #fff1f2; }
+.local-total th, .local-total td { padding: 10px !important; background: #d8e7f5; font-weight: 800; text-align: right; white-space: nowrap; }
+.local-total th { text-align: left; text-transform: uppercase; font-size: 20px; }
+.local-total td:nth-child(8) { background: #fff0b6; font-size: 18px; }
+.local-add { display: flex; align-items: center; gap: 7px; max-width: 1500px; margin: 14px auto 0; border: 1px solid #b8c4d1; background: white; border-radius: 8px; padding: 10px 15px; font: 700 14px/1 inherit; color: #174c7d; cursor: pointer; }
+.local-add:hover { background: #edf5fb; }
+.local-footnote { max-width: 1500px; margin: 16px auto 0; }
+.local-loading { min-height: 100vh; display: grid; place-items: center; color: #52627a; }
+@media (max-width: 700px) {
+  .local-page { padding: 14px; }
+  .local-header, .local-titlebar { align-items: flex-start; flex-direction: column; }
+  .local-actions { width: 100%; }
+  .local-actions .button { flex: 1; }
+}
 :root {
   --blue: #1769ff;
   --navy: #073f69;

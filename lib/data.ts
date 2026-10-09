@@ -23,7 +23,7 @@ export async function getWorkspace(): Promise<WorkspaceData> {
     const code = (error as Error).message;
     if (code === 'MFA_REQUIRED') redirect('/login?step=mfa');
     if (code === 'FORBIDDEN') redirect('/login?error=membership');
-    redirect('/login');
+    redirect('/local');
   }
   const { db, user, profile } = auth;
   try {
