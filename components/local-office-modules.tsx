@@ -6,6 +6,8 @@ import {
   Check,
   CircleDollarSign,
   Download,
+  Eye,
+  FileDown,
   FileText,
   Globe2,
   Plus,
@@ -15,6 +17,7 @@ import {
   Trash2,
   UserRound,
   UsersRound,
+  X,
 } from 'lucide-react';
 
 export type OfficeSection =
@@ -55,6 +58,10 @@ type SalesDocument = {
   currency: string;
   exchangeRate: number;
   status: string;
+  taxRate?: number;
+  discount?: number;
+  advance?: number;
+  notes?: string;
 };
 type Payment = {
   id: string;
@@ -153,6 +160,14 @@ const money = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value);
 const lkr = (amount: number, rate: number) => amount * rate;
+const documentTotal = (item: SalesDocument) =>
+  Math.max(
+    0,
+    item.amount +
+      item.amount * ((item.taxRate ?? 0) / 100) -
+      (item.discount ?? 0) -
+      (item.advance ?? 0),
+  );
 const nextNumber = (kind: DocumentKind, documents: SalesDocument[]) => {
   const sequence = documents
     .filter((item) => item.kind === kind)
@@ -201,7 +216,10 @@ export function LocalOfficeModule({
   }, []);
 
   useEffect(() => {
-    if (loaded) localStorage.setItem(storeKey, JSON.stringify(store));
+    if (loaded) {
+      localStorage.setItem(storeKey, JSON.stringify(store));
+      window.dispatchEvent(new Event('infonits:local-change'));
+    }
   }, [loaded, store]);
 
   useEffect(() => {
@@ -417,8 +435,28 @@ function SalesDocuments({
     amount: '',
     currency: 'LKR',
     status: kind === 'Invoice' ? 'Pending' : 'Draft',
+    taxRate: '0',
+    discount: '0',
+    advance: '0',
+    notes: 'Payment is due within 10 days of the invoice date.',
   });
+  const [preview, setPreview] = useState<SalesDocument | null>(null);
   const names = new Map(clients.map((client) => [client.id, client.name]));
+  const projectNames = new Map(projects.map((project) => [project.id, project.project]));
+
+  useEffect(() => {
+    if (kind !== 'Invoice') return;
+    try {
+      const saved = localStorage.getItem('infonits-invoice-draft');
+      if (!saved) return;
+      const seed = JSON.parse(saved) as Partial<typeof draft>;
+      setDraft((current) => ({ ...current, ...seed, status: 'Pending' }));
+      localStorage.removeItem('infonits-invoice-draft');
+      setFormOpen(true);
+    } catch {
+      localStorage.removeItem('infonits-invoice-draft');
+    }
+  }, [kind, setFormOpen]);
   const visible = items.filter((item) =>
     `${item.number} ${names.get(item.clientId) ?? ''}`.toLowerCase().includes(search.toLowerCase()),
   );
@@ -439,6 +477,10 @@ function SalesDocuments({
         currency: draft.currency,
         exchangeRate: draft.currency === 'LKR' ? 1 : (rates[draft.currency] ?? 1),
         status: draft.status,
+        taxRate: Number(draft.taxRate) || 0,
+        discount: Number(draft.discount) || 0,
+        advance: Number(draft.advance) || 0,
+        notes: draft.notes.trim(),
       },
       ...items,
     ]);
@@ -450,6 +492,10 @@ function SalesDocuments({
       amount: '',
       currency: 'LKR',
       status: kind === 'Invoice' ? 'Pending' : 'Draft',
+      taxRate: '0',
+      discount: '0',
+      advance: '0',
+      notes: 'Payment is due within 10 days of the invoice date.',
     });
     setFormOpen(false);
   }
@@ -531,6 +577,47 @@ function SalesDocuments({
               onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
             />
           </label>
+          {kind === 'Invoice' && (
+            <>
+              <label>
+                <span>Tax %</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={draft.taxRate}
+                  onChange={(e) => setDraft({ ...draft, taxRate: e.target.value })}
+                />
+              </label>
+              <label>
+                <span>Discount</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={draft.discount}
+                  onChange={(e) => setDraft({ ...draft, discount: e.target.value })}
+                />
+              </label>
+              <label>
+                <span>Advance paid</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={draft.advance}
+                  onChange={(e) => setDraft({ ...draft, advance: e.target.value })}
+                />
+              </label>
+              <label className="wide">
+                <span>Notes</span>
+                <input
+                  value={draft.notes}
+                  onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+                />
+              </label>
+            </>
+          )}
           <button className="button button-primary" type="submit">
             <Check size={16} />
             Save {kind.toLowerCase()}
@@ -563,7 +650,7 @@ function SalesDocuments({
                   <th>Due</th>
                   <th>Status</th>
                   <th>Total</th>
-                  <th />
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -597,11 +684,33 @@ function SalesDocuments({
                     </td>
                     <td>
                       <strong>
-                        {item.currency} {item.amount.toLocaleString()}
+                        {item.currency} {documentTotal(item).toLocaleString()}
                       </strong>
-                      <small>{money(lkr(item.amount, item.exchangeRate))}</small>
+                      <small>{money(lkr(documentTotal(item), item.exchangeRate))}</small>
                     </td>
-                    <td>
+                    <td className="office-row-actions">
+                      <button
+                        aria-label={`Preview ${item.number}`}
+                        title="Preview"
+                        onClick={() => setPreview(item)}
+                      >
+                        <Eye size={15} />
+                      </button>
+                      {kind === 'Invoice' && (
+                        <button
+                          aria-label={`Download ${item.number} PDF`}
+                          title="Download PDF"
+                          onClick={() =>
+                            void downloadInvoicePdf(
+                              item,
+                              names.get(item.clientId) ?? 'Client',
+                              projectNames.get(item.projectId) ?? 'Professional services',
+                            )
+                          }
+                        >
+                          <FileDown size={15} />
+                        </button>
+                      )}
                       <button
                         className="local-delete"
                         aria-label={`Delete ${item.number}`}
@@ -617,7 +726,190 @@ function SalesDocuments({
           </div>
         )}
       </section>
+      {preview && (
+        <InvoicePreview
+          item={preview}
+          client={names.get(preview.clientId) ?? 'Client'}
+          project={projectNames.get(preview.projectId) ?? 'Professional services'}
+          onClose={() => setPreview(null)}
+        />
+      )}
     </>
+  );
+}
+
+async function downloadInvoicePdf(item: SalesDocument, client: string, project: string) {
+  const { jsPDF } = await import('jspdf');
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+  const subtotal = item.amount;
+  const tax = subtotal * ((item.taxRate ?? 0) / 100);
+  const total = documentTotal(item);
+  pdf.setFillColor(13, 64, 112);
+  pdf.rect(0, 0, 210, 38, 'F');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(22);
+  pdf.text('INFONITS', 18, 20);
+  pdf.setFontSize(10);
+  pdf.text('INVOICE', 166, 20);
+  pdf.setFontSize(8);
+  pdf.text('infonits Pvt Ltd.', 18, 28);
+  pdf.text('Jaffna, Sri Lanka | hello@infonits.com | +94 77 607 9157', 18, 33);
+  pdf.setTextColor(35, 51, 73);
+  pdf.setFontSize(10);
+  pdf.text(`Invoice: ${item.number}`, 18, 52);
+  pdf.text(`Issue date: ${item.issueDate}`, 18, 59);
+  pdf.text(`Due date: ${item.dueDate}`, 18, 66);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('BILL TO', 130, 52);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(client, 130, 59);
+  pdf.setDrawColor(220, 227, 235);
+  pdf.line(18, 80, 192, 80);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Description', 18, 91);
+  pdf.text('Amount', 165, 91);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(project, 18, 103);
+  pdf.text(`${item.currency} ${subtotal.toLocaleString()}`, 165, 103);
+  pdf.line(18, 112, 192, 112);
+  pdf.setFontSize(9);
+  pdf.text('Subtotal', 130, 122);
+  pdf.text(`${item.currency} ${subtotal.toLocaleString()}`, 165, 122);
+  pdf.text(`Tax (${item.taxRate ?? 0}%)`, 130, 129);
+  pdf.text(`${item.currency} ${tax.toLocaleString()}`, 165, 129);
+  pdf.text('Discount', 130, 136);
+  pdf.text(`${item.currency} ${(item.discount ?? 0).toLocaleString()}`, 165, 136);
+  pdf.text('Advance paid', 130, 143);
+  pdf.text(`${item.currency} ${(item.advance ?? 0).toLocaleString()}`, 165, 143);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(13);
+  pdf.text('Grand total', 130, 155);
+  pdf.text(`${item.currency} ${total.toLocaleString()}`, 165, 155);
+  pdf.setFontSize(9);
+  pdf.setTextColor(100, 114, 133);
+  pdf.text(`LKR value at recorded rate: ${money(lkr(total, item.exchangeRate))}`, 18, 169);
+  pdf.text(item.notes || 'Payment is due within 10 days of the invoice date.', 18, 183, {
+    maxWidth: 170,
+  });
+  pdf.text('Thank you for working with Infonits.', 18, 275);
+  pdf.save(`${item.number}.pdf`);
+}
+
+function InvoicePreview({
+  item,
+  client,
+  project,
+  onClose,
+}: {
+  item: SalesDocument;
+  client: string;
+  project: string;
+  onClose: () => void;
+}) {
+  const subtotal = item.amount;
+  const tax = subtotal * ((item.taxRate ?? 0) / 100);
+  const total = documentTotal(item);
+  return (
+    <div className="local-modal-layer" role="presentation" onMouseDown={onClose}>
+      <section
+        className="local-modal invoice-preview-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="invoice-preview-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <span className="local-modal-icon">
+              <FileText size={19} />
+            </span>
+            <div>
+              <h2 id="invoice-preview-title">Invoice preview</h2>
+              <p>Review the document before downloading.</p>
+            </div>
+          </div>
+          <button aria-label="Close invoice preview" onClick={onClose}>
+            <X size={19} />
+          </button>
+        </header>
+        <div className="invoice-paper">
+          <div className="invoice-brand">
+            <div>
+              <strong>INFONITS</strong>
+              <small>
+                infonits Pvt Ltd. · Jaffna, Sri Lanka
+                <br />
+                hello@infonits.com · +94 77 607 9157
+              </small>
+            </div>
+            <span>INVOICE</span>
+          </div>
+          <div className="invoice-meta">
+            <div>
+              <span>Invoice</span>
+              <strong>{item.number}</strong>
+              <span>Issue date</span>
+              <strong>{item.issueDate}</strong>
+              <span>Due date</span>
+              <strong>{item.dueDate}</strong>
+            </div>
+            <div>
+              <span>Bill to</span>
+              <strong>{client}</strong>
+            </div>
+          </div>
+          <div className="invoice-line">
+            <strong>Description</strong>
+            <strong>Amount</strong>
+            <span>{project}</span>
+            <span>
+              {item.currency} {subtotal.toLocaleString()}
+            </span>
+          </div>
+          <div className="invoice-notes">
+            <strong>Notes</strong>
+            <p>{item.notes || 'Payment is due within 10 days of the invoice date.'}</p>
+          </div>
+          <div className="invoice-total">
+            <span>Subtotal</span>
+            <b>
+              {item.currency} {subtotal.toLocaleString()}
+            </b>
+            <span>Tax ({item.taxRate ?? 0}%)</span>
+            <b>
+              {item.currency} {tax.toLocaleString()}
+            </b>
+            <span>Discount</span>
+            <b>
+              {item.currency} {(item.discount ?? 0).toLocaleString()}
+            </b>
+            <span>Advance paid</span>
+            <b>
+              {item.currency} {(item.advance ?? 0).toLocaleString()}
+            </b>
+            <span className="grand">Grand total</span>
+            <strong>
+              {item.currency} {total.toLocaleString()}
+            </strong>
+            <small>{money(lkr(total, item.exchangeRate))} at recorded exchange rate</small>
+          </div>
+          <p>Thank you for working with Infonits.</p>
+        </div>
+        <footer className="invoice-preview-actions">
+          <button className="button button-outline" onClick={onClose}>
+            Close
+          </button>
+          <button
+            className="button button-primary"
+            onClick={() => void downloadInvoicePdf(item, client, project)}
+          >
+            <FileDown size={16} />
+            Download PDF
+          </button>
+        </footer>
+      </section>
+    </div>
   );
 }
 

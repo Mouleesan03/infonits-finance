@@ -10,6 +10,7 @@ import {
   CalendarDays,
   CircleDollarSign,
   FileCheck2,
+  FilePlus2,
   FileText,
   Globe2,
   Download,
@@ -31,6 +32,7 @@ import {
   X,
 } from 'lucide-react';
 import { LocalOfficeModule, type OfficeSection } from './local-office-modules';
+import { LocalCloudSync } from './local-cloud-sync';
 
 type Section = 'dashboard' | 'projects' | 'clients' | 'expenses' | OfficeSection;
 type LocalClient = { id: string; name: string; company: string; email: string; phone: string };
@@ -182,6 +184,7 @@ export function LocalFinance() {
         storageKey,
         JSON.stringify({ month, rows, clients, expenses, fxRates, fxDate }),
       );
+    window.dispatchEvent(new Event('infonits:local-change'));
   }, [clients, expenses, fxDate, fxRates, loaded, month, rows]);
 
   const totals = useMemo(() => {
@@ -292,6 +295,20 @@ export function LocalFinance() {
     setMenuOpen(false);
   }
 
+  function createInvoice(row: LocalRow) {
+    localStorage.setItem(
+      'infonits-invoice-draft',
+      JSON.stringify({
+        clientId: row.clientId,
+        projectId: row.id,
+        amount: String(row.value),
+        currency: row.currency,
+      }),
+    );
+    setSection('invoices');
+    setMenuOpen(false);
+  }
+
   function exportCsv() {
     const clientNames = new Map(clients.map((client) => [client.id, client.name]));
     const csv = [
@@ -346,7 +363,6 @@ export function LocalFinance() {
       <aside className={`local-sidebar ${menuOpen ? 'is-open' : ''}`}>
         <div className="local-brand">
           <img src="/infonits-logo.png" alt="infonits" width={154} height={36} />
-          <span>finance</span>
           <button aria-label="Close menu" onClick={() => setMenuOpen(false)}>
             <X size={20} />
           </button>
@@ -463,8 +479,8 @@ export function LocalFinance() {
         <div className="local-sidebar-note">
           <LockKeyhole size={17} />
           <div>
-            <strong>Saved on this device</strong>
-            <small>Export CSV regularly for backup.</small>
+            <strong>Automatic backup</strong>
+            <small>Use Cloud sync above to share records across devices.</small>
           </div>
         </div>
         <Link href="/login" className="local-login-link">
@@ -482,9 +498,7 @@ export function LocalFinance() {
             <Menu size={21} />
           </button>
           <span>Infonits Finance</span>
-          <div>
-            <span className="local-save-dot" /> Autosaved
-          </div>
+          <LocalCloudSync />
         </header>
 
         <main className="local-main">
@@ -521,13 +535,45 @@ export function LocalFinance() {
                 </button>
               </PageHeading>
               {projectFormOpen && (
-                <ProjectForm
-                  draft={projectDraft}
-                  setDraft={setProjectDraft}
-                  clients={clients}
-                  rates={fxRates}
-                  onSubmit={addProject}
-                />
+                <div
+                  className="local-modal-layer"
+                  role="presentation"
+                  onMouseDown={() => setProjectFormOpen(false)}
+                >
+                  <section
+                    className="local-modal local-project-modal"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="new-project-title"
+                    onMouseDown={(event) => event.stopPropagation()}
+                  >
+                    <header>
+                      <div>
+                        <span className="local-modal-icon">
+                          <BriefcaseBusiness size={19} />
+                        </span>
+                        <div>
+                          <h2 id="new-project-title">Add project</h2>
+                          <p>Keep project value, client and currency in one clear record.</p>
+                        </div>
+                      </div>
+                      <button
+                        aria-label="Close project form"
+                        onClick={() => setProjectFormOpen(false)}
+                      >
+                        <X size={19} />
+                      </button>
+                    </header>
+                    <ProjectForm
+                      draft={projectDraft}
+                      setDraft={setProjectDraft}
+                      clients={clients}
+                      rates={fxRates}
+                      onSubmit={addProject}
+                      onCancel={() => setProjectFormOpen(false)}
+                    />
+                  </section>
+                </div>
               )}
               <section className="local-sheet-card">
                 <div className="local-sheet-toolbar">
@@ -552,6 +598,7 @@ export function LocalFinance() {
                   clients={clients}
                   rates={fxRates}
                   onUpdate={updateProject}
+                  onInvoice={createInvoice}
                   onDelete={(id) => setRows((current) => current.filter((row) => row.id !== id))}
                 />
               </section>
@@ -799,23 +846,18 @@ function ProjectForm({
   clients,
   rates,
   onSubmit,
+  onCancel,
 }: {
   draft: typeof emptyProject;
   setDraft: React.Dispatch<React.SetStateAction<typeof emptyProject>>;
   clients: LocalClient[];
   rates: Record<string, number>;
   onSubmit: (event: React.FormEvent) => void;
+  onCancel: () => void;
 }) {
   const rate = draft.currency === 'LKR' ? 1 : (rates[draft.currency] ?? 1);
   return (
-    <form className="local-entry-form" onSubmit={onSubmit}>
-      <div className="local-form-title">
-        <Plus size={18} />
-        <div>
-          <strong>New project</strong>
-          <small>Required fields are marked *</small>
-        </div>
-      </div>
+    <form className="local-entry-form modal-project-form" onSubmit={onSubmit}>
       <label>
         <span>Project name *</span>
         <input
@@ -878,9 +920,14 @@ function ProjectForm({
         </strong>
         <span>{draft.value ? money(Number(draft.value) * rate) : money(0)}</span>
       </div>
-      <button className="button button-primary" type="submit">
-        <Plus size={16} /> Save project
-      </button>
+      <div className="local-modal-actions">
+        <button className="button button-outline" type="button" onClick={onCancel}>
+          Cancel
+        </button>
+        <button className="button button-primary" type="submit">
+          <Plus size={16} /> Add project
+        </button>
+      </div>
     </form>
   );
 }
@@ -890,12 +937,14 @@ function ProjectTable({
   clients,
   rates,
   onUpdate,
+  onInvoice,
   onDelete,
 }: {
   rows: LocalRow[];
   clients: LocalClient[];
   rates: Record<string, number>;
   onUpdate: (id: string, patch: Partial<LocalRow>) => void;
+  onInvoice: (row: LocalRow) => void;
   onDelete: (id: string) => void;
 }) {
   const totals = rows.reduce(
@@ -1037,6 +1086,14 @@ function ProjectTable({
                 </td>
                 <td className="local-mine">{money(mine)}</td>
                 <td>
+                  <button
+                    className="local-row-action"
+                    aria-label={`Create invoice for ${row.project}`}
+                    title="Create invoice"
+                    onClick={() => onInvoice(row)}
+                  >
+                    <FilePlus2 size={15} />
+                  </button>
                   <button
                     className="local-delete"
                     aria-label={`Delete ${row.project}`}

@@ -4,7 +4,7 @@ A private finance workspace built with Next.js App Router, TypeScript, Tailwind 
 
 ## Current state
 
-The full application source, SQL migration, RLS policies, audit triggers, financial tests, PostgreSQL integration tests and Vercel configuration are included. Supabase and Vercel are deliberately **not connected or deployed**, as requested. With environment variables absent, the app provides an explicitly labeled empty setup workspace. There are no demo customers, fabricated balances, localStorage financial records, or mock persistence fallbacks. Saving/importing is disabled until configured.
+The app is deployed on Vercel and connected to Supabase. It has two workspaces: the strict finance ledger with organization RLS/MFA, and `/local`, an easy management workspace for projects, clients, invoices, quotations, payments, team, posts, renewals, documents and reports. The management workspace saves instantly in the browser and can sync its encrypted-session user snapshot through Supabase after email-link sign-in.
 
 ## Run locally
 
@@ -30,7 +30,7 @@ npm start
 ## Connect Supabase
 
 1. Create a Supabase project (PostgreSQL 15 or later). Use separate projects for production and development/preview.
-2. Run `supabase/migrations/202610080001_finance.sql` once in the Supabase SQL Editor on a fresh project. Alternatively, use the Supabase CLI: `supabase login`, `supabase link --project-ref YOUR_PROJECT_REF`, then `supabase db push`. Do not reset an existing database. Review the migration before applying it to any existing schema.
+2. Run the files in `supabase/migrations/` in filename order. The first creates the strict finance ledger; `202610090001_local_workspace_sync.sql` adds per-user cross-device sync for `/local`. Alternatively, use the Supabase CLI: `supabase login`, `supabase link --project-ref YOUR_PROJECT_REF`, then `supabase db push`. Do not reset an existing database. Review migrations before applying them to an existing schema.
 3. Copy **Project URL** and the public **anon** key from Project Settings → API into `.env.local`:
 
    ```dotenv
@@ -108,9 +108,7 @@ Never map an advance or the legacy “For Me” value into profit. The screensho
 
 ## Vercel deployment
 
-`vercel.json` configures Next.js with Singapore (`sin1`) as the preferred function region. Connect this directory to a new Vercel project, install from the committed npm lockfile, and use Node 24. Add both Supabase public environment variables to the intended environment, update Supabase's Site URL/redirect allowlist, and deploy. Preview deployments must use a separate nonproduction Supabase project. Run build and tests before promoting production.
-
-This development session did not create a Vercel project, provision a Supabase instance, send invitations, or deploy the app.
+`vercel.json` configures Next.js with Singapore (`sin1`) as the preferred function region. The production deployment is [infonits-finance.vercel.app](https://infonits-finance.vercel.app/). Keep both Supabase public environment variables in Vercel, update Supabase's Site URL/redirect allowlist when domains change, and use a separate nonproduction Supabase project for preview deployments.
 
 ## Security and operations
 
@@ -119,7 +117,7 @@ This development session did not create a Vercel project, provision a Supabase i
 - Default table privileges are revoked before exact SELECT/INSERT/UPDATE/DELETE grants. Authenticated users cannot truncate tables, write profiles, or alter/delete audit rows.
 - API routes whitelist tables and Zod-validate fields; generated balances are never accepted from the browser. Same-origin checks and Next/Supabase cookie handling protect browser mutations. RLS remains the authorization boundary for direct database API requests.
 - Edits/deletions compare `updated_at` to detect stale versions. Payment/allocation triggers lock the obligation and enforce allocation limits; mutations and audit rows commit together. Database constraints also validate direct API requests.
-- No financial data is stored in localStorage or seeded into the live application. Financial responses use private/no-store headers. Poppins and the logo are served locally.
+- The strict finance ledger never falls back to localStorage. The `/local` management workspace uses localStorage for instant offline use and synchronizes a per-user JSON snapshot to `local_workspaces` only after Supabase email-link sign-in. RLS limits each snapshot to its authenticated owner.
 - See [Backup and restore](docs/BACKUP_RESTORE.md) and [Verification](docs/VERIFICATION.md) before launch.
 
 ## Source map
@@ -131,4 +129,4 @@ This development session did not create a Vercel project, provision a Supabase i
 - `supabase/migrations/` — Schema, constraints, RLS, immutable audit history, exact summary view, transactional import.
 - `tests/` — Financial/CSV tests plus embedded PostgreSQL integration/RLS coverage. Test fixtures never reach the application database.
 
-Version 1 intentionally excludes invoices, quotations, payroll, tax reporting, subscriptions and automatic reminders.
+The management workspace includes invoices, quotations and renewal reminders. Payroll and statutory tax reporting remain outside the current scope.
