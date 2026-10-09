@@ -36,13 +36,24 @@ export function AuthForm({
   useEffect(() => {
     if (!configured) return;
     let active = true;
-    void browserClient()
-      .auth.getUser()
-      .then(({ data }) => {
-        if (active) setSessionReady(!!data.user);
-      });
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const accountSetupFromUrl = ['invite', 'recovery'].includes(params.get('type') ?? '');
+    const db = browserClient();
+    const finishAccountSetup = (hasUser: boolean) => {
+      if (!active) return;
+      setSessionReady(hasUser);
+      if (hasUser && accountSetupFromUrl) {
+        setStep('complete');
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    };
+    void db.auth.getUser().then(({ data }) => finishAccountSetup(!!data.user));
+    const {
+      data: { subscription },
+    } = db.auth.onAuthStateChange((_event, session) => finishAccountSetup(!!session?.user));
     return () => {
       active = false;
+      subscription.unsubscribe();
     };
   }, [configured]);
   async function prepareMfa() {
