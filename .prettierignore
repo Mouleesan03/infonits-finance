@@ -1,0 +1,7 @@
+node_modules
+.next
+.vercel
+package-lock.json
+public
+*.tsbuildinfo
+next-env.d.ts
