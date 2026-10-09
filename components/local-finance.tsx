@@ -480,12 +480,9 @@ export function LocalFinance() {
           <LockKeyhole size={17} />
           <div>
             <strong>Automatic backup</strong>
-            <small>Use Cloud sync above to share records across devices.</small>
+            <small>Connect once, then every change saves to Supabase.</small>
           </div>
         </div>
-        <Link href="/login" className="local-login-link">
-          <LockKeyhole size={17} /> Secure Supabase login
-        </Link>
       </aside>
 
       <div className="local-content">
