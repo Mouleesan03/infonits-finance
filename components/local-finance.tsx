@@ -1881,7 +1881,6 @@ function ClientList({
               <h2>{client.name}</h2>
               <p>{client.company || 'Independent client'}</p>
               <label className="local-client-country">
-                <span aria-hidden="true">{countryFlags[client.country] || '🌐'}</span>
                 <select
                   aria-label={`Country for ${client.name}`}
                   value={client.country}
