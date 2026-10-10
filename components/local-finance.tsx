@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowDownRight,
   ArrowUpRight,
-  BarChart3,
+  Bell,
+  Bot,
   BriefcaseBusiness,
   CalendarDays,
   CircleDollarSign,
@@ -37,8 +38,9 @@ import {
 } from 'lucide-react';
 import { LocalOfficeModule, type OfficeSection } from './local-office-modules';
 import { LocalCloudSync } from './local-cloud-sync';
+import { InfonitsAssistant, type AssistantAction } from './infonits-assistant';
 
-type Section = 'dashboard' | 'projects' | 'clients' | 'expenses' | OfficeSection;
+type Section = 'dashboard' | 'assistant' | 'projects' | 'clients' | 'expenses' | OfficeSection;
 type LocalClient = {
   id: string;
   name: string;
@@ -97,6 +99,8 @@ type OfficeOverview = {
   renewals: Array<{
     id: string;
     website: string;
+    username?: string;
+    websiteUrl?: string;
     domainDue: string;
     hostingDue: string;
   }>;
@@ -130,6 +134,11 @@ const countryFlags: Record<string, string> = {
   Other: '🌐',
 };
 const today = () => new Date().toISOString().slice(0, 10);
+const addDays = (date: string, days: number) => {
+  const value = new Date(`${date}T00:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+};
 const emptyClient = { name: '', company: '', email: '', phone: '', country: 'Sri Lanka' };
 const emptyProject = { project: '', clientId: '', value: '', currency: 'LKR', note: '' };
 const emptyExpense = {
@@ -202,6 +211,8 @@ export function LocalFinance() {
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [officeFormSignal, setOfficeFormSignal] = useState(0);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [seenNotifications, setSeenNotifications] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -249,6 +260,9 @@ export function LocalFinance() {
       setFxDate(savedDate);
       setFxStatus(savedDate ? 'saved' : 'loading');
       setOfficeOverview(readOfficeOverview());
+      setSeenNotifications(
+        JSON.parse(localStorage.getItem('infonits-seen-notifications') ?? '[]') as string[],
+      );
     } catch {
       setRows([]);
     } finally {
@@ -329,13 +343,67 @@ export function LocalFinance() {
     };
   }, [expenses, rows]);
 
-  const chart = [
-    { label: 'Value', value: totals.value, tone: 'blue' },
-    { label: 'Income', value: totals.received, tone: 'green' },
-    { label: 'Work', value: totals.work, tone: 'red' },
-    { label: 'Expenses', value: totals.expenses, tone: 'orange' },
-  ];
-  const chartMax = Math.max(...chart.map((item) => item.value), 1);
+  const notifications = useMemo(() => {
+    const now = new Date(`${today()}T00:00:00`).getTime();
+    const invoiceItems = officeOverview.documents
+      .filter((item) => item.kind === 'Invoice' && item.status !== 'Paid')
+      .map((item) => {
+        const due = item.dueDate ? new Date(`${item.dueDate}T00:00:00`).getTime() : now;
+        const overdue = item.status === 'Overdue' || due < now;
+        return {
+          id: `invoice-${item.id}`,
+          title: `${item.number} ${overdue ? 'is overdue' : 'needs payment'}`,
+          detail: `${item.currency} ${compactNumber(item.amount)} · ${shortDate(item.dueDate)}`,
+          tone: overdue ? 'urgent' : 'info',
+          section: 'invoices' as Section,
+        };
+      });
+    const renewalItems = officeOverview.renewals
+      .flatMap((item) => [
+        { id: `domain-${item.id}`, label: 'domain', date: item.domainDue },
+        { id: `hosting-${item.id}`, label: 'hosting', date: item.hostingDue },
+      ])
+      .filter((item) => {
+        if (!item.date) return false;
+        const due = new Date(`${item.date}T00:00:00`).getTime();
+        return due - now <= 30 * 86_400_000;
+      })
+      .map((item) => ({
+        id: item.id,
+        title: `${item.label[0].toUpperCase()}${item.label.slice(1)} renewal due`,
+        detail: shortDate(item.date),
+        tone: 'warning',
+        section: 'renewals' as Section,
+      }));
+    return [...invoiceItems, ...renewalItems].slice(0, 8);
+  }, [officeOverview]);
+
+  const unreadNotifications = notifications.filter(
+    (notification) => !seenNotifications.includes(notification.id),
+  ).length;
+  const assistantContext = useMemo(() => ({
+    today: today(),
+    totals: {
+      projectValue: totals.value,
+      received: totals.received,
+      workCost: totals.work,
+      expenses: totals.expenses,
+      estimatedProfit: totals.net,
+    },
+    clients: clients.map((client) => ({ id: client.id, name: client.name })),
+    projects: rows.map((row) => ({ id: row.id, name: row.project })),
+    recentInvoices: officeOverview.documents
+      .filter((document) => document.kind === 'Invoice')
+      .slice(0, 20)
+      .map((document) => ({
+        number: document.number,
+        client: clients.find((client) => client.id === document.clientId)?.name ?? 'Unknown',
+        status: document.status,
+        amount: document.amount,
+        currency: document.currency,
+      })),
+  }), [clients, officeOverview.documents, rows, totals]);
+
   const selectedProject = rows.find((row) => row.id === selectedProjectId);
   const selectedProjectClient = clients.find((client) => client.id === selectedProject?.clientId);
   const selectedProjectInvoices = officeOverview.documents.filter(
@@ -438,6 +506,149 @@ export function LocalFinance() {
     setOfficeFormSignal((current) => current + 1);
   }
 
+  function applyAssistantAction(action: Exclude<AssistantAction, { type: 'none' }>) {
+    const findClient = (name: string) =>
+      clients.find((client) => client.name.toLowerCase() === name.trim().toLowerCase());
+    const findProject = (name: string) =>
+      rows.find((row) => row.project.toLowerCase() === name.trim().toLowerCase());
+    const rate = (currency: string) => (currency === 'LKR' ? 1 : (fxRates[currency] ?? 1));
+
+    if (action.type === 'create_client') {
+      setClients((current) => [
+        {
+          id: crypto.randomUUID(),
+          name: action.name,
+          company: action.company,
+          email: action.email,
+          phone: action.phone,
+          country: action.country || 'Sri Lanka',
+        },
+        ...current,
+      ]);
+      return `${action.name} was added to Clients.`;
+    }
+    if (action.type === 'create_project') {
+      const client = findClient(action.clientName);
+      setRows((current) => [
+        {
+          id: crypto.randomUUID(),
+          project: action.project,
+          clientId: client?.id ?? '',
+          value: action.amount,
+          currency: action.currency,
+          exchangeRate: rate(action.currency),
+          note: action.note,
+          advance: 0,
+          workDue: 0,
+          workPaid: 0,
+          status: 'Waiting',
+          createdAt: today(),
+        },
+        ...current,
+      ]);
+      return `${action.project} was added to Projects${client ? ` for ${client.name}` : ''}.`;
+    }
+    if (action.type === 'create_expense') {
+      setExpenses((current) => [
+        {
+          id: crypto.randomUUID(),
+          description: action.description,
+          category: action.category,
+          amount: action.amount,
+          currency: action.currency,
+          exchangeRate: rate(action.currency),
+          date: action.date || today(),
+        },
+        ...current,
+      ]);
+      return `${action.description} was added to Expenses.`;
+    }
+
+    let saved: Record<string, unknown[]>;
+    try {
+      saved = JSON.parse(localStorage.getItem(officeStorageKey) ?? '{}') as Record<
+        string,
+        unknown[]
+      >;
+    } catch {
+      saved = {};
+    }
+    const documents = (saved.documents ?? []) as OfficeOverview['documents'];
+    const payments = (saved.payments ?? []) as OfficeOverview['payments'];
+    const renewals = (saved.renewals ?? []) as OfficeOverview['renewals'];
+    const events = (saved.events ?? []) as Array<Record<string, unknown>>;
+
+    if (action.type === 'create_invoice' || action.type === 'create_quotation') {
+      const client = findClient(action.clientName);
+      if (!client) return `I could not apply this because client “${action.clientName}” was not found.`;
+      const project = findProject(action.projectName);
+      const kind = action.type === 'create_invoice' ? 'Invoice' : 'Quotation';
+      const prefix = kind === 'Invoice' ? 'INV' : 'QUO';
+      const next =
+        documents
+          .filter((item) => item.kind === kind)
+          .reduce(
+            (highest, item) => Math.max(highest, Number(item.number.split('-').at(-1)) || 0),
+            0,
+          ) + 1;
+      documents.unshift({
+        id: crypto.randomUUID(),
+        kind,
+        number: `${prefix}-${new Date().getFullYear()}-${String(next).padStart(3, '0')}`,
+        clientId: client.id,
+        projectId: project?.id ?? '',
+        dueDate: addDays(today(), 10),
+        status: kind === 'Invoice' ? 'Pending' : 'Draft',
+        amount: action.amount,
+        currency: action.currency,
+        exchangeRate: rate(action.currency),
+        issueDate: today(),
+        notes: action.notes,
+      } as OfficeOverview['documents'][number]);
+      saved.documents = documents;
+      localStorage.setItem(officeStorageKey, JSON.stringify(saved));
+      setOfficeOverview(readOfficeOverview());
+      window.dispatchEvent(new Event('infonits:local-change'));
+      return `${kind} ${prefix}-${new Date().getFullYear()}-${String(next).padStart(3, '0')} was created for ${client.name}.`;
+    }
+    if (action.type === 'create_payment') {
+      payments.unshift({
+        id: crypto.randomUUID(),
+        note: action.note,
+        category: action.category,
+        date: action.date || today(),
+        status: 'Pending',
+        amount: action.amount,
+        currency: action.currency,
+        exchangeRate: rate(action.currency),
+        type: action.paymentType,
+      } as OfficeOverview['payments'][number]);
+      saved.payments = payments;
+    } else if (action.type === 'create_event') {
+      events.unshift({
+        id: crypto.randomUUID(),
+        title: action.title,
+        date: action.date,
+        type: action.eventType,
+      });
+      saved.events = events;
+    } else if (action.type === 'create_renewal') {
+      renewals.unshift({
+        id: crypto.randomUUID(),
+        website: action.website,
+        username: '',
+        websiteUrl: '',
+        domainDue: action.domainDue,
+        hostingDue: action.hostingDue,
+      });
+      saved.renewals = renewals;
+    }
+    localStorage.setItem(officeStorageKey, JSON.stringify(saved));
+    setOfficeOverview(readOfficeOverview());
+    window.dispatchEvent(new Event('infonits:local-change'));
+    return 'The new record was added to your workspace.';
+  }
+
   function createInvoice(row: LocalRow) {
     localStorage.setItem(
       'infonits-invoice-draft',
@@ -492,7 +703,18 @@ export function LocalFinance() {
     URL.revokeObjectURL(url);
   }
 
-  if (!loaded) return <main className="local-loading">Opening your finance workspace…</main>;
+  if (!loaded)
+    return (
+      <main className="workspace-loader" role="status">
+        <div className="workspace-loader-mark">
+          <img src="/infonits-logo.png" alt="" width={136} height={34} />
+          <span><i /><i /><i /></span>
+        </div>
+        <strong>Preparing your workspace</strong>
+        <p>Syncing projects, invoices and finance data…</p>
+        <div className="workspace-loader-line"><i /></div>
+      </main>
+    );
 
   return (
     <div className="local-app">
@@ -525,6 +747,14 @@ export function LocalFinance() {
             >
               <LayoutDashboard size={19} />
               <span>Dashboard</span>
+            </button>
+            <button
+              className={section === 'assistant' ? 'active' : ''}
+              onClick={() => changeSection('assistant')}
+            >
+              <Bot size={19} />
+              <span>Infonits GPT</span>
+              <i className="local-ai-nav-dot" />
             </button>
             <button
               className={section === 'calendar' ? 'active' : ''}
@@ -649,24 +879,88 @@ export function LocalFinance() {
             <Menu size={21} />
           </button>
           <span>Infonits Finance</span>
-          <LocalCloudSync />
+          <div className="local-topbar-actions">
+            <button
+              type="button"
+              className="local-ai-shortcut"
+              aria-label="Open Infonits GPT"
+              onClick={() => changeSection('assistant')}
+            >
+              <Sparkles size={17} />
+            </button>
+            <div className="local-notification-wrap">
+              <button
+                type="button"
+                className="local-notification-button"
+                aria-label={`Notifications${unreadNotifications ? `, ${unreadNotifications} unread` : ''}`}
+                aria-expanded={notificationsOpen}
+                onClick={() => setNotificationsOpen((open) => !open)}
+              >
+                <Bell size={18} />
+                {unreadNotifications > 0 && <b>{unreadNotifications}</b>}
+              </button>
+              {notificationsOpen && (
+                <section className="local-notification-panel" aria-label="Notifications panel">
+                  <header>
+                    <div><strong>Notifications</strong><small>Invoices and renewals</small></div>
+                    {unreadNotifications > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ids = notifications.map((item) => item.id);
+                          setSeenNotifications(ids);
+                          localStorage.setItem('infonits-seen-notifications', JSON.stringify(ids));
+                        }}
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </header>
+                  <div>
+                    {notifications.length ? (
+                      notifications.map((notification) => (
+                        <button
+                          type="button"
+                          key={notification.id}
+                          className={seenNotifications.includes(notification.id) ? 'seen' : ''}
+                          onClick={() => {
+                            const next = [...new Set([...seenNotifications, notification.id])];
+                            setSeenNotifications(next);
+                            localStorage.setItem('infonits-seen-notifications', JSON.stringify(next));
+                            setNotificationsOpen(false);
+                            changeSection(notification.section);
+                          }}
+                        >
+                          <i className={notification.tone} />
+                          <span><strong>{notification.title}</strong><small>{notification.detail}</small></span>
+                        </button>
+                      ))
+                    ) : (
+                      <p><ShieldCheck size={18} /> You are all caught up.</p>
+                    )}
+                  </div>
+                </section>
+              )}
+            </div>
+            <LocalCloudSync />
+          </div>
         </header>
 
         <main className="local-main">
           {section === 'dashboard' && (
             <Dashboard
               totals={totals}
-              chart={chart}
-              chartMax={chartMax}
               rows={rows}
               clients={clients}
               expenses={expenses}
-              fxDate={fxDate}
-              fxStatus={fxStatus}
               office={officeOverview}
               onAddProject={openProjectForm}
               onSection={changeSection}
             />
+          )}
+
+          {section === 'assistant' && (
+            <InfonitsAssistant context={assistantContext} onApply={applyAssistantAction} />
           )}
 
           {section === 'projects' && (
@@ -829,7 +1123,7 @@ export function LocalFinance() {
             </>
           )}
 
-          {!['dashboard', 'projects', 'clients', 'expenses'].includes(section) && (
+          {!['dashboard', 'assistant', 'projects', 'clients', 'expenses'].includes(section) && (
             <LocalOfficeModule
               section={section as OfficeSection}
               clients={clients}
@@ -1084,32 +1378,22 @@ function ProjectDetail({
 
 function Dashboard({
   totals,
-  chart,
-  chartMax,
   rows,
   clients,
   expenses,
-  fxDate,
-  fxStatus,
   office,
   onAddProject,
   onSection,
 }: {
   totals: { value: number; received: number; work: number; expenses: number; net: number };
-  chart: Array<{ label: string; value: number; tone: string }>;
-  chartMax: number;
   rows: LocalRow[];
   clients: LocalClient[];
   expenses: LocalExpense[];
-  fxDate: string;
-  fxStatus: string;
   office: OfficeOverview;
   onAddProject: () => void;
   onSection: (section: Section) => void;
 }) {
-  const [aiInsight, setAiInsight] = useState('');
-  const [aiError, setAiError] = useState('');
-  const [aiLoading, setAiLoading] = useState(false);
+  const [invoiceFilter, setInvoiceFilter] = useState('All');
   const now = new Date(`${today()}T00:00:00`).getTime();
   const day = 86_400_000;
   const totalOutcome = totals.work + totals.expenses;
@@ -1177,33 +1461,17 @@ function Dashboard({
     outstandingInvoices.map((item) => item.clientId).filter(Boolean),
   ).size;
   const clientNames = new Map(clients.map((client) => [client.id, client.name]));
-
-  async function generateFinanceInsight() {
-    setAiLoading(true);
-    setAiError('');
-    try {
-      const response = await fetch('/api/finance-insight', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectValue: totals.value,
-          received: totals.received,
-          workCost: totals.work,
-          expenses: totals.expenses,
-          profit: totals.net,
-          projectCount: rows.length,
-          outstandingInvoices: outstandingInvoices.length,
-        }),
-      });
-      const data = (await response.json()) as { insight?: string; error?: string };
-      if (!response.ok || !data.insight) throw new Error(data.error || 'AI insight is unavailable.');
-      setAiInsight(data.insight);
-    } catch (error) {
-      setAiError(error instanceof Error ? error.message : 'AI insight is unavailable.');
-    } finally {
-      setAiLoading(false);
-    }
-  }
+  const recentInvoices = office.documents
+    .filter((item) => item.kind === 'Invoice')
+    .map((item) => {
+      const due = item.dueDate ? new Date(`${item.dueDate}T00:00:00`).getTime() : now;
+      return {
+        ...item,
+        status: item.status !== 'Paid' && due < now ? 'Overdue' : item.status,
+      };
+    })
+    .filter((item) => invoiceFilter === 'All' || item.status === invoiceFilter)
+    .slice(0, 4);
 
   return (
     <div className="local-dashboard-page">
@@ -1287,47 +1555,52 @@ function Dashboard({
             </div>
           )}
         </article>
-        <article className="local-chart-card">
+        <article className="local-recent-invoices-card">
           <div className="local-card-heading">
             <div>
-              <BarChart3 size={18} />
+              <FileText size={18} />
               <div>
-                <strong>Financial overview</strong>
-                <small>Project value, income and costs in LKR</small>
+                <strong>Recent invoices</strong>
+                <small>Latest billing activity and payment status</small>
               </div>
             </div>
-            <span className={`local-fx-badge ${fxStatus}`}>
-              {fxStatus === 'live' ? 'Daily rates' : 'Saved rates'} ·{' '}
-              {fxDate ? shortDate(fxDate, false) : 'offline'}
-            </span>
+            <button className="local-card-link" onClick={() => onSection('invoices')}>
+              View all <ArrowUpRight size={14} />
+            </button>
           </div>
-          <div className="local-bar-chart" aria-label="Financial totals comparison">
-            {chart.map((item) => (
-              <div className="local-bar-row" key={item.label}>
-                <span>{item.label}</span>
-                <div className="local-bar-track" aria-hidden="true">
-                  <div
-                    className={`local-bar ${item.tone}`}
-                    style={{
-                      width: `${item.value ? Math.max(5, (item.value / chartMax) * 100) : 0}%`,
-                    }}
-                  />
-                </div>
-                <strong className="local-bar-value" title={money(item.value)}>
-                  {compactMoney(item.value)}
-                </strong>
-              </div>
+          <div className="local-invoice-filters">
+            {['All', 'Paid', 'Sent', 'Pending', 'Overdue'].map((status) => (
+              <button
+                key={status}
+                className={invoiceFilter === status ? 'active' : ''}
+                onClick={() => setInvoiceFilter(status)}
+              >
+                {status}
+              </button>
             ))}
           </div>
-          <div className="local-ai-insight">
-            <span><Sparkles size={17} /></span>
-            <div>
-              <strong>AI finance insight</strong>
-              <p>{aiInsight || aiError || 'Get one concise observation and a practical next action from your totals.'}</p>
-            </div>
-            <button type="button" onClick={() => void generateFinanceInsight()} disabled={aiLoading}>
-              {aiLoading ? 'Analysing…' : aiInsight ? 'Refresh' : 'Generate'}
-            </button>
+          <div className="local-invoice-preview-list">
+            {recentInvoices.length ? (
+              recentInvoices.map((invoice) => (
+                <button key={invoice.id} onClick={() => onSection('invoices')}>
+                  <span>
+                    <strong>{invoice.number}</strong>
+                    <small>
+                      {(invoice.clientId && clientNames.get(invoice.clientId)) ?? 'Unknown client'} ·{' '}
+                      {shortDate(invoice.dueDate)}
+                    </small>
+                  </span>
+                  <em className={`invoice-state ${invoice.status.toLowerCase()}`}>
+                    {invoice.status}
+                  </em>
+                  <b>
+                    {invoice.currency} {compactNumber(invoice.amount)}
+                  </b>
+                </button>
+              ))
+            ) : (
+              <p className="local-invoice-empty">No {invoiceFilter.toLowerCase()} invoices.</p>
+            )}
           </div>
         </article>
       </section>

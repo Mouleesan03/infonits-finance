@@ -1,0 +1,183 @@
+'use client';
+
+import { useState } from 'react';
+import { ArrowUp, Bot, CheckCircle2, LoaderCircle, Sparkles } from 'lucide-react';
+
+export type AssistantAction =
+  | { type: 'none' }
+  | {
+      type: 'create_client';
+      name: string;
+      company: string;
+      email: string;
+      phone: string;
+      country: string;
+    }
+  | {
+      type: 'create_project';
+      project: string;
+      clientName: string;
+      amount: number;
+      currency: string;
+      note: string;
+    }
+  | {
+      type: 'create_expense';
+      description: string;
+      category: string;
+      amount: number;
+      currency: string;
+      date: string;
+    }
+  | {
+      type: 'create_invoice' | 'create_quotation';
+      clientName: string;
+      projectName: string;
+      amount: number;
+      currency: string;
+      notes: string;
+    }
+  | {
+      type: 'create_payment';
+      paymentType: 'Income' | 'Expense' | 'Saving' | 'Gold' | 'Loan';
+      category: string;
+      note: string;
+      amount: number;
+      currency: string;
+      date: string;
+    }
+  | { type: 'create_event'; title: string; date: string; eventType: string }
+  | { type: 'create_renewal'; website: string; domainDue: string; hostingDue: string };
+
+type ChatMessage = {
+  id: string;
+  role: 'assistant' | 'user';
+  text: string;
+  action?: AssistantAction;
+  applied?: boolean;
+};
+
+export function InfonitsAssistant({
+  context,
+  onApply,
+}: {
+  context: object;
+  onApply: (action: Exclude<AssistantAction, { type: 'none' }>) => string;
+}) {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: 'welcome',
+      role: 'assistant',
+      text: 'Hello! I can review your workspace or prepare clients, projects, invoices, quotations, expenses, payments, events and renewals.',
+    },
+  ]);
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function send(message = input) {
+    const clean = message.trim();
+    if (!clean || busy) return;
+    setInput('');
+    setError('');
+    setMessages((current) => [
+      ...current,
+      { id: crypto.randomUUID(), role: 'user', text: clean },
+    ]);
+    setBusy(true);
+    try {
+      const response = await fetch('/api/assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: clean, context }),
+      });
+      const data = (await response.json()) as {
+        reply?: string;
+        action?: AssistantAction;
+        error?: string;
+      };
+      if (!response.ok || !data.reply || !data.action) {
+        throw new Error(data.error || 'Infonits GPT could not answer right now.');
+      }
+      setMessages((current) => [
+        ...current,
+        { id: crypto.randomUUID(), role: 'assistant', text: data.reply!, action: data.action },
+      ]);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Infonits GPT is unavailable.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function apply(message: ChatMessage) {
+    if (!message.action || message.action.type === 'none') return;
+    const result = onApply(message.action);
+    setMessages((current) => [
+      ...current.map((item) => (item.id === message.id ? { ...item, applied: true } : item)),
+      { id: crypto.randomUUID(), role: 'assistant', text: result },
+    ]);
+  }
+
+  return (
+    <section className="assistant-page" aria-label="Infonits GPT">
+      <header className="assistant-header">
+        <span><Sparkles size={22} /></span>
+        <div>
+          <small>INFONITS AI</small>
+          <h1>Infonits GPT</h1>
+          <p>Ask about your business or prepare a workspace action.</p>
+        </div>
+        <i>Claude connected</i>
+      </header>
+      <div className="assistant-body">
+        <div className="assistant-messages" aria-live="polite">
+          {messages.map((message) => (
+            <article className={message.role} key={message.id}>
+              {message.role === 'assistant' && <span><Bot size={17} /></span>}
+              <div>
+                <p>{message.text}</p>
+                {message.action && message.action.type !== 'none' && (
+                  <button type="button" disabled={message.applied} onClick={() => apply(message)}>
+                    {message.applied ? <CheckCircle2 size={15} /> : <Sparkles size={15} />}
+                    {message.applied ? 'Applied' : 'Review & apply'}
+                  </button>
+                )}
+              </div>
+            </article>
+          ))}
+          {busy && (
+            <article className="assistant assistant-thinking">
+              <span><Bot size={17} /></span>
+              <div><LoaderCircle className="spin" size={17} /> Thinking…</div>
+            </article>
+          )}
+          {error && <p className="assistant-error">{error}</p>}
+        </div>
+        <div className="assistant-prompts">
+          {['Summarise my finance', 'Create an invoice', 'What needs attention?'].map((prompt) => (
+            <button type="button" key={prompt} onClick={() => void send(prompt)}>{prompt}</button>
+          ))}
+        </div>
+        <form
+          className="assistant-composer"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void send();
+          }}
+        >
+          <textarea
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder="Ask Infonits GPT or describe a task…"
+            rows={2}
+          />
+          <button type="submit" disabled={busy || !input.trim()} aria-label="Send message">
+            <ArrowUp size={18} />
+          </button>
+        </form>
+        <small className="assistant-footnote">Record changes are only made after you select Review &amp; apply.</small>
+      </div>
+    </section>
+  );
+}

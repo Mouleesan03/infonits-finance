@@ -1029,7 +1029,7 @@ function SalesDocuments({
             ).map((status) => (
               <button
                 key={status}
-                className={statusFilter === status ? 'active' : ''}
+                className={`${status.toLowerCase()} ${statusFilter === status ? 'active' : ''}`}
                 onClick={() => setStatusFilter(status)}
               >
                 {status}

@@ -59,9 +59,14 @@ export function LocalCloudWorkspace({ initialEmail }: { initialEmail?: string })
 
   if (state === 'checking') {
     return (
-      <main className="cloud-access-loading">
-        <LoaderCircle className="spin" size={24} />
-        <span>Opening your cloud workspace…</span>
+      <main className="workspace-loader" role="status">
+        <div className="workspace-loader-mark">
+          <img src="/infonits-logo.png" alt="" width={136} height={34} />
+          <span><i /><i /><i /></span>
+        </div>
+        <strong>Opening your secure workspace</strong>
+        <p>Checking your session and cloud backup…</p>
+        <div className="workspace-loader-line"><i /></div>
       </main>
     );
   }
