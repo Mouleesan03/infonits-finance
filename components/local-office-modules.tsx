@@ -2672,6 +2672,10 @@ function UsersModule({
             type="button"
             disabled={accountBusy}
             onClick={() => {
+              if (pinOpen) {
+                setNewPin('');
+                setConfirmPin('');
+              }
               setPinOpen((open) => !open);
               setAccountNotice('');
               setAccountError('');
