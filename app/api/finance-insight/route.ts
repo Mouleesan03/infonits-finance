@@ -38,11 +38,12 @@ export async function POST(request: Request) {
       instructions:
         'You are a concise finance operations assistant for a small service business. ' +
         'Use only the supplied aggregate figures. Give one clear observation and one practical next action. ' +
-        'Do not invent forecasts, tax advice, or missing facts. Keep the answer under 55 words.',
+        'Do not invent forecasts, tax advice, or missing facts. Keep the answer under 55 words. ' +
+        'Return plain text only without Markdown formatting.',
       prompt: `Finance snapshot in LKR: ${JSON.stringify(snapshot)}`,
     });
 
-    return Response.json({ insight: text.trim() });
+    return Response.json({ insight: text.replace(/\*\*/g, '').trim() });
   } catch (error) {
     const message =
       error instanceof z.ZodError
