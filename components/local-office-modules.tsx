@@ -12,6 +12,9 @@ import {
   FileText,
   Folder,
   Globe2,
+  KeyRound,
+  LogOut,
+  Mail,
   Plus,
   Printer,
   Search,
@@ -22,6 +25,8 @@ import {
   UsersRound,
   X,
 } from 'lucide-react';
+import { isSixDigitPin, pinCredential } from '@/lib/auth';
+import { browserClient } from '@/lib/supabase/browser';
 
 export type OfficeSection =
   | 'calendar'
@@ -2558,12 +2563,81 @@ function UsersModule({
   setFormOpen: (v: boolean) => void;
   onChange: (v: WorkspaceUser[]) => void;
 }) {
+  const [accountEmail, setAccountEmail] = useState('');
+  const [pinOpen, setPinOpen] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [accountBusy, setAccountBusy] = useState(false);
+  const [accountNotice, setAccountNotice] = useState('');
+  const [accountError, setAccountError] = useState('');
   const [draft, setDraft] = useState({
     name: '',
     username: '',
     role: 'Project manager',
     access: 'Projects, clients and sales',
   });
+
+  useEffect(() => {
+    let active = true;
+    void browserClient()
+      .auth.getUser()
+      .then(({ data }) => {
+        if (active) setAccountEmail(data.user?.email ?? '');
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function changePin(event: React.FormEvent) {
+    event.preventDefault();
+    setAccountNotice('');
+    setAccountError('');
+    if (!isSixDigitPin(newPin)) {
+      setAccountError('Enter exactly 6 numbers for the new PIN.');
+      return;
+    }
+    if (newPin !== confirmPin) {
+      setAccountError('The two PIN entries do not match.');
+      return;
+    }
+    setAccountBusy(true);
+    try {
+      const db = browserClient();
+      const {
+        data: { user },
+      } = await db.auth.getUser();
+      if (!user?.email) throw new Error('Your session expired. Log in again to change the PIN.');
+      const password = await pinCredential(user.email, newPin);
+      const { error } = await db.auth.updateUser({ password });
+      if (error) throw error;
+      setNewPin('');
+      setConfirmPin('');
+      setPinOpen(false);
+      setAccountNotice('Your PIN was changed successfully.');
+    } catch (error) {
+      setAccountError(
+        error instanceof Error && error.message.includes('session')
+          ? error.message
+          : 'Unable to change the PIN right now. Please try again.',
+      );
+    } finally {
+      setAccountBusy(false);
+    }
+  }
+
+  async function logOut() {
+    setAccountBusy(true);
+    setAccountError('');
+    const { error } = await browserClient().auth.signOut({ scope: 'local' });
+    if (error) {
+      setAccountError('Unable to log out right now. Please try again.');
+      setAccountBusy(false);
+      return;
+    }
+    window.location.assign('/login');
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!draft.name.trim() || !draft.username.trim()) return;
@@ -2575,10 +2649,95 @@ function UsersModule({
       <ModuleHeader
         eyebrow="ACCESS"
         title="Users & roles"
-        subtitle="Plan user access before connecting secure Supabase accounts."
+        subtitle="Manage your sign-in and plan workspace access."
         action="Add user"
         onAction={() => setFormOpen(!formOpen)}
       />
+      <section className="office-account-card" aria-labelledby="account-security-title">
+        <div className="office-account-summary">
+          <span className="office-account-icon">
+            <ShieldCheck size={22} />
+          </span>
+          <div>
+            <span>YOUR ACCOUNT</span>
+            <h2 id="account-security-title">Sign-in &amp; security</h2>
+            <p>
+              <Mail size={15} /> {accountEmail || 'Loading account…'}
+            </p>
+          </div>
+        </div>
+        <div className="office-account-actions">
+          <button
+            className="button button-outline"
+            type="button"
+            disabled={accountBusy}
+            onClick={() => {
+              setPinOpen((open) => !open);
+              setAccountNotice('');
+              setAccountError('');
+            }}
+          >
+            <KeyRound size={16} /> {pinOpen ? 'Cancel' : 'Change PIN'}
+          </button>
+          <button
+            className="button office-logout-button"
+            type="button"
+            disabled={accountBusy}
+            onClick={() => void logOut()}
+          >
+            <LogOut size={16} /> Log out
+          </button>
+        </div>
+        {pinOpen && (
+          <form className="office-pin-form" onSubmit={changePin}>
+            <label>
+              <span>New 6-digit PIN</span>
+              <input
+                type="password"
+                inputMode="numeric"
+                autoComplete="new-password"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                value={newPin}
+                onChange={(event) =>
+                  setNewPin(event.target.value.replace(/\D/g, '').slice(0, 6))
+                }
+                placeholder="••••••"
+                required
+              />
+            </label>
+            <label>
+              <span>Confirm new PIN</span>
+              <input
+                type="password"
+                inputMode="numeric"
+                autoComplete="new-password"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                value={confirmPin}
+                onChange={(event) =>
+                  setConfirmPin(event.target.value.replace(/\D/g, '').slice(0, 6))
+                }
+                placeholder="••••••"
+                required
+              />
+            </label>
+            <button className="button button-primary" type="submit" disabled={accountBusy}>
+              <KeyRound size={16} /> {accountBusy ? 'Saving…' : 'Save new PIN'}
+            </button>
+          </form>
+        )}
+        {accountNotice && (
+          <p className="office-account-message success" role="status">
+            <Check size={16} /> {accountNotice}
+          </p>
+        )}
+        {accountError && (
+          <p className="office-account-message error" role="alert">
+            <AlertTriangle size={16} /> {accountError}
+          </p>
+        )}
+      </section>
       {formOpen && (
         <form className="office-form" onSubmit={submit}>
           <label>

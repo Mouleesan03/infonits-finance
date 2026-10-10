@@ -569,6 +569,121 @@
   gap: 12px;
   padding: 15px;
 }
+.office-account-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid #dce7f2;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fff, #f5f9fe);
+  box-shadow: 0 9px 26px rgba(22, 47, 82, 0.06);
+}
+.office-account-summary {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+.office-account-icon {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #e8f3ff;
+  color: #176fd4;
+}
+.office-account-summary > div > span {
+  color: #2873bb;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.office-account-summary h2 {
+  margin-top: 2px;
+  color: #1c304a;
+  font-size: 17px;
+}
+.office-account-summary p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  color: #66788f;
+  font-size: 12px;
+}
+.office-account-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.office-logout-button {
+  border: 1px solid #f0c9cb;
+  background: #fff5f5;
+  color: #bf3f45;
+}
+.office-pin-form {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 11px;
+  padding-top: 16px;
+  border-top: 1px solid #e3eaf2;
+}
+.office-pin-form label {
+  display: grid;
+  gap: 6px;
+}
+.office-pin-form label > span {
+  color: #5f7086;
+  font-size: 11px;
+  font-weight: 700;
+}
+.office-pin-form input {
+  width: 100%;
+  min-height: 43px;
+  padding: 9px 12px;
+  border: 1px solid #d7e1eb;
+  border-radius: 9px;
+  background: #fff;
+  color: #21354f;
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  outline: none;
+}
+.office-pin-form input:focus {
+  border-color: #3e8bd7;
+  box-shadow: 0 0 0 3px rgba(45, 124, 204, 0.1);
+}
+.office-pin-form .button {
+  min-height: 43px;
+}
+.office-account-message {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.office-account-message.success {
+  background: #eaf8f2;
+  color: #087a55;
+}
+.office-account-message.error {
+  background: #fff0f0;
+  color: #b83c43;
+}
 .office-person {
   display: grid;
   grid-template-columns: 46px minmax(0, 1fr) auto 34px;
@@ -772,6 +887,24 @@
   }
   .office-card-grid {
     padding: 10px;
+  }
+  .office-account-card {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 15px;
+  }
+  .office-account-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .office-account-actions .button {
+    width: 100%;
+  }
+  .office-pin-form {
+    grid-template-columns: 1fr;
+  }
+  .office-pin-form .button {
+    width: 100%;
   }
   .office-person {
     grid-template-columns: 42px minmax(0, 1fr) auto;
