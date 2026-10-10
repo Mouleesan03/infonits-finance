@@ -7,7 +7,6 @@ import {
   BarChart3,
   BriefcaseBusiness,
   CalendarDays,
-  ChevronDown,
   CircleDollarSign,
   Clock3,
   CreditCard,
@@ -21,8 +20,6 @@ import {
   LockKeyhole,
   Menu,
   MessagesSquare,
-  PanelLeftClose,
-  PanelLeftOpen,
   Pencil,
   PieChart,
   Plus,
@@ -41,8 +38,14 @@ import { LocalOfficeModule, type OfficeSection } from './local-office-modules';
 import { LocalCloudSync } from './local-cloud-sync';
 
 type Section = 'dashboard' | 'projects' | 'clients' | 'expenses' | OfficeSection;
-type NavGroup = 'overview' | 'sales' | 'work' | 'finance' | 'admin';
-type LocalClient = { id: string; name: string; company: string; email: string; phone: string };
+type LocalClient = {
+  id: string;
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  country: string;
+};
 type LocalRow = {
   id: string;
   project: string;
@@ -101,8 +104,32 @@ type OfficeOverview = {
 const storageKey = 'infonits-finance-local-v1';
 const officeStorageKey = 'infonits-finance-office-v1';
 const currencies = ['LKR', 'USD', 'GBP', 'EUR', 'AUD', 'CAD', 'INR', 'AED', 'SGD', 'JPY'];
+const countries = [
+  'Sri Lanka',
+  'Australia',
+  'Canada',
+  'France',
+  'India',
+  'Singapore',
+  'United Arab Emirates',
+  'United Kingdom',
+  'United States',
+  'Other',
+];
+const countryFlags: Record<string, string> = {
+  'Sri Lanka': '🇱🇰',
+  Australia: '🇦🇺',
+  Canada: '🇨🇦',
+  France: '🇫🇷',
+  India: '🇮🇳',
+  Singapore: '🇸🇬',
+  'United Arab Emirates': '🇦🇪',
+  'United Kingdom': '🇬🇧',
+  'United States': '🇺🇸',
+  Other: '🌐',
+};
 const today = () => new Date().toISOString().slice(0, 10);
-const emptyClient = { name: '', company: '', email: '', phone: '' };
+const emptyClient = { name: '', company: '', email: '', phone: '', country: 'Sri Lanka' };
 const emptyProject = { project: '', clientId: '', value: '', currency: 'LKR', note: '' };
 const emptyExpense = {
   description: '',
@@ -123,14 +150,17 @@ const compactNumber = (value: number) =>
     maximumFractionDigits: 1,
   }).format(value);
 const compactMoney = (value: number) => `LKR ${compactNumber(value)}`;
-const localValue = (value: number, rate: number) => value * rate;
-const navGroupFor = (section: Section): NavGroup => {
-  if (section === 'dashboard' || section === 'calendar') return 'overview';
-  if (section === 'clients' || section === 'invoices' || section === 'quotations') return 'sales';
-  if (section === 'projects' || section === 'team' || section === 'posts') return 'work';
-  if (section === 'payments' || section === 'expenses' || section === 'reports') return 'finance';
-  return 'admin';
+const shortDate = (value: string, includeYear = true) => {
+  if (!value) return '';
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    ...(includeYear ? { year: '2-digit' as const } : {}),
+  }).format(date);
 };
+const localValue = (value: number, rate: number) => value * rate;
 
 function readOfficeOverview(): OfficeOverview {
   try {
@@ -156,9 +186,7 @@ export function LocalFinance() {
   const [fxDate, setFxDate] = useState('');
   const [fxStatus, setFxStatus] = useState<'loading' | 'live' | 'saved'>('loading');
   const [section, setSection] = useState<Section>('dashboard');
-  const [navGroup, setNavGroup] = useState<NavGroup | null>('overview');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [projectFormOpen, setProjectFormOpen] = useState(false);
   const [clientFormOpen, setClientFormOpen] = useState(false);
   const [expenseFormOpen, setExpenseFormOpen] = useState(false);
@@ -212,7 +240,9 @@ export function LocalFinance() {
             (row) => row.project.trim() || row.value || row.advance || row.workDue || row.workPaid,
           ),
       );
-      setClients(parsed?.clients ?? []);
+      setClients(
+        (parsed?.clients ?? []).map((client) => ({ ...client, country: client.country ?? '' })),
+      );
       setExpenses(parsed?.expenses ?? []);
       setFxRates(parsed?.fxRates ?? { LKR: 1 });
       setFxDate(savedDate);
@@ -274,11 +304,6 @@ export function LocalFinance() {
     };
   }, []);
 
-  useEffect(() => {
-    const savedPreference = localStorage.getItem('infonits-sidebar-collapsed');
-    setSidebarCollapsed(savedPreference === null ? true : savedPreference === 'true');
-  }, []);
-
   const totals = useMemo(() => {
     const projects = rows.reduce(
       (sum, row) => {
@@ -318,16 +343,7 @@ export function LocalFinance() {
 
   function changeSection(next: Section) {
     setSection(next);
-    setNavGroup(navGroupFor(next));
     setMenuOpen(false);
-  }
-
-  function toggleSidebar() {
-    setSidebarCollapsed((collapsed) => {
-      const next = !collapsed;
-      localStorage.setItem('infonits-sidebar-collapsed', String(next));
-      return next;
-    });
   }
 
   function rateFor(currency: string) {
@@ -478,7 +494,7 @@ export function LocalFinance() {
   if (!loaded) return <main className="local-loading">Opening your finance workspace…</main>;
 
   return (
-    <div className={`local-app ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <div className="local-app">
       {menuOpen && (
         <button
           className="local-overlay"
@@ -499,22 +515,10 @@ export function LocalFinance() {
           >
             <X size={20} />
           </button>
-          <button
-            className="local-sidebar-toggle"
-            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Minimize sidebar'}
-            title={sidebarCollapsed ? 'Expand sidebar' : 'Minimize sidebar'}
-            onClick={toggleSidebar}
-          >
-            {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-          </button>
         </div>
         <div className="local-mode-chip">Personal cloud</div>
         <nav className="local-nav" aria-label="Workspace navigation">
-          <SidebarGroup
-            label="Overview"
-            open={navGroup === 'overview'}
-            onToggle={() => setNavGroup((current) => (current === 'overview' ? null : 'overview'))}
-          >
+          <SidebarGroup label="Overview">
             <button
               className={section === 'dashboard' ? 'active' : ''}
               onClick={() => changeSection('dashboard')}
@@ -530,11 +534,7 @@ export function LocalFinance() {
               <span>Calendar</span>
             </button>
           </SidebarGroup>
-          <SidebarGroup
-            label="Sales"
-            open={navGroup === 'sales'}
-            onToggle={() => setNavGroup((current) => (current === 'sales' ? null : 'sales'))}
-          >
+          <SidebarGroup label="Sales">
             <button
               className={section === 'clients' ? 'active' : ''}
               onClick={() => changeSection('clients')}
@@ -558,11 +558,7 @@ export function LocalFinance() {
               <span>Quotations</span>
             </button>
           </SidebarGroup>
-          <SidebarGroup
-            label="Work"
-            open={navGroup === 'work'}
-            onToggle={() => setNavGroup((current) => (current === 'work' ? null : 'work'))}
-          >
+          <SidebarGroup label="Work">
             <button
               className={section === 'projects' ? 'active' : ''}
               onClick={() => changeSection('projects')}
@@ -586,11 +582,7 @@ export function LocalFinance() {
               <span>Post tracker</span>
             </button>
           </SidebarGroup>
-          <SidebarGroup
-            label="Finance"
-            open={navGroup === 'finance'}
-            onToggle={() => setNavGroup((current) => (current === 'finance' ? null : 'finance'))}
-          >
+          <SidebarGroup label="Finance">
             <button
               className={section === 'payments' ? 'active' : ''}
               onClick={() => changeSection('payments')}
@@ -614,11 +606,7 @@ export function LocalFinance() {
               <span>Reports</span>
             </button>
           </SidebarGroup>
-          <SidebarGroup
-            label="Admin"
-            open={navGroup === 'admin'}
-            onToggle={() => setNavGroup((current) => (current === 'admin' ? null : 'admin'))}
-          >
+          <SidebarGroup label="Admin">
             <button
               className={section === 'renewals' ? 'active' : ''}
               onClick={() => changeSection('renewals')}
@@ -793,6 +781,11 @@ export function LocalFinance() {
                 clients={clients}
                 rows={rows}
                 onAdd={() => setClientFormOpen(true)}
+                onUpdate={(id, patch) =>
+                  setClients((current) =>
+                    current.map((client) => (client.id === id ? { ...client, ...patch } : client)),
+                  )
+                }
                 onRemove={(id) => {
                   setClients((current) => current.filter((client) => client.id !== id));
                   setRows((current) =>
@@ -899,28 +892,12 @@ export function LocalFinance() {
   );
 }
 
-function SidebarGroup({
-  label,
-  open,
-  onToggle,
-  children,
-}: {
-  label: string;
-  open: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}) {
+function SidebarGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <section className={`local-nav-group ${open ? 'is-open' : ''}`}>
-      <button
-        type="button"
-        className="local-nav-group-toggle"
-        aria-expanded={open}
-        onClick={onToggle}
-      >
+    <section className="local-nav-group is-open">
+      <div className="local-nav-group-toggle">
         <span>{label}</span>
-        <ChevronDown size={15} />
-      </button>
+      </div>
       <div className="local-nav-group-links">{children}</div>
     </section>
   );
@@ -1075,7 +1052,7 @@ function ProjectDetail({
           </div>
           <div>
             <dt>Created</dt>
-            <dd>{row.createdAt}</dd>
+            <dd>{shortDate(row.createdAt)}</dd>
           </div>
           <div>
             <dt>Invoices</dt>
@@ -1145,7 +1122,7 @@ function Dashboard({
         return {
           id: `invoice-${item.id}`,
           title: `${item.number} ${overdue ? 'is overdue' : 'needs payment'}`,
-          meta: `${item.currency} ${compactNumber(item.amount)} · ${item.dueDate || 'No due date'}`,
+          meta: `${item.currency} ${compactNumber(item.amount)} · ${item.dueDate ? shortDate(item.dueDate) : 'No due date'}`,
           tone: overdue ? 'urgent' : 'waiting',
           date: due,
           section: 'invoices' as Section,
@@ -1290,7 +1267,8 @@ function Dashboard({
               </div>
             </div>
             <span className={`local-fx-badge ${fxStatus}`}>
-              {fxStatus === 'live' ? 'Daily rates' : 'Saved rates'} · {fxDate || 'offline'}
+              {fxStatus === 'live' ? 'Daily rates' : 'Saved rates'} ·{' '}
+              {fxDate ? shortDate(fxDate, false) : 'offline'}
             </span>
           </div>
           <div className="local-bar-chart">
@@ -1568,7 +1546,7 @@ function ProjectTable({
               <div className="local-project-main">
                 <strong>{row.project}</strong>
                 <small>
-                  {clientName || 'No client'} · {row.createdAt}
+                  {clientName || 'No client'} · {shortDate(row.createdAt)}
                 </small>
               </div>
               <div className="local-project-value">
@@ -1798,6 +1776,19 @@ function ClientForm({
           />
         </label>
       ))}
+      <label>
+        <span>Country</span>
+        <select
+          value={draft.country}
+          onChange={(event) => setDraft({ ...draft, country: event.target.value })}
+        >
+          {countries.map((country) => (
+            <option key={country} value={country}>
+              {countryFlags[country]} {country}
+            </option>
+          ))}
+        </select>
+      </label>
       <button className="button button-primary" type="submit">
         <Plus size={16} /> Save client
       </button>
@@ -1809,11 +1800,13 @@ function ClientList({
   clients,
   rows,
   onAdd,
+  onUpdate,
   onRemove,
 }: {
   clients: LocalClient[];
   rows: LocalRow[];
   onAdd: () => void;
+  onUpdate: (id: string, patch: Partial<LocalClient>) => void;
   onRemove: (id: string) => void;
 }) {
   if (!clients.length)
@@ -1843,6 +1836,21 @@ function ClientList({
             <div className="local-client-details">
               <h2>{client.name}</h2>
               <p>{client.company || 'Independent client'}</p>
+              <label className="local-client-country">
+                <span aria-hidden="true">{countryFlags[client.country] || '🌐'}</span>
+                <select
+                  aria-label={`Country for ${client.name}`}
+                  value={client.country}
+                  onChange={(event) => onUpdate(client.id, { country: event.target.value })}
+                >
+                  <option value="">Choose country</option>
+                  {countries.map((country) => (
+                    <option key={country} value={country}>
+                      {countryFlags[country]} {country}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <div>
                 <span>{client.email || 'No email'}</span>
                 <span>{client.phone || 'No phone'}</span>
@@ -1994,7 +2002,7 @@ function ExpenseList({
           <div>
             <strong>{expense.description}</strong>
             <small>
-              {expense.category} · {expense.date}
+              {expense.category} · {shortDate(expense.date)}
             </small>
           </div>
           <div className="local-expense-amount">

@@ -7507,6 +7507,132 @@ tfoot td {
   }
 }
 
+/* Readable type, permanent full navigation, and client country details. */
+.local-nav {
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.local-nav-group-links,
+.local-nav-group.is-open .local-nav-group-links {
+  display: grid;
+}
+.local-nav .local-nav-group-toggle {
+  cursor: default;
+}
+.local-titlebar h1 {
+  font-size: 24px;
+}
+.local-titlebar p {
+  font-size: 13px;
+}
+.local-card-heading strong {
+  font-size: 14px;
+}
+.local-card-heading small,
+.local-summary article > small,
+.local-outstanding-total > span,
+.local-attention-preview small {
+  font-size: 11px;
+  line-height: 1.45;
+}
+.local-fx-badge {
+  font-size: 11px;
+}
+.local-project-preview-head {
+  font-size: 10px;
+}
+.local-project-preview-list > button {
+  min-height: 58px;
+}
+.local-project-preview-list > button > span:first-child {
+  font-size: 11px;
+}
+.local-project-preview-list strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+.local-project-preview-list small {
+  font-size: 11px;
+  line-height: 1.35;
+}
+.local-project-preview-list b {
+  font-size: 12px;
+}
+.local-project-preview-list em {
+  font-size: 10px;
+}
+.local-project-main > small,
+.local-project-value > small {
+  font-size: 11px;
+}
+.local-client-form {
+  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+}
+.local-client-form input,
+.local-client-form select {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid #d8e0e9;
+  border-radius: 8px;
+  background: #fbfcfe;
+  outline: 0;
+  font: inherit;
+}
+.local-client-form input:focus,
+.local-client-form select:focus {
+  border-color: #2d79c7;
+  box-shadow: 0 0 0 3px #e5f1ff;
+}
+.local-client-country {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  color: #536981;
+  font-size: 11px;
+  font-weight: 700;
+}
+.local-client-country > span {
+  font-size: 16px;
+  line-height: 1;
+}
+.local-client-country select {
+  max-width: 190px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.local-client-details > div {
+  margin-top: 7px;
+  font-size: 11px;
+}
+
+@media (max-width: 1180px) {
+  .local-client-form {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .local-titlebar h1 {
+    font-size: 22px;
+  }
+  .local-titlebar p {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .local-client-form {
+    grid-template-columns: 1fr;
+  }
+  .local-project-preview-list strong {
+    white-space: normal;
+  }
+}
+
 /* Projects: compact read-first rows with editing kept behind one clear action. */
 .local-project-ledger-head,
 .local-project-record {
@@ -8042,5 +8168,43 @@ tfoot td {
   }
   .local-action-center {
     padding: 14px;
+  }
+}
+
+/* Final dashboard readability overrides. */
+.local-summary article > small,
+.local-card-heading small,
+.local-outstanding-total > span,
+.local-attention-preview small {
+  font-size: 11px;
+  line-height: 1.45;
+}
+.local-project-preview-head {
+  font-size: 10px;
+}
+.local-project-preview-list > button {
+  min-height: 58px;
+}
+.local-project-preview-list > button > span:first-child {
+  font-size: 11px;
+}
+.local-project-preview-list strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+.local-project-preview-list small {
+  font-size: 11px;
+  line-height: 1.35;
+}
+.local-project-preview-list b {
+  font-size: 12px;
+}
+.local-project-preview-list em {
+  font-size: 10px;
+}
+
+@media (max-width: 720px) {
+  .local-project-preview-list strong {
+    white-space: normal;
   }
 }
