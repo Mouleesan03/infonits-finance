@@ -1,10 +1,27 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LockKeyhole, ArrowRight, LoaderCircle, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import {
+  ArrowRight,
+  ArrowUpRight,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  KeyRound,
+  LoaderCircle,
+  Mail,
+  ShieldCheck,
+} from 'lucide-react';
 import { browserClient } from '@/lib/supabase/browser';
+import { isSixDigitPin, normalizeEmail } from '@/lib/auth';
 import { Button } from './ui/button';
+
+type AuthStep = 'login' | 'complete' | 'mfa';
+type LoginMode = 'pin' | 'password';
+const rememberedEmailKey = 'infonits-finance-login-email';
+
 export function AuthForm({
   configured,
   initialStep,
@@ -18,21 +35,33 @@ export function AuthForm({
 }) {
   const router = useRouter();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [credential, setCredential] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [showCredential, setShowCredential] = useState(false);
+  const [loginMode, setLoginMode] = useState<LoginMode>('pin');
   const [code, setCode] = useState('');
   const [error, setError] = useState(
     initialError === 'membership'
       ? 'Your account has no active workspace membership. Contact the workspace administrator.'
       : initialError
-        ? 'This invitation could not be verified. Request a new invitation.'
+        ? 'This secure link could not be verified. Request a new PIN link.'
         : '',
   );
+  const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
-  const [step, setStep] = useState(complete ? 'complete' : initialStep === 'mfa' ? 'mfa' : 'login');
+  const [step, setStep] = useState<AuthStep>(
+    complete ? 'complete' : initialStep === 'mfa' ? 'mfa' : 'login',
+  );
   const [factor, setFactor] = useState('');
   const [qr, setQr] = useState('');
   const [secret, setSecret] = useState('');
   const [sessionReady, setSessionReady] = useState(false);
+
+  useEffect(() => {
+    const remembered = window.localStorage.getItem(rememberedEmailKey);
+    if (remembered) setEmail(remembered);
+  }, []);
+
   useEffect(() => {
     if (!configured) return;
     let active = true;
@@ -56,8 +85,10 @@ export function AuthForm({
       subscription.unsubscribe();
     };
   }, [configured]);
+
   async function prepareMfa() {
     setError('');
+    setNotice('');
     setBusy(true);
     try {
       const db = browserClient();
@@ -67,15 +98,14 @@ export function AuthForm({
       if (!user) throw new Error('Sign in before setting up your authenticator.');
       const { data, error } = await db.auth.mfa.listFactors();
       if (error) throw error;
-      const existing = data.totp.find((f) => f.status === 'verified');
+      const existing = data.totp.find((item) => item.status === 'verified');
       if (existing) {
         setFactor(existing.id);
         setQr('');
         setSecret('');
       } else {
-        // Clear incomplete enrollments, leaving verified factors intact.
         for (const pending of data.all.filter(
-          (f) => f.factor_type === 'totp' && f.status === 'unverified',
+          (item) => item.factor_type === 'totp' && item.status === 'unverified',
         )) {
           const { error } = await db.auth.mfa.unenroll({ factorId: pending.id });
           if (error) throw error;
@@ -91,22 +121,61 @@ export function AuthForm({
         setSecret(result.data.totp.secret);
       }
       setStep('mfa');
-    } catch (e) {
-      setError((e as Error).message);
+    } catch (caught) {
+      setError((caught as Error).message);
     } finally {
       setBusy(false);
     }
   }
+
+  async function sendPinLink() {
+    setError('');
+    setNotice('');
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+      setError('Enter your email address first.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const { error } = await browserClient().auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/auth/complete`,
+      });
+      if (error) throw error;
+      window.localStorage.setItem(rememberedEmailKey, normalizedEmail);
+      setNotice('Check your email for a secure link to create a new 6-digit PIN.');
+    } catch {
+      setError('The PIN email could not be sent right now. Wait a moment and try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError('');
+    setNotice('');
     try {
       if (!configured) throw new Error('Supabase is not connected yet.');
       const db = browserClient();
       if (step === 'login') {
-        const { error } = await db.auth.signInWithPassword({ email, password });
-        if (error) throw new Error('Unable to sign in. Check your email and password.');
+        const normalizedEmail = normalizeEmail(email);
+        if (loginMode === 'pin' && !isSixDigitPin(credential)) {
+          throw new Error('Enter your 6-digit PIN.');
+        }
+        const { error } = await db.auth.signInWithPassword({
+          email: normalizedEmail,
+          password: credential,
+        });
+        if (error) {
+          throw new Error(
+            loginMode === 'pin'
+              ? 'Email or PIN is incorrect. You can reset the PIN below.'
+              : 'Email or password is incorrect.',
+          );
+        }
+        window.localStorage.setItem(rememberedEmailKey, normalizedEmail);
         setSessionReady(true);
         const {
           data: { user },
@@ -116,19 +185,22 @@ export function AuthForm({
           .select('role,active')
           .eq('id', user!.id)
           .single();
-        if (!profile?.active)
+        if (!profile?.active) {
+          await db.auth.signOut();
           throw new Error(
             'Your account has no active workspace membership. Contact the administrator.',
           );
+        }
         const { data: assurance } = await db.auth.mfa.getAuthenticatorAssuranceLevel();
         if (profile.role === 'admin' && assurance?.currentLevel !== 'aal2') {
-          setStep('mfa');
+          await prepareMfa();
           return;
         }
       } else if (step === 'complete') {
-        if (password.length < 12) throw new Error('Use at least 12 characters for your password.');
-        const { error } = await db.auth.updateUser({ password });
-        if (error) throw error;
+        if (!isSixDigitPin(credential)) throw new Error('Choose exactly 6 numbers for your PIN.');
+        if (credential !== confirmPin) throw new Error('The two PIN entries do not match.');
+        const { error } = await db.auth.updateUser({ password: credential });
+        if (error) throw new Error('Unable to save this PIN. Try another 6-digit number.');
       } else {
         if (!factor) throw new Error('Choose “Prepare authenticator” first.');
         const { data: challenge, error } = await db.auth.mfa.challenge({ factorId: factor });
@@ -138,114 +210,186 @@ export function AuthForm({
           challengeId: challenge.id,
           code,
         });
-        if (verified.error)
+        if (verified.error) {
           throw new Error('That code could not be verified. Try the current six-digit code.');
+        }
       }
       router.push('/');
       router.refresh();
-    } catch (e) {
-      setError((e as Error).message);
+    } catch (caught) {
+      setError((caught as Error).message);
     } finally {
       setBusy(false);
     }
   }
+
+  const title =
+    step === 'mfa'
+      ? 'One last security check'
+      : step === 'complete'
+        ? 'Create your PIN'
+        : 'Welcome back';
+  const description =
+    step === 'mfa'
+      ? 'Enter the current code from your authenticator app.'
+      : step === 'complete'
+        ? 'Choose six numbers you can enter quickly on any device.'
+        : 'Use your email and 6-digit PIN to open your workspace.';
+
   return (
-    <div className="auth-page">
+    <div className="auth-page auth-page-v2">
       <aside className="auth-story">
-        <Link className="brand official-brand light" href="/" aria-label="Infonits Finance home">
-          <img src="/infonits-logo.png" alt="infonits" width={154} height={36} />
-          <span className="brand-finance">finance</span>
+        <Link className="auth-brand" href="/" aria-label="Infonits Finance home">
+          <img src="/infonits-white-logo.png" alt="infonits" width={154} height={36} />
+          <span>FINANCE</span>
         </Link>
-        <div>
-          <span className="eyebrow">A CLEARER FINANCIAL PICTURE</span>
+        <div className="auth-story-copy">
+          <span className="eyebrow">YOUR PRIVATE FINANCE WORKSPACE</span>
           <h1>
-            Good work.
+            Quick access.
             <br />
             Clear numbers.
             <br />
-            <span>Confident decisions.</span>
+            <span>Less friction.</span>
           </h1>
-          <p>
-            Your projects, payments and profit.
-            <br />
-            One simple, private workspace.
-          </p>
-          <div className="auth-formula">
-            <span>Project value</span>
-            <b>−</b>
-            <span>Direct costs</span>
-            <b>=</b>
-            <strong>For Me ↗</strong>
+          <p>Projects, payments, invoices and profit in one secure workspace.</p>
+          <div className="auth-benefits">
+            <span>
+              <KeyRound size={17} /> Simple 6-digit PIN
+            </span>
+            <span>
+              <ShieldCheck size={17} /> Protected cloud session
+            </span>
+            <span>
+              <CheckCircle2 size={17} /> Works smoothly on mobile
+            </span>
           </div>
         </div>
-        <span className="auth-footer">Built for the way Infonits works.</span>
+        <span className="auth-footer">Infonits Finance · Private workspace</span>
       </aside>
+
       <main className="auth-main">
-        <div className="auth-box">
+        <div className="auth-box auth-box-v2">
           <span className="auth-lock">
-            <LockKeyhole size={24} />
+            <KeyRound size={23} />
           </span>
-          <h2>
-            {step === 'mfa'
-              ? 'Secure your workspace'
-              : step === 'complete'
-                ? 'Make yourself at home'
-                : 'Welcome back.'}
-          </h2>
-          <p>
-            {step === 'mfa'
-              ? 'Administrators verify with an authenticator before accessing financial records.'
-              : step === 'complete'
-                ? 'Set a strong password to finish accepting your invitation.'
-                : 'Sign in to your Infonits Finance workspace.'}
-          </p>
+          <span className="auth-kicker">SECURE SIGN IN</span>
+          <h2>{title}</h2>
+          <p>{description}</p>
+
           {!configured && (
             <div className="notice">
               <ShieldCheck size={18} />
-              <span>
-                Connect Supabase to enable secure sign-in. <Link href="/settings">View setup</Link>
-              </span>
+              <span>Connect Supabase to enable secure sign-in.</span>
             </div>
           )}
+
           <form onSubmit={submit}>
             {step === 'login' && (
               <>
-                <label className="field">
+                <label className="field auth-icon-field">
                   <span>Email address</span>
-                  <input
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@infonits.io"
-                    required
-                  />
+                  <span className="auth-input-wrap">
+                    <Mail size={17} aria-hidden="true" />
+                    <input
+                      type="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      placeholder="you@infonits.io"
+                      required
+                    />
+                  </span>
                 </label>
-                <label className="field">
-                  <span>Password</span>
-                  <input
-                    type="password"
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
+                <label className="field auth-icon-field">
+                  <span>{loginMode === 'pin' ? '6-digit PIN' : 'Current password'}</span>
+                  <span className="auth-input-wrap">
+                    <KeyRound size={17} aria-hidden="true" />
+                    <input
+                      type={showCredential ? 'text' : 'password'}
+                      inputMode={loginMode === 'pin' ? 'numeric' : 'text'}
+                      autoComplete="current-password"
+                      pattern={loginMode === 'pin' ? '[0-9]{6}' : undefined}
+                      maxLength={loginMode === 'pin' ? 6 : undefined}
+                      value={credential}
+                      onChange={(event) =>
+                        setCredential(
+                          loginMode === 'pin'
+                            ? event.target.value.replace(/\D/g, '').slice(0, 6)
+                            : event.target.value,
+                        )
+                      }
+                      placeholder={loginMode === 'pin' ? '••••••' : 'Enter current password'}
+                      required
+                    />
+                    <button
+                      className="auth-reveal"
+                      type="button"
+                      aria-label={showCredential ? 'Hide credential' : 'Show credential'}
+                      onClick={() => setShowCredential((value) => !value)}
+                    >
+                      {showCredential ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
+                  </span>
                 </label>
+                <div className="auth-login-options">
+                  <button type="button" onClick={() => void sendPinLink()} disabled={busy}>
+                    Set or reset PIN
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCredential('');
+                      setError('');
+                      setNotice('');
+                      setLoginMode((value) => (value === 'pin' ? 'password' : 'pin'));
+                    }}
+                  >
+                    {loginMode === 'pin' ? 'Use existing password' : 'Use 6-digit PIN'}
+                  </button>
+                </div>
               </>
             )}
+
             {step === 'complete' && (
-              <label className="field">
-                <span>New password</span>
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={12}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </label>
+              <div className="auth-pin-grid">
+                <label className="field">
+                  <span>New 6-digit PIN</span>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="new-password"
+                    pattern="[0-9]{6}"
+                    minLength={6}
+                    maxLength={6}
+                    value={credential}
+                    onChange={(event) =>
+                      setCredential(event.target.value.replace(/\D/g, '').slice(0, 6))
+                    }
+                    placeholder="••••••"
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>Confirm PIN</span>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="new-password"
+                    pattern="[0-9]{6}"
+                    minLength={6}
+                    maxLength={6}
+                    value={confirmPin}
+                    onChange={(event) =>
+                      setConfirmPin(event.target.value.replace(/\D/g, '').slice(0, 6))
+                    }
+                    placeholder="••••••"
+                    required
+                  />
+                </label>
+              </div>
             )}
+
             {step === 'mfa' && (
               <>
                 {!factor && (
@@ -279,18 +423,28 @@ export function AuthForm({
                       pattern="[0-9]{6}"
                       maxLength={6}
                       value={code}
-                      onChange={(e) => setCode(e.target.value)}
+                      onChange={(event) =>
+                        setCode(event.target.value.replace(/\D/g, '').slice(0, 6))
+                      }
                       required
                     />
                   </label>
                 )}
               </>
             )}
+
+            {notice && (
+              <p className="auth-success" role="status">
+                <CheckCircle2 size={17} />
+                {notice}
+              </p>
+            )}
             {error && (
               <p className="error-message" role="alert">
                 {error}
               </p>
             )}
+
             <Button
               className="auth-submit"
               type="submit"
@@ -298,17 +452,21 @@ export function AuthForm({
             >
               {busy ? <LoaderCircle size={17} className="spin" /> : null}
               {step === 'login'
-                ? 'Sign in'
+                ? loginMode === 'pin'
+                  ? 'Open workspace'
+                  : 'Sign in'
                 : step === 'complete'
-                  ? 'Set password & continue'
+                  ? 'Save PIN & continue'
                   : 'Verify & continue'}
               <ArrowRight size={16} />
             </Button>
           </form>
-          <p className="invite-note">
-            <ShieldCheck size={14} />
-            Invitation-only access. Contact your administrator for an invitation or password reset.
+
+          <p className="auth-security-note">
+            <ShieldCheck size={15} /> Your PIN is handled by Supabase authentication and never
+            stored in this app.
           </p>
+
           {sessionReady && (
             <button
               className="text-link"

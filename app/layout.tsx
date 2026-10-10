@@ -4,6 +4,7 @@ import '@fontsource/poppins/500.css';
 import '@fontsource/poppins/600.css';
 import '@fontsource/poppins/700.css';
 import './globals.css';
+import { DeploymentRefresh } from '@/components/deployment-refresh';
 export const metadata: Metadata = {
   title: 'Infonits Finance',
   description: 'A clear view of your projects, payments and profit.',
@@ -17,7 +18,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <DeploymentRefresh />
+        {children}
+      </body>
     </html>
   );
 }
