@@ -8311,12 +8311,18 @@ tfoot td {
 }
 
 .local-project-status select {
-  min-width: 98px;
+  min-width: 108px;
   min-height: 34px;
   padding: 6px 28px 6px 12px;
   font-size: 12px;
   text-align: left;
   text-align-last: left;
+}
+@media (min-width: 1181px) {
+  .local-project-ledger-head,
+  .local-project-record {
+    grid-template-columns: 36px minmax(190px, 1.6fr) repeat(4, minmax(82px, 0.7fr)) 126px 150px;
+  }
 }
 
 /* Post Tracker: compact totals and a date-first scheduling calendar. */
