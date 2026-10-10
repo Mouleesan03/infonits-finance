@@ -29,6 +29,7 @@ beforeAll(async () => {
     '',
   );
   await db.exec(migration);
+  await db.exec(readFileSync('supabase/migrations/202610110001_foreign_key_indexes.sql', 'utf8'));
   await db.exec(
     `insert into auth.users values('${editor}'),('${admin}'),('${other}'),('${outsider}');insert into public.profiles(id,role,organization_id) values('${editor}','editor','${org}'),('${admin}','admin','${org}'),('${other}','editor','${otherOrg}');`,
   );
@@ -60,6 +61,17 @@ describe('PostgreSQL financial integration', () => {
       "select reloptions::text as options from pg_class where relname='project_financials'",
     );
     expect(view.options).toContain('security_invoker=true');
+  });
+  it('covers composite finance foreign keys with indexes', async () => {
+    const row = await one(
+      `select count(*)::text count from pg_indexes where schemaname='public' and indexname in (
+        'projects_client_organization_idx',
+        'client_payments_project_organization_idx',
+        'project_costs_project_organization_idx',
+        'project_cost_payments_cost_organization_idx'
+      )`,
+    );
+    expect(row.count).toBe('4');
   });
   it('treats unpaid committed costs as profit deductions', async () => {
     const p = await one('select * from project_financials where id=$1', [projectId]);
