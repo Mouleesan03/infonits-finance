@@ -1164,131 +1164,174 @@ async function downloadInvoicePdf(
     `${item.currency} ${value.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
   const clientName = client?.name ?? 'Client';
 
-  pdf.setFillColor(10, 49, 86);
-  pdf.rect(0, 0, 210, 44, 'F');
-  pdf.setFillColor(255, 105, 45);
-  pdf.rect(0, 0, 6, 44, 'F');
+  pdf.setFillColor(15, 37, 68);
+  pdf.rect(0, 0, 210, 43, 'F');
+  pdf.setFillColor(38, 126, 230);
+  pdf.rect(0, 0, 210, 4, 'F');
   try {
-    const logo = await imageDataUrl('/infonits-logo.png');
-    pdf.setFillColor(255, 255, 255);
-    pdf.roundedRect(14, 8, 66, 22, 3, 3, 'F');
-    pdf.addImage(logo, 'PNG', 18, 12, 58, 13.4);
+    const logo = await imageDataUrl('/infonits-white-logo.png');
+    pdf.addImage(logo, 'PNG', 16, 13, 58, 11.6);
   } catch {
     pdf.setTextColor(255, 255, 255);
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(24);
-    pdf.text('infonits', 18, 21);
+    pdf.text('infonits', 16, 23);
   }
+  pdf.setTextColor(152, 183, 218);
+  pdf.setFontSize(6.5);
+  pdf.text('DESIGN  x  TECHNOLOGY', 16, 32);
   pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(7);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text('Digital solutions & creative technology', 18, 36);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(17);
-  pdf.text('INVOICE', 192, 18, { align: 'right' });
-  pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(item.number, 192, 27, { align: 'right' });
-  pdf.setFillColor(255, 255, 255);
-  pdf.roundedRect(164, 31, 28, 7, 2, 2, 'F');
-  pdf.setTextColor(10, 49, 86);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(7);
-  pdf.text(item.status.toUpperCase(), 178, 35.5, { align: 'center' });
-
-  pdf.setFillColor(247, 249, 252);
-  pdf.roundedRect(18, 54, 82, 43, 3, 3, 'F');
-  pdf.roundedRect(110, 54, 82, 43, 3, 3, 'F');
-  pdf.setFontSize(8);
-  pdf.setTextColor(102, 117, 138);
-  pdf.text('FROM', 24, 63);
-  pdf.text('BILL TO', 116, 63);
-  pdf.setTextColor(31, 47, 68);
-  pdf.setFontSize(11);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Infonits Pvt Ltd.', 24, 72);
-  pdf.text(clientName, 116, 72);
+  pdf.text('BILLING DOCUMENT', 194, 13, { align: 'right' });
+  pdf.setFontSize(22);
+  pdf.text('INVOICE', 194, 24, { align: 'right' });
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(82, 98, 119);
-  pdf.text('Jaffna, Sri Lanka', 24, 79);
-  pdf.text('hello@infonits.com', 24, 85);
-  pdf.text('+94 77 607 9157', 24, 91);
-  if (client?.company) pdf.text(client.company, 116, 79);
-  if (client?.email) pdf.text(client.email, 116, client.company ? 85 : 79);
-  if (client?.phone) pdf.text(client.phone, 116, client.company || client.email ? 91 : 85);
-
-  pdf.setFillColor(237, 244, 252);
-  pdf.roundedRect(18, 104, 174, 18, 2, 2, 'F');
-  pdf.setFontSize(7);
-  pdf.setTextColor(100, 116, 137);
-  pdf.text('ISSUE DATE', 24, 111);
-  pdf.text('DUE DATE', 82, 111);
-  pdf.text('CURRENCY', 140, 111);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(31, 47, 68);
-  pdf.setFontSize(9);
-  pdf.text(item.issueDate, 24, 117);
-  pdf.text(item.dueDate, 82, 117);
-  pdf.text(item.currency, 140, 117);
-
-  pdf.setFillColor(10, 49, 86);
-  pdf.rect(18, 132, 174, 11, 'F');
+  pdf.text(item.number, 194, 31, { align: 'right' });
+  pdf.setFillColor(33, 164, 116);
+  pdf.roundedRect(166, 34, 28, 6, 3, 3, 'F');
   pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(8);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('DESCRIPTION', 23, 139);
-  pdf.text('AMOUNT', 187, 139, { align: 'right' });
-  pdf.setTextColor(37, 53, 74);
+  pdf.setFontSize(6.5);
+  pdf.text(item.status.toUpperCase(), 180, 38, { align: 'center' });
+
+  pdf.setTextColor(77, 96, 120);
+  pdf.setFontSize(7);
+  pdf.text('ISSUED BY', 16, 55);
+  pdf.setTextColor(20, 40, 66);
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Infonits (Pvt) Ltd', 16, 63);
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(83, 101, 124);
+  pdf.text('Jaffna, Sri Lanka', 16, 70);
+  pdf.text('hello@infonits.io  |  www.infonits.io', 16, 76);
+
+  const meta = [
+    ['Invoice number', item.number],
+    ['Issue date', item.issueDate],
+    ['Due date', item.dueDate],
+  ];
+  meta.forEach(([label, value], index) => {
+    const y = 55 + index * 10;
+    pdf.setTextColor(104, 120, 141);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    pdf.text(label, 128, y);
+    pdf.setTextColor(25, 45, 70);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8.5);
+    pdf.text(value, 194, y, { align: 'right' });
+  });
+
+  pdf.setFillColor(241, 246, 252);
+  pdf.roundedRect(16, 86, 178, 35, 3, 3, 'F');
+  pdf.setTextColor(75, 96, 121);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(7);
+  pdf.text('BILL TO', 22, 96);
+  pdf.setTextColor(21, 42, 68);
+  pdf.setFontSize(12);
+  pdf.text(clientName, 22, 105);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7.5);
+  pdf.setTextColor(82, 101, 125);
+  const clientLines = [client?.company, client?.email, client?.phone].filter(Boolean) as string[];
+  pdf.text(clientLines.length ? clientLines : ['Client account'], 22, 112);
+  pdf.setTextColor(75, 96, 121);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(7);
+  pdf.text('PROJECT', 128, 96);
+  pdf.setTextColor(21, 42, 68);
+  pdf.setFontSize(9);
+  pdf.text(project, 128, 105, { maxWidth: 60 });
+
+  pdf.setTextColor(21, 42, 68);
   pdf.setFontSize(10);
+  pdf.text('Services & deliverables', 16, 135);
+  pdf.setFillColor(15, 37, 68);
+  pdf.roundedRect(16, 140, 178, 11, 2, 2, 'F');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(7);
+  pdf.text('DESCRIPTION', 22, 147);
+  pdf.text('QTY', 132, 147, { align: 'right' });
+  pdf.text('RATE', 162, 147, { align: 'right' });
+  pdf.text('AMOUNT', 188, 147, { align: 'right' });
+
+  pdf.setTextColor(21, 42, 68);
+  pdf.setFontSize(8.5);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(project, 22, 161, { maxWidth: 96 });
   pdf.setFont('helvetica', 'normal');
-  pdf.text(project, 23, 154, { maxWidth: 112 });
-  pdf.text(currency(subtotal), 187, 154, { align: 'right' });
-  pdf.setDrawColor(220, 227, 235);
-  pdf.line(18, 164, 192, 164);
+  pdf.setTextColor(100, 116, 137);
+  pdf.setFontSize(7);
+  pdf.text('Professional services', 22, 168);
+  pdf.setTextColor(39, 56, 78);
+  pdf.setFontSize(8);
+  pdf.text('1', 132, 161, { align: 'right' });
+  pdf.text(currency(subtotal), 162, 161, { align: 'right' });
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(currency(subtotal), 188, 161, { align: 'right' });
+  pdf.setDrawColor(222, 229, 238);
+  pdf.line(16, 176, 194, 176);
 
   const summaryRows = [
     ['Subtotal', currency(subtotal)],
-    [`Tax (${item.taxRate ?? 0}%)`, currency(tax)],
     ['Discount', `- ${currency(item.discount ?? 0)}`],
+    [`Tax (${item.taxRate ?? 0}%)`, currency(tax)],
+    ['Invoice total', currency(subtotal + tax - (item.discount ?? 0))],
     ['Advance paid', `- ${currency(item.advance ?? 0)}`],
   ];
-  pdf.setFontSize(9);
   summaryRows.forEach(([label, value], index) => {
-    const y = 176 + index * 8;
-    pdf.setTextColor(100, 114, 133);
-    pdf.text(label, 128, y);
-    pdf.setTextColor(40, 55, 75);
-    pdf.text(value, 187, y, { align: 'right' });
+    const y = 187 + index * 7;
+    pdf.setFont('helvetica', index === 3 ? 'bold' : 'normal');
+    pdf.setFontSize(index === 3 ? 8.5 : 8);
+    pdf.setTextColor(92, 108, 129);
+    pdf.text(label, 126, y);
+    pdf.setTextColor(35, 52, 75);
+    pdf.text(value, 194, y, { align: 'right' });
   });
-  pdf.setFillColor(10, 49, 86);
-  pdf.roundedRect(122, 207, 70, 18, 3, 3, 'F');
+
+  pdf.setTextColor(75, 96, 121);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(7);
+  pdf.text('PAYMENT NOTE', 16, 187);
+  pdf.setTextColor(75, 92, 114);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+  pdf.text(item.notes || 'Payment is due within 10 days of the invoice date.', 16, 195, {
+    maxWidth: 86,
+  });
+  pdf.text(`Use ${item.number} as the payment reference.`, 16, 211, { maxWidth: 86 });
+
+  pdf.setFillColor(31, 112, 198);
+  pdf.roundedRect(120, 224, 74, 20, 3, 3, 'F');
   pdf.setTextColor(255, 255, 255);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(8);
-  pdf.text('AMOUNT DUE', 128, 214);
+  pdf.setFontSize(7);
+  pdf.text('BALANCE DUE', 126, 232);
   pdf.setFontSize(13);
-  pdf.text(currency(total), 187, 219, { align: 'right' });
+  pdf.text(currency(total), 188, 238, { align: 'right' });
 
-  pdf.setTextColor(72, 88, 109);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(8);
-  pdf.text('NOTES & PAYMENT', 18, 215);
+  pdf.setFillColor(244, 247, 251);
+  pdf.roundedRect(16, 224, 94, 32, 3, 3, 'F');
+  pdf.setTextColor(21, 42, 68);
+  pdf.setFontSize(8.5);
+  pdf.text('Payment reference', 22, 234);
+  pdf.setTextColor(83, 101, 124);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(item.notes || 'Payment is due within 10 days of the invoice date.', 18, 223, {
-    maxWidth: 92,
-  });
-  pdf.text(`Use ${item.number} as the payment reference.`, 18, 239, { maxWidth: 92 });
-  pdf.setTextColor(111, 125, 143);
-  pdf.text(`Recorded LKR value: ${money(lkr(total, item.exchangeRate))}`, 122, 232, {
-    maxWidth: 70,
-  });
+  pdf.setFontSize(7.5);
+  pdf.text(`${item.number}  |  hello@infonits.io`, 22, 243);
+  pdf.text(`Recorded value: ${money(lkr(total, item.exchangeRate))}`, 22, 250);
 
-  pdf.setDrawColor(224, 230, 237);
-  pdf.line(18, 270, 192, 270);
-  pdf.setTextColor(105, 119, 138);
-  pdf.text('Thank you for choosing Infonits.', 18, 278);
-  pdf.text('infonits.com', 192, 278, { align: 'right' });
+  pdf.setDrawColor(222, 229, 238);
+  pdf.line(16, 276, 194, 276);
+  pdf.setTextColor(97, 112, 132);
+  pdf.setFontSize(7);
+  pdf.text('CREATED WITH CARE BY INFONITS', 16, 284);
+  pdf.text('hello@infonits.io  |  www.infonits.io', 194, 284, { align: 'right' });
   pdf.save(`${item.number}.pdf`);
 }
 
@@ -1329,81 +1372,74 @@ function InvoicePreview({
             <X size={19} />
           </button>
         </header>
-        <div className="invoice-paper">
-          <div className="invoice-brand">
+        <div className="invoice-paper invoice-a4">
+          <div className="invoice-a4-header">
             <div>
-              <span className="invoice-logo-panel">
-                <img src="/infonits-logo.png" alt="Infonits" />
-              </span>
-              <small>
-                Digital solutions & creative technology
-                <br />
-                Jaffna, Sri Lanka · hello@infonits.com · +94 77 607 9157
-              </small>
+              <img src="/infonits-white-logo.png" alt="Infonits" />
+              <small>DESIGN&nbsp; × &nbsp;TECHNOLOGY</small>
             </div>
-            <div className="invoice-brand-title">
-              <span>INVOICE</span>
-              <small>
-                {item.number} · {item.status}
-              </small>
+            <div>
+              <small>BILLING DOCUMENT</small>
+              <strong>INVOICE</strong>
+              <span>{item.number}</span>
+              <em>{item.status}</em>
             </div>
           </div>
-          <div className="invoice-meta">
-            <div className="invoice-meta-card">
-              <span>Invoice</span>
-              <strong>{item.number}</strong>
-              <span>Issue date</span>
-              <strong>{item.issueDate}</strong>
-              <span>Due date</span>
-              <strong>{item.dueDate}</strong>
+          <div className="invoice-a4-meta">
+            <div>
+              <span>Issued by</span>
+              <strong>Infonits (Pvt) Ltd</strong>
+              <p>Jaffna, Sri Lanka<br />hello@infonits.io<br />www.infonits.io</p>
             </div>
-            <div className="invoice-bill-card">
+            <dl>
+              <dt>Invoice number</dt><dd>{item.number}</dd>
+              <dt>Issue date</dt><dd>{item.issueDate}</dd>
+              <dt>Due date</dt><dd>{item.dueDate}</dd>
+            </dl>
+          </div>
+          <div className="invoice-a4-billto">
+            <div>
               <span>Bill to</span>
               <strong>{client?.name ?? 'Client'}</strong>
-              {client?.company ? <small>{client.company}</small> : null}
-              {client?.email ? <small>{client.email}</small> : null}
-              {client?.phone ? <small>{client.phone}</small> : null}
+              <p>{[client?.company, client?.email, client?.phone].filter(Boolean).join(' · ')}</p>
+            </div>
+            <div>
+              <span>Project</span>
+              <strong>{project}</strong>
             </div>
           </div>
-          <div className="invoice-line">
-            <strong>Description</strong>
-            <strong>Amount</strong>
-            <span>{project}</span>
-            <span>
-              {item.currency} {subtotal.toLocaleString()}
-            </span>
+          <div className="invoice-a4-services">
+            <h3>Services &amp; deliverables</h3>
+            <div className="invoice-a4-table-head"><span>Description</span><span>Qty</span><span>Rate</span><span>Amount</span></div>
+            <div className="invoice-a4-table-row">
+              <span><b>01</b><strong>{project}</strong><small>Professional services</small></span>
+              <span>1</span>
+              <span>{item.currency} {subtotal.toLocaleString()}</span>
+              <strong>{item.currency} {subtotal.toLocaleString()}</strong>
+            </div>
           </div>
-          <div className="invoice-summary-row">
-            <div className="invoice-notes">
-              <strong>Notes & payment</strong>
+          <div className="invoice-a4-recap">
+            <div>
+              <span>Payment note</span>
               <p>{item.notes || 'Payment is due within 10 days of the invoice date.'}</p>
-              <p>Use {item.number} as the payment reference.</p>
+              <p>Use <strong>{item.number}</strong> as the payment reference.</p>
             </div>
-            <div className="invoice-total">
-              <span>Subtotal</span>
-              <b>
-                {item.currency} {subtotal.toLocaleString()}
-              </b>
-              <span>Tax ({item.taxRate ?? 0}%)</span>
-              <b>
-                {item.currency} {tax.toLocaleString()}
-              </b>
-              <span>Discount</span>
-              <b>
-                {item.currency} {(item.discount ?? 0).toLocaleString()}
-              </b>
-              <span>Advance paid</span>
-              <b>
-                {item.currency} {(item.advance ?? 0).toLocaleString()}
-              </b>
-              <span className="grand">Amount due</span>
-              <strong>
-                {item.currency} {total.toLocaleString()}
-              </strong>
-              <small>{money(lkr(total, item.exchangeRate))} at recorded exchange rate</small>
+            <div className="invoice-a4-totals">
+              <span>Subtotal</span><b>{item.currency} {subtotal.toLocaleString()}</b>
+              <span>Discount</span><b>− {item.currency} {(item.discount ?? 0).toLocaleString()}</b>
+              <span>Tax ({item.taxRate ?? 0}%)</span><b>{item.currency} {tax.toLocaleString()}</b>
+              <span>Advance paid</span><b>− {item.currency} {(item.advance ?? 0).toLocaleString()}</b>
+              <strong>Balance due</strong><strong>{item.currency} {total.toLocaleString()}</strong>
             </div>
           </div>
-          <p>Thank you for choosing Infonits.</p>
+          <div className="invoice-a4-payment">
+            <div><span>Payment reference</span><strong>{item.number}</strong></div>
+            <div><span>Recorded LKR value</span><strong>{money(lkr(total, item.exchangeRate))}</strong></div>
+          </div>
+          <div className="invoice-a4-footer">
+            <span>CREATED WITH CARE BY <strong>INFONITS</strong></span>
+            <span>hello@infonits.io · www.infonits.io</span>
+          </div>
         </div>
         <footer className="invoice-preview-actions">
           <button className="button button-outline" onClick={onClose}>

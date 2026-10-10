@@ -25,6 +25,7 @@ import {
   Plus,
   ReceiptText,
   RefreshCw,
+  Sparkles,
   ShieldCheck,
   Trash2,
   TrendingUp,
@@ -504,7 +505,7 @@ export function LocalFinance() {
       )}
       <aside className={`local-sidebar ${menuOpen ? 'is-open' : ''}`}>
         <div className="local-brand">
-          <img src="/infonits-logo.png" alt="infonits" width={154} height={36} />
+          <img src="/infonits-white-logo.png" alt="infonits" width={154} height={36} />
           <span className="local-brand-compact" aria-hidden="true">
             IN
           </span>
@@ -1106,6 +1107,9 @@ function Dashboard({
   onAddProject: () => void;
   onSection: (section: Section) => void;
 }) {
+  const [aiInsight, setAiInsight] = useState('');
+  const [aiError, setAiError] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
   const now = new Date(`${today()}T00:00:00`).getTime();
   const day = 86_400_000;
   const totalOutcome = totals.work + totals.expenses;
@@ -1173,6 +1177,33 @@ function Dashboard({
     outstandingInvoices.map((item) => item.clientId).filter(Boolean),
   ).size;
   const clientNames = new Map(clients.map((client) => [client.id, client.name]));
+
+  async function generateFinanceInsight() {
+    setAiLoading(true);
+    setAiError('');
+    try {
+      const response = await fetch('/api/finance-insight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectValue: totals.value,
+          received: totals.received,
+          workCost: totals.work,
+          expenses: totals.expenses,
+          profit: totals.net,
+          projectCount: rows.length,
+          outstandingInvoices: outstandingInvoices.length,
+        }),
+      });
+      const data = (await response.json()) as { insight?: string; error?: string };
+      if (!response.ok || !data.insight) throw new Error(data.error || 'AI insight is unavailable.');
+      setAiInsight(data.insight);
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : 'AI insight is unavailable.');
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   return (
     <div className="local-dashboard-page">
@@ -1287,6 +1318,16 @@ function Dashboard({
                 </strong>
               </div>
             ))}
+          </div>
+          <div className="local-ai-insight">
+            <span><Sparkles size={17} /></span>
+            <div>
+              <strong>AI finance insight</strong>
+              <p>{aiInsight || aiError || 'Get one concise observation and a practical next action from your totals.'}</p>
+            </div>
+            <button type="button" onClick={() => void generateFinanceInsight()} disabled={aiLoading}>
+              {aiLoading ? 'Analysing…' : aiInsight ? 'Refresh' : 'Generate'}
+            </button>
           </div>
         </article>
       </section>
