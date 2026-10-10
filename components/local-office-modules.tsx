@@ -535,6 +535,7 @@ function MonthCalendar({
 function CalendarEventModal({
   initialDate,
   initialEvent,
+  dateEvents = [],
   readOnly = false,
   postMode = false,
   clients = [],
@@ -542,9 +543,11 @@ function CalendarEventModal({
   onClose,
   onSave,
   onDelete,
+  onSelectEvent,
 }: {
   initialDate: string;
   initialEvent?: CalendarEvent;
+  dateEvents?: CalendarEvent[];
   readOnly?: boolean;
   postMode?: boolean;
   clients?: ClientRef[];
@@ -552,6 +555,7 @@ function CalendarEventModal({
   onClose: () => void;
   onSave: (event: Omit<CalendarEvent, 'id'>) => void;
   onDelete?: () => void;
+  onSelectEvent?: (event: CalendarEvent) => void;
 }) {
   const [draft, setDraft] = useState({
     title: initialEvent?.title ?? '',
@@ -714,6 +718,28 @@ function CalendarEventModal({
               placeholder="Optional details"
             />
           </label>
+          {dateEvents.length > 0 && (
+            <section className="office-event-day-list" aria-label={`Events on ${draft.date}`}>
+              <div>
+                <strong>Events on {draft.date}</strong>
+                <small>{dateEvents.length} scheduled</small>
+              </div>
+              <div>
+                {dateEvents.map((event) => (
+                  <button
+                    type="button"
+                    key={event.id}
+                    className={event.id === initialEvent?.id ? 'active' : ''}
+                    onClick={() => onSelectEvent?.(event)}
+                  >
+                    <span className={event.type.toLowerCase()} />
+                    <b>{event.title}</b>
+                    <small>{event.type}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
           <footer>
             {onDelete && !readOnly && (
               <button className="button office-danger-button" type="button" onClick={onDelete}>
@@ -2347,10 +2373,12 @@ function PostsModule({
           key={`${selectedEvent?.id ?? 'new'}-${eventDate}`}
           initialDate={eventDate}
           initialEvent={selectedEvent ?? undefined}
+          dateEvents={postCalendarEvents.filter((event) => event.date === eventDate)}
           readOnly={Boolean(selectedEvent && !events.some((event) => event.id === selectedEvent.id))}
           postMode
           clients={clients}
           projects={projects}
+          onSelectEvent={(event) => setSelectedEvent(event)}
           onClose={() => {
             setEventDate(null);
             setSelectedEvent(null);
@@ -2597,6 +2625,7 @@ function LettersModule({
   setFormOpen: (v: boolean) => void;
   onChange: (v: ServiceLetter[]) => void;
 }) {
+  const [editingId, setEditingId] = useState('');
   const [draft, setDraft] = useState({
     date: today(),
     client: '',
@@ -2607,8 +2636,91 @@ function LettersModule({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!draft.client.trim() || !draft.subject.trim()) return;
-    onChange([{ id: crypto.randomUUID(), ...draft }, ...items]);
+    onChange(
+      editingId
+        ? items.map((item) => (item.id === editingId ? { id: item.id, ...draft } : item))
+        : [{ id: crypto.randomUUID(), ...draft }, ...items],
+    );
+    setEditingId('');
+    setDraft({ date: today(), client: '', subject: '', preparedBy: '', body: '' });
     setFormOpen(false);
+  }
+  function editLetter(item: ServiceLetter) {
+    setEditingId(item.id);
+    setDraft({
+      date: item.date,
+      client: item.client,
+      subject: item.subject,
+      preparedBy: item.preparedBy,
+      body: item.body,
+    });
+    setFormOpen(true);
+  }
+  async function downloadLetter(item: ServiceLetter) {
+    const { jsPDF } = await import('jspdf');
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+    pdf.setFillColor(15, 37, 68);
+    pdf.rect(0, 0, 210, 43, 'F');
+    pdf.setFillColor(38, 126, 230);
+    pdf.rect(0, 0, 210, 4, 'F');
+    try {
+      const logo = await imageDataUrl('/infonits-white-logo.png');
+      pdf.addImage(logo, 'PNG', 16, 13, 58, 11.6);
+    } catch {
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(24);
+      pdf.text('infonits', 16, 24);
+    }
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(17);
+    pdf.text('SERVICE LETTER', 194, 22, { align: 'right' });
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    pdf.setTextColor(177, 201, 228);
+    pdf.text(item.date, 194, 30, { align: 'right' });
+
+    pdf.setTextColor(87, 106, 129);
+    pdf.setFontSize(8);
+    pdf.text('PREPARED FOR', 16, 58);
+    pdf.setTextColor(21, 42, 68);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(13);
+    pdf.text(item.client, 16, 67, { maxWidth: 178 });
+    pdf.setFillColor(241, 246, 252);
+    pdf.roundedRect(16, 79, 178, 26, 3, 3, 'F');
+    pdf.setTextColor(78, 98, 122);
+    pdf.setFontSize(7);
+    pdf.text('SUBJECT', 22, 89);
+    pdf.setTextColor(21, 42, 68);
+    pdf.setFontSize(12);
+    pdf.text(item.subject, 22, 98, { maxWidth: 166 });
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.setTextColor(48, 65, 87);
+    const body = pdf.splitTextToSize(item.body || 'No additional details provided.', 174);
+    pdf.text(body, 18, 123, { lineHeightFactor: 1.6 });
+
+    pdf.setDrawColor(219, 228, 238);
+    pdf.line(16, 251, 88, 251);
+    pdf.setTextColor(91, 108, 130);
+    pdf.setFontSize(7);
+    pdf.text('PREPARED BY', 16, 259);
+    pdf.setTextColor(21, 42, 68);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    pdf.text(item.preparedBy || 'Infonits (Pvt) Ltd', 16, 267);
+    pdf.setDrawColor(222, 229, 238);
+    pdf.line(16, 278, 194, 278);
+    pdf.setTextColor(97, 112, 132);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    pdf.text('INFONITS (PVT) LTD', 16, 286);
+    pdf.text('hello@infonits.io  |  www.infonits.io', 194, 286, { align: 'right' });
+    const filename = `${item.subject.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'service-letter'}.pdf`;
+    pdf.save(filename);
   }
   function printLetter(item: ServiceLetter) {
     const popup = window.open('', '_blank', 'width=800,height=900');
@@ -2626,7 +2738,11 @@ function LettersModule({
         title="Documents"
         subtitle="Create and print simple service letters from one place."
         action="New service letter"
-        onAction={() => setFormOpen(!formOpen)}
+        onAction={() => {
+          setEditingId('');
+          setDraft({ date: today(), client: '', subject: '', preparedBy: '', body: '' });
+          setFormOpen(!formOpen);
+        }}
       />
       {formOpen && (
         <form className="office-form letter-form" onSubmit={submit}>
@@ -2671,7 +2787,7 @@ function LettersModule({
           </label>
           <button className="button button-primary" type="submit">
             <Check size={16} />
-            Save letter
+            {editingId ? 'Update letter' : 'Save letter'}
           </button>
         </form>
       )}
@@ -2704,6 +2820,12 @@ function LettersModule({
                     </td>
                     <td>{item.preparedBy || '—'}</td>
                     <td className="office-row-actions">
+                      <button aria-label="Edit letter" title="Edit" onClick={() => editLetter(item)}>
+                        <Pencil size={16} />
+                      </button>
+                      <button aria-label="Download letter PDF" title="Download A4 PDF" onClick={() => void downloadLetter(item)}>
+                        <FileDown size={16} />
+                      </button>
                       <button aria-label="Print letter" onClick={() => printLetter(item)}>
                         <Printer size={16} />
                       </button>
@@ -3118,7 +3240,9 @@ function CalendarModule({
           key={`${selectedEvent?.id ?? 'new'}-${eventDate}`}
           initialDate={eventDate}
           initialEvent={selectedEvent ?? undefined}
+          dateEvents={derived.filter((event) => event.date === eventDate)}
           readOnly={Boolean(selectedEvent && !items.some((event) => event.id === selectedEvent.id))}
+          onSelectEvent={(event) => setSelectedEvent(event)}
           onClose={() => {
             setFormOpen(false);
             setEventDate(null);

@@ -2221,19 +2221,17 @@ function ClientList({
             <div className="local-client-details">
               <h2>{client.name}</h2>
               <p>{client.company || 'Independent client'}</p>
-              <span className="local-client-country-display">
-                {countryFlags[client.country] ?? '🌐'} {client.country || 'Country not set'}
-              </span>
-              <div>
+              <div className="local-client-meta">
+                <span className="local-client-country-display">
+                  {countryFlags[client.country] ?? '🌐'} {client.country || 'Country not set'}
+                </span>
                 <span>{client.email || 'No email'}</span>
                 <span>{client.phone || 'No phone'}</span>
               </div>
             </div>
             <div className="local-client-stats">
-              <strong>{clientRows.length}</strong>
-              <span>Projects</span>
-              <strong>{money(value)}</strong>
-              <span>Total value</span>
+              <span><small>Projects</small><strong>{clientRows.length}</strong></span>
+              <span><small>Total value</small><strong>{money(value)}</strong></span>
             </div>
             <div className="local-client-actions">
               <button className="local-row-action neutral" aria-label={`Edit ${client.name}`} onClick={() => setEditingId(editingId === client.id ? '' : client.id)}>

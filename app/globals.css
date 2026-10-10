@@ -10819,3 +10819,156 @@ tfoot td {
     grid-template-columns: 1fr;
   }
 }
+
+/* Final workspace QA: hierarchy, modal sizing and touch-safe controls. */
+.local-modal-layer {
+  z-index: 1000;
+  padding: 18px;
+}
+.invoice-preview-modal {
+  width: min(820px, calc(100vw - 36px));
+  max-height: calc(100dvh - 36px);
+}
+.invoice-preview-modal > header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  min-height: 70px;
+  padding-block: 14px;
+  background: #fff;
+}
+.invoice-preview-modal .invoice-paper.invoice-a4 {
+  width: min(620px, calc(100% - 32px));
+  margin: 16px auto;
+}
+.local-client-card {
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: 14px;
+}
+.local-client-details .local-client-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px 13px;
+  margin-top: 10px;
+}
+.local-client-country-display {
+  margin-top: 0;
+}
+.local-client-stats {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+  padding-top: 13px;
+  border-top: 1px solid #e8eef5;
+}
+.local-client-stats > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: #f5f8fc;
+}
+.local-client-stats small {
+  color: #7b8ba0;
+  font-size: 9px;
+  font-weight: 700;
+}
+.local-client-stats strong {
+  color: #203853;
+  font-size: 11px;
+  text-align: right;
+}
+.local-client-actions {
+  grid-column: 3;
+  grid-row: 1;
+}
+.local-project-status {
+  min-width: 116px;
+}
+.local-project-status select {
+  width: 112px;
+  min-width: 112px;
+  padding: 8px 34px 8px 13px !important;
+  text-overflow: clip;
+}
+.office-event-day-list {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid #dbe6f2;
+  border-radius: 10px;
+  background: #f7faff;
+}
+.office-event-day-list > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.office-event-day-list > div:first-child strong {
+  color: #223a55;
+  font-size: 11px;
+}
+.office-event-day-list > div:first-child small {
+  color: #74869b;
+  font-size: 9px;
+}
+.office-event-day-list > div:last-child {
+  display: grid;
+  gap: 6px;
+}
+.office-event-day-list button {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #e0e8f1;
+  border-radius: 8px;
+  background: #fff;
+  color: #2d435d;
+  text-align: left;
+}
+.office-event-day-list button.active {
+  border-color: #6aa5e8;
+  box-shadow: 0 0 0 2px #e2f0ff;
+}
+.office-event-day-list button > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2f7ed2;
+}
+.office-event-day-list button > span.renewal { background: #e6a01b; }
+.office-event-day-list button > span.post { background: #8548df; }
+.office-event-day-list button b { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.office-event-day-list button small { color: #7b8ca1; font-size: 9px; }
+
+@media (max-width: 720px) {
+  .local-modal-layer { padding: 10px; }
+  .invoice-preview-modal {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 20px);
+  }
+  .invoice-preview-modal .invoice-paper.invoice-a4 {
+    width: 650px;
+    min-width: 650px;
+    margin: 10px;
+  }
+  .local-client-card {
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+  }
+  .local-client-stats {
+    grid-template-columns: 1fr;
+  }
+  .office-event-day-list button {
+    min-height: 42px;
+  }
+}

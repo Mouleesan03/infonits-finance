@@ -206,6 +206,12 @@ export function InfonitsAssistant({
           <textarea
             value={input}
             onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                if (!busy && input.trim()) void send();
+              }
+            }}
             placeholder="Ask Infonits GPT or describe a task…"
             rows={2}
           />
