@@ -15,7 +15,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { browserClient } from '@/lib/supabase/browser';
-import { isSixDigitPin, normalizeEmail } from '@/lib/auth';
+import { isSixDigitPin, normalizeEmail, pinCredential } from '@/lib/auth';
 import { Button } from './ui/button';
 
 type AuthStep = 'login' | 'complete' | 'mfa';
@@ -164,9 +164,11 @@ export function AuthForm({
         if (loginMode === 'pin' && !isSixDigitPin(credential)) {
           throw new Error('Enter your 6-digit PIN.');
         }
+        const password =
+          loginMode === 'pin' ? await pinCredential(normalizedEmail, credential) : credential;
         const { error } = await db.auth.signInWithPassword({
           email: normalizedEmail,
-          password: credential,
+          password,
         });
         if (error) {
           throw new Error(
@@ -199,8 +201,19 @@ export function AuthForm({
       } else if (step === 'complete') {
         if (!isSixDigitPin(credential)) throw new Error('Choose exactly 6 numbers for your PIN.');
         if (credential !== confirmPin) throw new Error('The two PIN entries do not match.');
-        const { error } = await db.auth.updateUser({ password: credential });
-        if (error) throw new Error('Unable to save this PIN. Try another 6-digit number.');
+        const {
+          data: { user },
+        } = await db.auth.getUser();
+        if (!user?.email) throw new Error('Your recovery session expired. Request a new PIN link.');
+        const password = await pinCredential(user.email, credential);
+        const { error } = await db.auth.updateUser({ password });
+        if (error) {
+          throw new Error(
+            error.message.toLowerCase().includes('session')
+              ? 'Your recovery session expired. Request a new PIN link.'
+              : 'Unable to save this PIN right now. Wait a moment and try again.',
+          );
+        }
       } else {
         if (!factor) throw new Error('Choose “Prepare authenticator” first.');
         const { data: challenge, error } = await db.auth.mfa.challenge({ factorId: factor });
