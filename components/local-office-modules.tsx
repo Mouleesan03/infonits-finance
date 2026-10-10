@@ -138,6 +138,17 @@ type Store = {
 const storeKey = 'infonits-finance-office-v1';
 const today = () => new Date().toISOString().slice(0, 10);
 const thisMonth = () => today().slice(0, 7);
+const addDays = (date: string, days: number) => {
+  const value = new Date(`${date}T00:00:00`);
+  value.setDate(value.getDate() + days);
+  return value.toISOString().slice(0, 10);
+};
+const invoiceDueDate = (item: Pick<SalesDocument, 'issueDate' | 'dueDate'>) =>
+  item.dueDate && item.dueDate > item.issueDate ? item.dueDate : addDays(item.issueDate, 10);
+const currentDocumentStatus = (item: SalesDocument) => {
+  if (item.kind !== 'Invoice' || item.status === 'Paid') return item.status;
+  return invoiceDueDate(item) < today() ? 'Overdue' : item.status;
+};
 const currencies = ['LKR', 'USD', 'GBP', 'EUR', 'AUD', 'CAD', 'INR', 'AED', 'SGD', 'JPY'];
 const emptyStore: Store = {
   documents: [],
@@ -215,7 +226,22 @@ export function LocalOfficeModule({
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storeKey);
-      if (saved) setStore({ ...emptyStore, ...(JSON.parse(saved) as Partial<Store>) });
+      if (saved) {
+        const savedStore = JSON.parse(saved) as Partial<Store>;
+        const parsed: Store = {
+          ...emptyStore,
+          ...savedStore,
+          documents: savedStore.documents ?? [],
+        };
+        setStore({
+          ...parsed,
+          documents: parsed.documents.map((item) => ({
+            ...item,
+            dueDate: item.kind === 'Invoice' ? invoiceDueDate(item) : item.dueDate,
+            status: currentDocumentStatus(item),
+          })),
+        });
+      }
     } catch {
       setStore(emptyStore);
     } finally {
@@ -443,7 +469,7 @@ function SalesDocuments({
     clientId: '',
     projectId: '',
     issueDate: today(),
-    dueDate: today(),
+    dueDate: addDays(today(), 10),
     amount: '',
     currency: 'LKR',
     status: kind === 'Invoice' ? 'Pending' : 'Draft',
@@ -453,6 +479,7 @@ function SalesDocuments({
     notes: 'Payment is due within 10 days of the invoice date.',
   });
   const [preview, setPreview] = useState<SalesDocument | null>(null);
+  const [statusFilter, setStatusFilter] = useState('All');
   const names = new Map(clients.map((client) => [client.id, client.name]));
   const clientDetails = new Map(clients.map((client) => [client.id, client]));
   const projectNames = new Map(projects.map((project) => [project.id, project.project]));
@@ -470,9 +497,41 @@ function SalesDocuments({
       localStorage.removeItem('infonits-invoice-draft');
     }
   }, [kind, setFormOpen]);
-  const visible = items.filter((item) =>
-    `${item.number} ${names.get(item.clientId) ?? ''}`.toLowerCase().includes(search.toLowerCase()),
+  useEffect(() => setStatusFilter('All'), [kind]);
+  const normalizedItems = items.map((item) => ({
+    ...item,
+    dueDate: item.kind === 'Invoice' ? invoiceDueDate(item) : item.dueDate,
+    status: currentDocumentStatus(item),
+  }));
+  const visible = normalizedItems.filter(
+    (item) =>
+      (statusFilter === 'All' || item.status === statusFilter) &&
+      `${item.number} ${names.get(item.clientId) ?? ''}`
+        .toLowerCase()
+        .includes(search.toLowerCase()),
   );
+  const invoiceSummary = normalizedItems.reduce(
+    (summary, item) => {
+      const value = lkr(documentTotal(item), item.exchangeRate);
+      return {
+        billed: summary.billed + value,
+        paid: summary.paid + (item.status === 'Paid' ? value : 0),
+        pending:
+          summary.pending + (item.status === 'Pending' || item.status === 'Sent' ? value : 0),
+        overdue: summary.overdue + (item.status === 'Overdue' ? value : 0),
+      };
+    },
+    { billed: 0, paid: 0, pending: 0, overdue: 0 },
+  );
+  const statusCounts = normalizedItems.reduce(
+    (counts, item) => ({ ...counts, [item.status]: (counts[item.status] ?? 0) + 1 }),
+    {} as Record<string, number>,
+  );
+  const invoiceCount = Math.max(normalizedItems.length, 1);
+  const paidPercent = ((statusCounts.Paid ?? 0) / invoiceCount) * 100;
+  const sentPercent = ((statusCounts.Sent ?? 0) / invoiceCount) * 100;
+  const pendingPercent = ((statusCounts.Pending ?? 0) / invoiceCount) * 100;
+  const overduePercent = ((statusCounts.Overdue ?? 0) / invoiceCount) * 100;
   function submit(event: React.FormEvent) {
     event.preventDefault();
     const amount = Number(draft.amount);
@@ -501,7 +560,7 @@ function SalesDocuments({
       clientId: '',
       projectId: '',
       issueDate: today(),
-      dueDate: today(),
+      dueDate: addDays(today(), 10),
       amount: '',
       currency: 'LKR',
       status: kind === 'Invoice' ? 'Pending' : 'Draft',
@@ -521,6 +580,59 @@ function SalesDocuments({
         action={`New ${kind.toLowerCase()}`}
         onAction={() => setFormOpen(!formOpen)}
       />
+      {kind === 'Invoice' && (
+        <>
+          <section className="invoice-kpis" aria-label="Invoice totals">
+            <article className="blue">
+              <span>Total invoices</span>
+              <strong>{normalizedItems.length}</strong>
+              <small>{projects.length} projects</small>
+            </article>
+            <article className="amber">
+              <span>Total billed</span>
+              <strong>{money(invoiceSummary.billed)}</strong>
+              <small>All recorded invoices</small>
+            </article>
+            <article className="green">
+              <span>Paid</span>
+              <strong>{money(invoiceSummary.paid)}</strong>
+              <small>{statusCounts.Paid ?? 0} invoices</small>
+            </article>
+            <article className="red">
+              <span>Pending</span>
+              <strong>{money(invoiceSummary.pending)}</strong>
+              <small>{(statusCounts.Pending ?? 0) + (statusCounts.Sent ?? 0)} invoices</small>
+            </article>
+            <article className="purple">
+              <span>Overdue</span>
+              <strong>{money(invoiceSummary.overdue)}</strong>
+              <small>{statusCounts.Overdue ?? 0} invoices</small>
+            </article>
+          </section>
+          <section className="invoice-status-card">
+            <div>
+              <span>Invoice status</span>
+              <strong>{normalizedItems.length}</strong>
+              <small>Automatically updated after the 10-day due date.</small>
+            </div>
+            <div className="invoice-status-bars">
+              {[
+                ['Paid', paidPercent],
+                ['Sent', sentPercent],
+                ['Pending', pendingPercent],
+                ['Overdue', overduePercent],
+              ].map(([label, percent]) => (
+                <button key={label} onClick={() => setStatusFilter(String(label))}>
+                  <span className={String(label).toLowerCase()} />
+                  <b>{label}</b>
+                  <i style={{ width: `${Number(percent)}%` }} />
+                  <strong>{statusCounts[String(label)] ?? 0}</strong>
+                </button>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
       {formOpen && (
         <form className="office-form" onSubmit={submit}>
           <label>
@@ -557,7 +669,13 @@ function SalesDocuments({
             <input
               type="date"
               value={draft.issueDate}
-              onChange={(e) => setDraft({ ...draft, issueDate: e.target.value })}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  issueDate: e.target.value,
+                  dueDate: addDays(e.target.value, 10),
+                })
+              }
             />
           </label>
           <label>
@@ -644,7 +762,21 @@ function SalesDocuments({
             onChange={setSearch}
             placeholder={`Search ${kind.toLowerCase()}s`}
           />
-          <span>{items.length} total</span>
+          <div className="invoice-filter-chips">
+            {(kind === 'Invoice'
+              ? ['All', 'Paid', 'Sent', 'Pending', 'Overdue']
+              : ['All', 'Draft', 'Sent', 'Accepted', 'Declined']
+            ).map((status) => (
+              <button
+                key={status}
+                className={statusFilter === status ? 'active' : ''}
+                onClick={() => setStatusFilter(status)}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+          <span>{visible.length} shown</span>
         </div>
         {!visible.length ? (
           <Empty
@@ -751,6 +883,18 @@ function SalesDocuments({
   );
 }
 
+async function imageDataUrl(path: string) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error('Logo unavailable');
+  const blob = await response.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
 async function downloadInvoicePdf(
   item: SalesDocument,
   client: ClientRef | undefined,
@@ -769,13 +913,21 @@ async function downloadInvoicePdf(
   pdf.rect(0, 0, 210, 44, 'F');
   pdf.setFillColor(255, 105, 45);
   pdf.rect(0, 0, 6, 44, 'F');
+  try {
+    const logo = await imageDataUrl('/infonits-logo.png');
+    pdf.setFillColor(255, 255, 255);
+    pdf.roundedRect(14, 8, 66, 22, 3, 3, 'F');
+    pdf.addImage(logo, 'PNG', 18, 12, 58, 13.4);
+  } catch {
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(24);
+    pdf.text('infonits', 18, 21);
+  }
   pdf.setTextColor(255, 255, 255);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(24);
-  pdf.text('infonits', 18, 21);
-  pdf.setFontSize(8);
+  pdf.setFontSize(7);
   pdf.setFont('helvetica', 'normal');
-  pdf.text('Digital solutions & creative technology', 18, 29);
+  pdf.text('Digital solutions & creative technology', 18, 36);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(17);
   pdf.text('INVOICE', 192, 18, { align: 'right' });
@@ -925,7 +1077,9 @@ function InvoicePreview({
         <div className="invoice-paper">
           <div className="invoice-brand">
             <div>
-              <strong>infonits</strong>
+              <span className="invoice-logo-panel">
+                <img src="/infonits-logo.png" alt="Infonits" />
+              </span>
               <small>
                 Digital solutions & creative technology
                 <br />

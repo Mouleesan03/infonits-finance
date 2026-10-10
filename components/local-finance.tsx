@@ -7,6 +7,7 @@ import {
   BarChart3,
   BriefcaseBusiness,
   CalendarDays,
+  ChevronDown,
   CircleDollarSign,
   Clock3,
   CreditCard,
@@ -39,6 +40,7 @@ import { LocalOfficeModule, type OfficeSection } from './local-office-modules';
 import { LocalCloudSync } from './local-cloud-sync';
 
 type Section = 'dashboard' | 'projects' | 'clients' | 'expenses' | OfficeSection;
+type NavGroup = 'overview' | 'sales' | 'work' | 'finance' | 'admin';
 type LocalClient = { id: string; name: string; company: string; email: string; phone: string };
 type LocalRow = {
   id: string;
@@ -114,6 +116,13 @@ const money = (value: number) =>
     maximumFractionDigits: 2,
   }).format(value);
 const localValue = (value: number, rate: number) => value * rate;
+const navGroupFor = (section: Section): NavGroup => {
+  if (section === 'dashboard' || section === 'calendar') return 'overview';
+  if (section === 'clients' || section === 'invoices' || section === 'quotations') return 'sales';
+  if (section === 'projects' || section === 'team' || section === 'posts') return 'work';
+  if (section === 'payments' || section === 'expenses' || section === 'reports') return 'finance';
+  return 'admin';
+};
 
 function readOfficeOverview(): OfficeOverview {
   try {
@@ -139,6 +148,7 @@ export function LocalFinance() {
   const [fxDate, setFxDate] = useState('');
   const [fxStatus, setFxStatus] = useState<'loading' | 'live' | 'saved'>('loading');
   const [section, setSection] = useState<Section>('dashboard');
+  const [navGroup, setNavGroup] = useState<NavGroup | null>('overview');
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarPreferenceLoaded, setSidebarPreferenceLoaded] = useState(false);
@@ -307,6 +317,7 @@ export function LocalFinance() {
 
   function changeSection(next: Section) {
     setSection(next);
+    setNavGroup(navGroupFor(next));
     setMenuOpen(false);
   }
 
@@ -490,112 +501,137 @@ export function LocalFinance() {
         </div>
         <div className="local-mode-chip">Personal cloud</div>
         <nav className="local-nav" aria-label="Workspace navigation">
-          <span className="local-nav-label">Overview</span>
-          <button
-            className={section === 'dashboard' ? 'active' : ''}
-            onClick={() => changeSection('dashboard')}
+          <SidebarGroup
+            label="Overview"
+            open={navGroup === 'overview'}
+            onToggle={() => setNavGroup((current) => (current === 'overview' ? null : 'overview'))}
           >
-            <LayoutDashboard size={19} />
-            <span>Dashboard</span>
-          </button>
-          <button
-            className={section === 'calendar' ? 'active' : ''}
-            onClick={() => changeSection('calendar')}
+            <button
+              className={section === 'dashboard' ? 'active' : ''}
+              onClick={() => changeSection('dashboard')}
+            >
+              <LayoutDashboard size={19} />
+              <span>Dashboard</span>
+            </button>
+            <button
+              className={section === 'calendar' ? 'active' : ''}
+              onClick={() => changeSection('calendar')}
+            >
+              <CalendarDays size={19} />
+              <span>Calendar</span>
+            </button>
+          </SidebarGroup>
+          <SidebarGroup
+            label="Sales"
+            open={navGroup === 'sales'}
+            onToggle={() => setNavGroup((current) => (current === 'sales' ? null : 'sales'))}
           >
-            <CalendarDays size={19} />
-            <span>Calendar</span>
-          </button>
-          <span className="local-nav-label">Sales</span>
-          <button
-            className={section === 'clients' ? 'active' : ''}
-            onClick={() => changeSection('clients')}
+            <button
+              className={section === 'clients' ? 'active' : ''}
+              onClick={() => changeSection('clients')}
+            >
+              <Users size={19} />
+              <span>Clients</span>
+              <b>{clients.length}</b>
+            </button>
+            <button
+              className={section === 'invoices' ? 'active' : ''}
+              onClick={() => changeSection('invoices')}
+            >
+              <FileText size={19} />
+              <span>Invoices</span>
+            </button>
+            <button
+              className={section === 'quotations' ? 'active' : ''}
+              onClick={() => changeSection('quotations')}
+            >
+              <FileCheck2 size={19} />
+              <span>Quotations</span>
+            </button>
+          </SidebarGroup>
+          <SidebarGroup
+            label="Work"
+            open={navGroup === 'work'}
+            onToggle={() => setNavGroup((current) => (current === 'work' ? null : 'work'))}
           >
-            <Users size={19} />
-            <span>Clients</span>
-            <b>{clients.length}</b>
-          </button>
-          <button
-            className={section === 'invoices' ? 'active' : ''}
-            onClick={() => changeSection('invoices')}
+            <button
+              className={section === 'projects' ? 'active' : ''}
+              onClick={() => changeSection('projects')}
+            >
+              <BriefcaseBusiness size={19} />
+              <span>Projects</span>
+              <b>{rows.length}</b>
+            </button>
+            <button
+              className={section === 'team' ? 'active' : ''}
+              onClick={() => changeSection('team')}
+            >
+              <UsersRound size={19} />
+              <span>Team</span>
+            </button>
+            <button
+              className={section === 'posts' ? 'active' : ''}
+              onClick={() => changeSection('posts')}
+            >
+              <MessagesSquare size={19} />
+              <span>Post tracker</span>
+            </button>
+          </SidebarGroup>
+          <SidebarGroup
+            label="Finance"
+            open={navGroup === 'finance'}
+            onToggle={() => setNavGroup((current) => (current === 'finance' ? null : 'finance'))}
           >
-            <FileText size={19} />
-            <span>Invoices</span>
-          </button>
-          <button
-            className={section === 'quotations' ? 'active' : ''}
-            onClick={() => changeSection('quotations')}
+            <button
+              className={section === 'payments' ? 'active' : ''}
+              onClick={() => changeSection('payments')}
+            >
+              <CircleDollarSign size={19} />
+              <span>Payments</span>
+            </button>
+            <button
+              className={section === 'expenses' ? 'active' : ''}
+              onClick={() => changeSection('expenses')}
+            >
+              <ReceiptText size={19} />
+              <span>Expenses</span>
+              <b>{expenses.length}</b>
+            </button>
+            <button
+              className={section === 'reports' ? 'active' : ''}
+              onClick={() => changeSection('reports')}
+            >
+              <PieChart size={19} />
+              <span>Reports</span>
+            </button>
+          </SidebarGroup>
+          <SidebarGroup
+            label="Admin"
+            open={navGroup === 'admin'}
+            onToggle={() => setNavGroup((current) => (current === 'admin' ? null : 'admin'))}
           >
-            <FileCheck2 size={19} />
-            <span>Quotations</span>
-          </button>
-          <span className="local-nav-label">Work</span>
-          <button
-            className={section === 'projects' ? 'active' : ''}
-            onClick={() => changeSection('projects')}
-          >
-            <BriefcaseBusiness size={19} />
-            <span>Projects</span>
-            <b>{rows.length}</b>
-          </button>
-          <button
-            className={section === 'team' ? 'active' : ''}
-            onClick={() => changeSection('team')}
-          >
-            <UsersRound size={19} />
-            <span>Team</span>
-          </button>
-          <button
-            className={section === 'posts' ? 'active' : ''}
-            onClick={() => changeSection('posts')}
-          >
-            <MessagesSquare size={19} />
-            <span>Post tracker</span>
-          </button>
-          <span className="local-nav-label">Finance</span>
-          <button
-            className={section === 'payments' ? 'active' : ''}
-            onClick={() => changeSection('payments')}
-          >
-            <CircleDollarSign size={19} />
-            <span>Payments</span>
-          </button>
-          <button
-            className={section === 'expenses' ? 'active' : ''}
-            onClick={() => changeSection('expenses')}
-          >
-            <ReceiptText size={19} />
-            <span>Expenses</span>
-            <b>{expenses.length}</b>
-          </button>
-          <button
-            className={section === 'reports' ? 'active' : ''}
-            onClick={() => changeSection('reports')}
-          >
-            <PieChart size={19} />
-            <span>Reports</span>
-          </button>
-          <span className="local-nav-label">Admin</span>
-          <button
-            className={section === 'renewals' ? 'active' : ''}
-            onClick={() => changeSection('renewals')}
-          >
-            <Globe2 size={19} />
-            <span>Renewals</span>
-          </button>
-          <button
-            className={section === 'documents' ? 'active' : ''}
-            onClick={() => changeSection('documents')}
-          >
-            <FileText size={19} />
-            <span>Documents</span>
-          </button>
-          <button
-            className={section === 'users' ? 'active' : ''}
-            onClick={() => changeSection('users')}
-          >
-            <ShieldCheck size={19} />
-            <span>Users & roles</span>
-          </button>
+            <button
+              className={section === 'renewals' ? 'active' : ''}
+              onClick={() => changeSection('renewals')}
+            >
+              <Globe2 size={19} />
+              <span>Renewals</span>
+            </button>
+            <button
+              className={section === 'documents' ? 'active' : ''}
+              onClick={() => changeSection('documents')}
+            >
+              <FileText size={19} />
+              <span>Documents</span>
+            </button>
+            <button
+              className={section === 'users' ? 'active' : ''}
+              onClick={() => changeSection('users')}
+            >
+              <ShieldCheck size={19} />
+              <span>Users & roles</span>
+            </button>
+          </SidebarGroup>
         </nav>
         <div className="local-sidebar-note">
           <LockKeyhole size={17} />
@@ -850,6 +886,33 @@ export function LocalFinance() {
         />
       ) : null}
     </div>
+  );
+}
+
+function SidebarGroup({
+  label,
+  open,
+  onToggle,
+  children,
+}: {
+  label: string;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={`local-nav-group ${open ? 'is-open' : ''}`}>
+      <button
+        type="button"
+        className="local-nav-group-toggle"
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        <span>{label}</span>
+        <ChevronDown size={15} />
+      </button>
+      <div className="local-nav-group-links">{children}</div>
+    </section>
   );
 }
 
@@ -1383,36 +1446,31 @@ function ProjectTable({
       </div>
     );
   return (
-    <div className="local-sheet-wrap">
-      <table className="local-sheet">
-        <thead>
-          <tr>
-            <th>Project details</th>
-            <th>Client</th>
-            <th>Amount</th>
-            <th>Currency / Rate</th>
-            <th>Advance received</th>
-            <th>Pay for work</th>
-            <th>Paid for work</th>
-            <th>Payment status</th>
-            <th>For me</th>
-            <th aria-label="Actions" />
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => {
-            const mine =
-              localValue(row.value, row.exchangeRate) - row.advance - row.workDue - row.workPaid;
-            return (
-              <tr key={row.id}>
-                <td data-label="Project">
-                  <input
-                    aria-label="Project details"
-                    value={row.project}
-                    onChange={(event) => onUpdate(row.id, { project: event.target.value })}
-                  />
-                </td>
-                <td data-label="Client">
+    <section className="local-project-ledger" aria-label="Project records">
+      <div className="local-project-ledger-head" aria-hidden="true">
+        <span>#</span>
+        <span>Project</span>
+        <span>Value</span>
+        <span>Payments</span>
+        <span>For me</span>
+        <span>Status</span>
+        <span>Actions</span>
+      </div>
+      <div className="local-project-records">
+        {rows.map((row, index) => {
+          const value = localValue(row.value, row.exchangeRate);
+          const mine = value - row.advance - row.workDue - row.workPaid;
+          return (
+            <article className="local-project-record" key={row.id}>
+              <span className="local-project-number">{String(index + 1).padStart(2, '0')}</span>
+              <div className="local-project-main">
+                <input
+                  className="local-project-name-input"
+                  aria-label="Project name"
+                  value={row.project}
+                  onChange={(event) => onUpdate(row.id, { project: event.target.value })}
+                />
+                <div>
                   <select
                     aria-label="Client"
                     value={row.clientId}
@@ -1425,18 +1483,11 @@ function ProjectTable({
                       </option>
                     ))}
                   </select>
-                </td>
-                <td className="local-money-cell" data-label="Amount">
-                  <input
-                    aria-label="Project amount"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={row.value || ''}
-                    onChange={(event) => onUpdate(row.id, { value: Number(event.target.value) })}
-                  />
-                </td>
-                <td className="local-currency-cell" data-label="Currency / rate">
+                  <small>Created {row.createdAt}</small>
+                </div>
+              </div>
+              <div className="local-project-value">
+                <div>
                   <select
                     aria-label="Currency"
                     value={row.currency}
@@ -1455,6 +1506,18 @@ function ProjectTable({
                     ))}
                   </select>
                   <input
+                    aria-label="Project amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={row.value || ''}
+                    onChange={(event) => onUpdate(row.id, { value: Number(event.target.value) })}
+                  />
+                </div>
+                <strong>{money(value)}</strong>
+                <label>
+                  Rate
+                  <input
                     aria-label="Exchange rate to LKR"
                     type="number"
                     min="0"
@@ -1464,21 +1527,20 @@ function ProjectTable({
                       onUpdate(row.id, { exchangeRate: Number(event.target.value) })
                     }
                   />
-                </td>
-                {(['advance', 'workDue', 'workPaid'] as const).map((field) => (
-                  <td
-                    key={field}
-                    className={`local-money-cell ${field === 'advance' ? 'income-cell' : 'outcome-cell'}`}
-                    data-label={
-                      field === 'advance'
-                        ? 'Advance received'
-                        : field === 'workDue'
-                          ? 'Pay for work'
-                          : 'Paid for work'
-                    }
-                  >
+                </label>
+              </div>
+              <div className="local-project-payments">
+                {(
+                  [
+                    ['advance', 'Received'],
+                    ['workDue', 'To pay'],
+                    ['workPaid', 'Paid'],
+                  ] as const
+                ).map(([field, label]) => (
+                  <label key={field} className={field === 'advance' ? 'income' : 'outcome'}>
+                    <span>{label}</span>
                     <input
-                      aria-label={field}
+                      aria-label={label}
                       type="number"
                       min="0"
                       step="0.01"
@@ -1488,67 +1550,75 @@ function ProjectTable({
                         onUpdate(row.id, { [field]: Number(event.target.value) })
                       }
                     />
-                  </td>
+                  </label>
                 ))}
-                <td data-label="Status">
-                  <select
-                    aria-label="Payment status"
-                    value={row.status}
-                    onChange={(event) =>
-                      onUpdate(row.id, { status: event.target.value as LocalRow['status'] })
-                    }
-                  >
-                    <option>Waiting</option>
-                    <option>Partial</option>
-                    <option>Paid</option>
-                  </select>
-                </td>
-                <td className="local-mine" data-label="For me">
-                  {money(mine)}
-                </td>
-                <td className="local-card-actions" data-label="Actions">
-                  <button
-                    className="local-row-action neutral"
-                    aria-label={`View ${row.project} details`}
-                    title="Project details"
-                    onClick={() => onView(row.id)}
-                  >
-                    <Eye size={15} />
-                  </button>
-                  <button
-                    className="local-row-action"
-                    aria-label={`Create invoice for ${row.project}`}
-                    title="Create invoice"
-                    onClick={() => onInvoice(row)}
-                  >
-                    <FilePlus2 size={15} />
-                  </button>
-                  <button
-                    className="local-delete"
-                    aria-label={`Delete ${row.project}`}
-                    onClick={() => onDelete(row.id)}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
-          <tr className="local-total">
-            <th>Total</th>
-            <td />
-            <td>{money(totals.value)}</td>
-            <td />
-            <td className="positive">{money(totals.advance)}</td>
-            <td className="negative">{money(totals.workDue)}</td>
-            <td className="negative">{money(totals.workPaid)}</td>
-            <td />
-            <td>{money(totals.mine)}</td>
-            <td />
-          </tr>
-        </tbody>
-      </table>
-    </div>
+              </div>
+              <div className="local-project-profit">
+                <small>For me</small>
+                <strong>{money(mine)}</strong>
+              </div>
+              <div className="local-project-status">
+                <select
+                  aria-label="Payment status"
+                  className={row.status.toLowerCase()}
+                  value={row.status}
+                  onChange={(event) =>
+                    onUpdate(row.id, { status: event.target.value as LocalRow['status'] })
+                  }
+                >
+                  <option>Waiting</option>
+                  <option>Partial</option>
+                  <option>Paid</option>
+                </select>
+              </div>
+              <div className="local-card-actions">
+                <button
+                  className="local-row-action neutral"
+                  aria-label={`View ${row.project} details`}
+                  title="Project details"
+                  onClick={() => onView(row.id)}
+                >
+                  <Eye size={16} />
+                </button>
+                <button
+                  className="local-row-action"
+                  aria-label={`Create invoice for ${row.project}`}
+                  title="Create invoice"
+                  onClick={() => onInvoice(row)}
+                >
+                  <FilePlus2 size={16} />
+                </button>
+                <button
+                  className="local-delete"
+                  aria-label={`Delete ${row.project}`}
+                  onClick={() => onDelete(row.id)}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+      <footer className="local-project-totals">
+        <div>
+          <span>Total value</span>
+          <strong>{money(totals.value)}</strong>
+        </div>
+        <div className="positive">
+          <span>Received</span>
+          <strong>{money(totals.advance)}</strong>
+        </div>
+        <div className="negative">
+          <span>Work cost</span>
+          <strong>{money(totals.workDue + totals.workPaid)}</strong>
+        </div>
+        <div>
+          <span>For me</span>
+          <strong>{money(totals.mine)}</strong>
+        </div>
+      </footer>
+    </section>
   );
 }
 
