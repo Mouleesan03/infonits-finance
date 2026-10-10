@@ -60,7 +60,7 @@ type LocalRow = {
   advance: number;
   workDue: number;
   workPaid: number;
-  status: 'Waiting' | 'Partial' | 'Paid';
+  status: 'Waiting' | 'Partial' | 'Paid' | 'Overdue';
   createdAt: string;
 };
 type LocalExpense = {
@@ -664,6 +664,28 @@ export function LocalFinance() {
     setMenuOpen(false);
   }
 
+  function openDashboardInvoice(id: string, mode: 'view' | 'edit') {
+    localStorage.setItem(`infonits-invoice-${mode}-id`, id);
+    setSection('invoices');
+  }
+
+  function deleteDashboardInvoice(id: string) {
+    if (!window.confirm('Delete this invoice? This cannot be undone.')) return;
+    let saved: Record<string, unknown>;
+    try {
+      saved = JSON.parse(localStorage.getItem(officeStorageKey) ?? '{}') as Record<string, unknown>;
+    } catch {
+      saved = {};
+    }
+    const documents = Array.isArray(saved.documents)
+      ? (saved.documents as OfficeOverview['documents'])
+      : [];
+    saved.documents = documents.filter((document) => document.id !== id);
+    localStorage.setItem(officeStorageKey, JSON.stringify(saved));
+    setOfficeOverview(readOfficeOverview());
+    window.dispatchEvent(new Event('infonits:local-change'));
+  }
+
   function exportCsv() {
     const clientNames = new Map(clients.map((client) => [client.id, client.name]));
     const csv = [
@@ -957,6 +979,9 @@ export function LocalFinance() {
               office={officeOverview}
               onAddProject={openProjectForm}
               onSection={changeSection}
+              onInvoiceView={(id) => openDashboardInvoice(id, 'view')}
+              onInvoiceEdit={(id) => openDashboardInvoice(id, 'edit')}
+              onInvoiceDelete={deleteDashboardInvoice}
             />
           )}
 
@@ -1116,7 +1141,13 @@ export function LocalFinance() {
               )}
               <ExpenseList
                 expenses={expenses}
+                rates={fxRates}
                 onAdd={() => setExpenseFormOpen(true)}
+                onUpdate={(id, patch) =>
+                  setExpenses((current) =>
+                    current.map((expense) => (expense.id === id ? { ...expense, ...patch } : expense)),
+                  )
+                }
                 onDelete={(id) =>
                   setExpenses((current) => current.filter((expense) => expense.id !== id))
                 }
@@ -1385,6 +1416,9 @@ function Dashboard({
   office,
   onAddProject,
   onSection,
+  onInvoiceView,
+  onInvoiceEdit,
+  onInvoiceDelete,
 }: {
   totals: { value: number; received: number; work: number; expenses: number; net: number };
   rows: LocalRow[];
@@ -1393,8 +1427,12 @@ function Dashboard({
   office: OfficeOverview;
   onAddProject: () => void;
   onSection: (section: Section) => void;
+  onInvoiceView: (id: string) => void;
+  onInvoiceEdit: (id: string) => void;
+  onInvoiceDelete: (id: string) => void;
 }) {
   const [invoiceFilter, setInvoiceFilter] = useState('All');
+  const [invoicePage, setInvoicePage] = useState(0);
   const now = new Date(`${today()}T00:00:00`).getTime();
   const day = 86_400_000;
   const totalOutcome = totals.work + totals.expenses;
@@ -1471,9 +1509,12 @@ function Dashboard({
     };
   });
   const openInvoices = invoiceOverview.filter((item) => item.status !== 'Paid');
-  const recentInvoices = invoiceOverview
-    .filter((item) => invoiceFilter === 'All' || item.status === invoiceFilter)
-    .slice(0, 4);
+  const filteredInvoices = invoiceOverview.filter(
+    (item) => invoiceFilter === 'All' || item.status === invoiceFilter,
+  );
+  const invoicePageCount = Math.max(1, Math.ceil(filteredInvoices.length / 3));
+  const safeInvoicePage = Math.min(invoicePage, invoicePageCount - 1);
+  const recentInvoices = filteredInvoices.slice(safeInvoicePage * 3, safeInvoicePage * 3 + 3);
 
   return (
     <div className="local-dashboard-page">
@@ -1575,7 +1616,10 @@ function Dashboard({
               <button
                 key={status}
                 className={invoiceFilter === status ? 'active' : ''}
-                onClick={() => setInvoiceFilter(status)}
+                onClick={() => {
+                  setInvoiceFilter(status);
+                  setInvoicePage(0);
+                }}
               >
                 {status}
               </button>
@@ -1584,26 +1628,40 @@ function Dashboard({
           <div className="local-invoice-preview-list">
             {recentInvoices.length ? (
               recentInvoices.map((invoice) => (
-                <button key={invoice.id} onClick={() => onSection('invoices')}>
-                  <span>
+                <div className="local-invoice-preview-row" key={invoice.id}>
+                  <button className="local-invoice-preview-main" onClick={() => onInvoiceView(invoice.id)}>
+                    <span>
                     <strong>{invoice.number}</strong>
                     <small>
                       {(invoice.clientId && clientNames.get(invoice.clientId)) ?? 'Unknown client'} ·{' '}
                       {shortDate(invoice.dueDate)}
                     </small>
-                  </span>
+                    </span>
+                  </button>
                   <em className={`invoice-state ${invoice.status.toLowerCase()}`}>
                     {invoice.status}
                   </em>
                   <b>
                     {invoice.currency} {compactNumber(invoice.amount)}
                   </b>
-                </button>
+                  <span className="local-invoice-preview-actions">
+                    <button title="View invoice" aria-label={`View ${invoice.number}`} onClick={() => onInvoiceView(invoice.id)}><Eye size={14} /></button>
+                    <button title="Edit invoice" aria-label={`Edit ${invoice.number}`} onClick={() => onInvoiceEdit(invoice.id)}><Pencil size={14} /></button>
+                    <button className="delete" title="Delete invoice" aria-label={`Delete ${invoice.number}`} onClick={() => onInvoiceDelete(invoice.id)}><Trash2 size={14} /></button>
+                  </span>
+                </div>
               ))
             ) : (
               <p className="local-invoice-empty">No {invoiceFilter.toLowerCase()} invoices.</p>
             )}
           </div>
+          {invoicePageCount > 1 && (
+            <div className="local-invoice-pagination">
+              <button disabled={safeInvoicePage === 0} onClick={() => setInvoicePage((page) => Math.max(0, page - 1))}>Previous</button>
+              <span>{safeInvoicePage + 1} / {invoicePageCount}</span>
+              <button disabled={safeInvoicePage + 1 >= invoicePageCount} onClick={() => setInvoicePage((page) => Math.min(invoicePageCount - 1, page + 1))}>Next</button>
+            </div>
+          )}
           <div className="local-invoice-summary">
             <span><small>Total invoices</small><strong>{invoiceDocuments.length}</strong></span>
             <span><small>Open</small><strong>{openInvoices.length}</strong></span>
@@ -1903,6 +1961,7 @@ function ProjectTable({
                   <option>Waiting</option>
                   <option>Partial</option>
                   <option>Paid</option>
+                  <option>Overdue</option>
                 </select>
               </div>
               <div className="local-card-actions">
@@ -2133,6 +2192,7 @@ function ClientList({
   onUpdate: (id: string, patch: Partial<LocalClient>) => void;
   onRemove: (id: string) => void;
 }) {
+  const [editingId, setEditingId] = useState('');
   if (!clients.length)
     return (
       <section className="local-empty-clients">
@@ -2160,20 +2220,9 @@ function ClientList({
             <div className="local-client-details">
               <h2>{client.name}</h2>
               <p>{client.company || 'Independent client'}</p>
-              <label className="local-client-country">
-                <select
-                  aria-label={`Country for ${client.name}`}
-                  value={client.country}
-                  onChange={(event) => onUpdate(client.id, { country: event.target.value })}
-                >
-                  <option value="">Choose country</option>
-                  {countries.map((country) => (
-                    <option key={country} value={country}>
-                      {countryFlags[country]} {country}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <span className="local-client-country-display">
+                {countryFlags[client.country] ?? '🌐'} {client.country || 'Country not set'}
+              </span>
               <div>
                 <span>{client.email || 'No email'}</span>
                 <span>{client.phone || 'No phone'}</span>
@@ -2185,13 +2234,22 @@ function ClientList({
               <strong>{money(value)}</strong>
               <span>Total value</span>
             </div>
-            <button
-              className="local-delete"
-              aria-label={`Remove ${client.name}`}
-              onClick={() => onRemove(client.id)}
-            >
-              <Trash2 size={16} />
-            </button>
+            <div className="local-client-actions">
+              <button className="local-row-action neutral" aria-label={`Edit ${client.name}`} onClick={() => setEditingId(editingId === client.id ? '' : client.id)}>
+                {editingId === client.id ? <X size={16} /> : <Pencil size={16} />}
+              </button>
+              <button className="local-delete" aria-label={`Remove ${client.name}`} onClick={() => onRemove(client.id)}><Trash2 size={16} /></button>
+            </div>
+            {editingId === client.id && (
+              <div className="local-client-editor">
+                <label><span>Name</span><input value={client.name} onChange={(event) => onUpdate(client.id, { name: event.target.value })} /></label>
+                <label><span>Company</span><input value={client.company} onChange={(event) => onUpdate(client.id, { company: event.target.value })} /></label>
+                <label><span>Email</span><input type="email" value={client.email} onChange={(event) => onUpdate(client.id, { email: event.target.value })} /></label>
+                <label><span>Phone</span><input value={client.phone} onChange={(event) => onUpdate(client.id, { phone: event.target.value })} /></label>
+                <label><span>Country</span><select value={client.country} onChange={(event) => onUpdate(client.id, { country: event.target.value })}>{countries.map((country) => <option key={country} value={country}>{countryFlags[country]} {country}</option>)}</select></label>
+                <button className="button button-primary" type="button" onClick={() => setEditingId('')}>Done</button>
+              </div>
+            )}
           </article>
         );
       })}
@@ -2290,13 +2348,18 @@ function ExpenseForm({
 
 function ExpenseList({
   expenses,
+  rates,
   onAdd,
+  onUpdate,
   onDelete,
 }: {
   expenses: LocalExpense[];
+  rates: Record<string, number>;
   onAdd: () => void;
+  onUpdate: (id: string, patch: Partial<LocalExpense>) => void;
   onDelete: (id: string) => void;
 }) {
+  const [editingId, setEditingId] = useState('');
   if (!expenses.length)
     return (
       <section className="local-empty-clients">
@@ -2318,7 +2381,7 @@ function ExpenseList({
         <strong>−{money(total)}</strong>
       </div>
       {expenses.map((expense) => (
-        <article key={expense.id}>
+        <article className={editingId === expense.id ? 'is-editing' : ''} key={expense.id}>
           <span className="local-expense-icon">
             <ReceiptText size={17} />
           </span>
@@ -2335,12 +2398,30 @@ function ExpenseList({
             <strong>−{money(localValue(expense.amount, expense.exchangeRate))}</strong>
           </div>
           <button
+            className="local-row-action neutral"
+            aria-label={`Edit ${expense.description}`}
+            title="Edit expense"
+            onClick={() => setEditingId(editingId === expense.id ? '' : expense.id)}
+          >
+            {editingId === expense.id ? <X size={15} /> : <Pencil size={15} />}
+          </button>
+          <button
             className="local-delete"
             aria-label={`Delete ${expense.description}`}
             onClick={() => onDelete(expense.id)}
           >
             <Trash2 size={15} />
           </button>
+          {editingId === expense.id && (
+            <div className="local-expense-editor">
+              <label><span>Description</span><input value={expense.description} onChange={(event) => onUpdate(expense.id, { description: event.target.value })} /></label>
+              <label><span>Category</span><input value={expense.category} onChange={(event) => onUpdate(expense.id, { category: event.target.value })} /></label>
+              <label><span>Amount</span><input type="number" min="0" step="0.01" value={expense.amount} onChange={(event) => onUpdate(expense.id, { amount: Number(event.target.value) || 0 })} /></label>
+              <label><span>Currency</span><select value={expense.currency} onChange={(event) => onUpdate(expense.id, { currency: event.target.value, exchangeRate: event.target.value === 'LKR' ? 1 : (rates[event.target.value] ?? 1) })}>{currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></label>
+              <label><span>Date</span><input type="date" value={expense.date} onChange={(event) => onUpdate(expense.id, { date: event.target.value })} /></label>
+              <button className="button button-primary" type="button" onClick={() => setEditingId('')}>Done</button>
+            </div>
+          )}
         </article>
       ))}
     </section>

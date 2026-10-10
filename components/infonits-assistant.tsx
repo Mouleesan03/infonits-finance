@@ -57,6 +57,43 @@ type ChatMessage = {
   applied?: boolean;
 };
 
+function InlineMessage({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return (
+    <>
+      {parts.map((part, index) =>
+        part.startsWith('**') && part.endsWith('**') ? (
+          <strong key={`${part}-${index}`}>{part.slice(2, -2)}</strong>
+        ) : (
+          <span key={`${part}-${index}`}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+function FormattedMessage({ text }: { text: string }) {
+  const lines = text
+    .replace(/\s+(?=[📁💰📊👥🧾⏳⚠️✅] \*\*)/g, '\n')
+    .replace(/\s+•\s+/g, '\n• ')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return (
+    <div className="assistant-message-copy">
+      {lines.map((line, index) => {
+        const bullet = line.startsWith('• ') || line.startsWith('- ');
+        return (
+          <p className={bullet ? 'bullet' : ''} key={`${line}-${index}`}>
+            {bullet && <i aria-hidden="true" />}
+            <span><InlineMessage text={bullet ? line.slice(2) : line} /></span>
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 export function InfonitsAssistant({
   context,
   onApply,
@@ -136,7 +173,7 @@ export function InfonitsAssistant({
             <article className={message.role} key={message.id}>
               {message.role === 'assistant' && <span><Bot size={17} /></span>}
               <div>
-                <p>{message.text}</p>
+                <FormattedMessage text={message.text} />
                 {message.action && message.action.type !== 'none' && (
                   <button type="button" disabled={message.applied} onClick={() => apply(message)}>
                     {message.applied ? <CheckCircle2 size={15} /> : <Sparkles size={15} />}

@@ -15,6 +15,7 @@ import {
   KeyRound,
   LogOut,
   Mail,
+  Pencil,
   Plus,
   Printer,
   Search,
@@ -112,6 +113,8 @@ type Renewal = {
   website: string;
   username: string;
   websiteUrl: string;
+  domainLogin?: string;
+  serverLogin?: string;
   domainDue: string;
   hostingDue: string;
 };
@@ -465,11 +468,13 @@ function MonthCalendar({
   month,
   events,
   onDateClick,
+  onEventClick,
   compact = false,
 }: {
   month: string;
   events: CalendarEvent[];
   onDateClick: (date: string) => void;
+  onEventClick?: (event: CalendarEvent) => void;
   compact?: boolean;
 }) {
   const [year, monthNumber] = month.split('-').map(Number);
@@ -497,23 +502,29 @@ function MonthCalendar({
           const date = `${month}-${String(day).padStart(2, '0')}`;
           const dayEvents = eventsByDate.get(date) ?? [];
           return (
-            <button
-              type="button"
+            <div
               key={date}
-              className={date === today() ? 'is-today' : ''}
-              onClick={() => onDateClick(date)}
-              aria-label={`Add event on ${date}`}
+              className={`office-calendar-day ${date === today() ? 'is-today' : ''}`}
             >
-              <b>{day}</b>
+              <button type="button" className="office-calendar-date-hit" onClick={() => onDateClick(date)} aria-label={`Add event on ${date}`}>
+                <b>{day}</b>
+              </button>
               {dayEvents.slice(0, compact ? 3 : 2).map((event) => (
-                <span key={event.id} title={event.title} className={event.type.toLowerCase()}>
+                <button
+                  type="button"
+                  key={event.id}
+                  title={`View ${event.title}`}
+                  aria-label={`View ${event.title}`}
+                  className={`office-calendar-event ${event.type.toLowerCase()}`}
+                  onClick={() => onEventClick?.(event)}
+                >
                   {compact ? '' : event.title}
-                </span>
+                </button>
               ))}
               {dayEvents.length > (compact ? 3 : 2) && (
                 <small>+{dayEvents.length - (compact ? 3 : 2)} more</small>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
@@ -523,31 +534,38 @@ function MonthCalendar({
 
 function CalendarEventModal({
   initialDate,
+  initialEvent,
+  readOnly = false,
   postMode = false,
   clients = [],
   projects = [],
   onClose,
   onSave,
+  onDelete,
 }: {
   initialDate: string;
+  initialEvent?: CalendarEvent;
+  readOnly?: boolean;
   postMode?: boolean;
   clients?: ClientRef[];
   projects?: ProjectRef[];
   onClose: () => void;
   onSave: (event: Omit<CalendarEvent, 'id'>) => void;
+  onDelete?: () => void;
 }) {
   const [draft, setDraft] = useState({
-    title: '',
-    date: initialDate,
-    type: postMode ? 'Post' : 'Task',
-    clientId: '',
-    projectId: '',
-    platform: 'Instagram',
-    count: '1',
-    remarks: '',
+    title: initialEvent?.title ?? '',
+    date: initialEvent?.date ?? initialDate,
+    type: initialEvent?.type ?? (postMode ? 'Post' : 'Task'),
+    clientId: initialEvent?.clientId ?? '',
+    projectId: initialEvent?.projectId ?? '',
+    platform: initialEvent?.platform ?? 'Instagram',
+    count: String(initialEvent?.count ?? 1),
+    remarks: initialEvent?.remarks ?? '',
   });
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
+    if (readOnly) return;
     if (!draft.title.trim()) return;
     onSave({
       title: draft.title.trim(),
@@ -575,9 +593,13 @@ function CalendarEventModal({
               <CalendarDays size={19} />
             </span>
             <div>
-              <h2 id="office-event-modal-title">{postMode ? 'Add posted update' : 'Add event'}</h2>
+              <h2 id="office-event-modal-title">
+                {initialEvent ? 'Event details' : postMode ? 'Add posted update' : 'Add event'}
+              </h2>
               <p>
-                {postMode
+                {readOnly
+                  ? 'This item is managed from its original invoice or renewal record.'
+                  : postMode
                   ? 'Record content for the selected date.'
                   : 'Add a reminder to your calendar.'}
               </p>
@@ -592,6 +614,7 @@ function CalendarEventModal({
             <span>{postMode ? 'Update title' : 'Event'} *</span>
             <input
               autoFocus
+              disabled={readOnly}
               required
               placeholder={postMode ? 'e.g. Published campaign reel' : 'e.g. Client review meeting'}
               value={draft.title}
@@ -602,6 +625,7 @@ function CalendarEventModal({
             <span>Date</span>
             <input
               type="date"
+              disabled={readOnly}
               value={draft.date}
               onChange={(event) => setDraft({ ...draft, date: event.target.value })}
             />
@@ -611,6 +635,7 @@ function CalendarEventModal({
               <label>
                 <span>Client</span>
                 <select
+                  disabled={readOnly}
                   value={draft.clientId}
                   onChange={(event) => setDraft({ ...draft, clientId: event.target.value })}
                 >
@@ -625,6 +650,7 @@ function CalendarEventModal({
               <label>
                 <span>Project</span>
                 <select
+                  disabled={readOnly}
                   value={draft.projectId}
                   onChange={(event) => setDraft({ ...draft, projectId: event.target.value })}
                 >
@@ -639,6 +665,7 @@ function CalendarEventModal({
               <label>
                 <span>Platform</span>
                 <select
+                  disabled={readOnly}
                   value={draft.platform}
                   onChange={(event) => setDraft({ ...draft, platform: event.target.value })}
                 >
@@ -653,6 +680,7 @@ function CalendarEventModal({
               <label>
                 <span>Post count</span>
                 <input
+                  disabled={readOnly}
                   type="number"
                   min="1"
                   value={draft.count}
@@ -664,6 +692,7 @@ function CalendarEventModal({
             <label>
               <span>Type</span>
               <select
+                disabled={readOnly}
                 value={draft.type}
                 onChange={(event) => setDraft({ ...draft, type: event.target.value })}
               >
@@ -678,6 +707,7 @@ function CalendarEventModal({
           <label className="wide">
             <span>Notes</span>
             <textarea
+              disabled={readOnly}
               rows={3}
               value={draft.remarks}
               onChange={(event) => setDraft({ ...draft, remarks: event.target.value })}
@@ -685,12 +715,19 @@ function CalendarEventModal({
             />
           </label>
           <footer>
+            {onDelete && !readOnly && (
+              <button className="button office-danger-button" type="button" onClick={onDelete}>
+                <Trash2 size={16} /> Delete
+              </button>
+            )}
             <button className="button button-outline" type="button" onClick={onClose}>
               Cancel
             </button>
-            <button className="button button-primary" type="submit">
-              <Check size={16} /> Save
-            </button>
+            {!readOnly && (
+              <button className="button button-primary" type="submit">
+                <Check size={16} /> {initialEvent ? 'Save changes' : 'Save'}
+              </button>
+            )}
           </footer>
         </form>
       </section>
@@ -737,6 +774,7 @@ function SalesDocuments({
     notes: 'Payment is due within 10 days of the invoice date.',
   });
   const [preview, setPreview] = useState<SalesDocument | null>(null);
+  const [editingId, setEditingId] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const names = new Map(clients.map((client) => [client.id, client.name]));
   const clientDetails = new Map(clients.map((client) => [client.id, client]));
@@ -756,6 +794,32 @@ function SalesDocuments({
     }
   }, [kind, setFormOpen]);
   useEffect(() => setStatusFilter('All'), [kind]);
+  useEffect(() => {
+    const editId = localStorage.getItem('infonits-invoice-edit-id');
+    const viewId = localStorage.getItem('infonits-invoice-view-id');
+    const editItem = items.find((item) => item.id === editId);
+    const viewItem = items.find((item) => item.id === viewId);
+    if (editItem) {
+      setDraft({
+        clientId: editItem.clientId,
+        projectId: editItem.projectId,
+        issueDate: editItem.issueDate,
+        dueDate: editItem.dueDate,
+        amount: String(editItem.amount),
+        currency: editItem.currency,
+        status: editItem.status,
+        taxRate: String(editItem.taxRate ?? 0),
+        discount: String(editItem.discount ?? 0),
+        advance: String(editItem.advance ?? 0),
+        notes: editItem.notes ?? '',
+      });
+      setEditingId(editItem.id);
+      setFormOpen(true);
+    }
+    if (viewItem) setPreview(viewItem);
+    localStorage.removeItem('infonits-invoice-edit-id');
+    localStorage.removeItem('infonits-invoice-view-id');
+  }, [items, setFormOpen]);
   const normalizedItems = items.map((item) => ({
     ...item,
     dueDate: item.kind === 'Invoice' ? invoiceDueDate(item) : item.dueDate,
@@ -794,11 +858,11 @@ function SalesDocuments({
     event.preventDefault();
     const amount = Number(draft.amount);
     if (!draft.clientId || !Number.isFinite(amount) || amount <= 0) return;
-    onChange([
-      {
-        id: crypto.randomUUID(),
+    const existing = items.find((item) => item.id === editingId);
+    const nextDocument: SalesDocument = {
+        id: existing?.id ?? crypto.randomUUID(),
         kind,
-        number: nextNumber(kind, allItems),
+        number: existing?.number ?? nextNumber(kind, allItems),
         clientId: draft.clientId,
         projectId: draft.projectId,
         issueDate: draft.issueDate,
@@ -811,9 +875,12 @@ function SalesDocuments({
         discount: Number(draft.discount) || 0,
         advance: Number(draft.advance) || 0,
         notes: draft.notes.trim(),
-      },
-      ...items,
-    ]);
+      };
+    onChange(
+      existing
+        ? items.map((item) => (item.id === existing.id ? nextDocument : item))
+        : [nextDocument, ...items],
+    );
     setDraft({
       clientId: '',
       projectId: '',
@@ -827,7 +894,27 @@ function SalesDocuments({
       advance: '0',
       notes: 'Payment is due within 10 days of the invoice date.',
     });
+    setEditingId('');
     setFormOpen(false);
+  }
+
+  function editDocument(item: SalesDocument) {
+    setDraft({
+      clientId: item.clientId,
+      projectId: item.projectId,
+      issueDate: item.issueDate,
+      dueDate: item.dueDate,
+      amount: String(item.amount),
+      currency: item.currency,
+      status: item.status,
+      taxRate: String(item.taxRate ?? 0),
+      discount: String(item.discount ?? 0),
+      advance: String(item.advance ?? 0),
+      notes: item.notes ?? '',
+    });
+    setEditingId(item.id);
+    setFormOpen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   return (
     <>
@@ -1011,7 +1098,7 @@ function SalesDocuments({
           )}
           <button className="button button-primary" type="submit">
             <Check size={16} />
-            Save {kind.toLowerCase()}
+            {editingId ? 'Update' : 'Save'} {kind.toLowerCase()}
           </button>
         </form>
       )}
@@ -1094,6 +1181,13 @@ function SalesDocuments({
                       <small>{money(lkr(documentTotal(item), item.exchangeRate))}</small>
                     </td>
                     <td className="office-row-actions" data-label="Actions">
+                      <button
+                        aria-label={`Edit ${item.number}`}
+                        title="Edit"
+                        onClick={() => editDocument(item)}
+                      >
+                        <Pencil size={15} />
+                      </button>
                       <button
                         aria-label={`Preview ${item.number}`}
                         title="Preview"
@@ -1858,6 +1952,7 @@ function PostsModule({
   });
   const [calendarMonth, setCalendarMonth] = useState(thisMonth());
   const [eventDate, setEventDate] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const names = new Map(clients.map((client) => [client.id, client.name]));
   const projectNames = new Map(projects.map((project) => [project.id, project.project]));
   const members = new Map(team.map((member) => [member.id, member.name]));
@@ -2171,7 +2266,14 @@ function PostsModule({
           <MonthCalendar
             month={calendarMonth}
             events={postCalendarEvents}
-            onDateClick={setEventDate}
+            onDateClick={(date) => {
+              setSelectedEvent(null);
+              setEventDate(date);
+            }}
+            onEventClick={(event) => {
+              setSelectedEvent(event);
+              setEventDate(event.date);
+            }}
             compact
           />
         </article>
@@ -2242,16 +2344,35 @@ function PostsModule({
 
       {eventDate && (
         <CalendarEventModal
-          key={eventDate}
+          key={`${selectedEvent?.id ?? 'new'}-${eventDate}`}
           initialDate={eventDate}
+          initialEvent={selectedEvent ?? undefined}
+          readOnly={Boolean(selectedEvent && !events.some((event) => event.id === selectedEvent.id))}
           postMode
           clients={clients}
           projects={projects}
-          onClose={() => setEventDate(null)}
-          onSave={(event) => {
-            onEventsChange([...events, { id: crypto.randomUUID(), ...event }]);
+          onClose={() => {
             setEventDate(null);
+            setSelectedEvent(null);
           }}
+          onSave={(event) => {
+            onEventsChange(
+              selectedEvent
+                ? events.map((item) => (item.id === selectedEvent.id ? { id: item.id, ...event } : item))
+                : [...events, { id: crypto.randomUUID(), ...event }],
+            );
+            setEventDate(null);
+            setSelectedEvent(null);
+          }}
+          onDelete={
+            selectedEvent && events.some((event) => event.id === selectedEvent.id)
+              ? () => {
+                  onEventsChange(events.filter((event) => event.id !== selectedEvent.id));
+                  setEventDate(null);
+                  setSelectedEvent(null);
+                }
+              : undefined
+          }
         />
       )}
     </>
@@ -2273,9 +2394,12 @@ function RenewalsModule({
     website: '',
     username: '',
     websiteUrl: '',
+    domainLogin: '',
+    serverLogin: '',
     domainDue: '',
     hostingDue: '',
   });
+  const [editingId, setEditingId] = useState('');
   const soon = items.filter((x) =>
     [x.domainDue, x.hostingDue].some(
       (d) =>
@@ -2287,16 +2411,32 @@ function RenewalsModule({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!draft.website.trim()) return;
-    onChange([{ id: crypto.randomUUID(), ...draft, website: draft.website.trim() }, ...items]);
-    setDraft({ website: '', username: '', websiteUrl: '', domainDue: '', hostingDue: '' });
+    const next = { id: editingId || crypto.randomUUID(), ...draft, website: draft.website.trim() };
+    onChange(editingId ? items.map((item) => (item.id === editingId ? next : item)) : [next, ...items]);
+    setDraft({ website: '', username: '', websiteUrl: '', domainLogin: '', serverLogin: '', domainDue: '', hostingDue: '' });
+    setEditingId('');
     setFormOpen(false);
+  }
+  function editRenewal(item: Renewal) {
+    setDraft({
+      website: item.website,
+      username: item.username,
+      websiteUrl: item.websiteUrl,
+      domainLogin: item.domainLogin ?? '',
+      serverLogin: item.serverLogin ?? '',
+      domainDue: item.domainDue,
+      hostingDue: item.hostingDue,
+    });
+    setEditingId(item.id);
+    setFormOpen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   return (
     <>
       <ModuleHeader
         eyebrow="ADMIN"
         title="Renewals"
-        subtitle="Keep website, domain and hosting dates visible. Passwords are not stored in browser mode."
+        subtitle="Keep renewal dates and non-secret login identifiers together. Passwords are never stored here."
         action="Add renewal"
         onAction={() => setFormOpen(!formOpen)}
       >
@@ -2328,6 +2468,24 @@ function RenewalsModule({
             />
           </label>
           <label>
+            <span>Domain login ID</span>
+            <input
+              autoComplete="off"
+              placeholder="Username or account email"
+              value={draft.domainLogin}
+              onChange={(e) => setDraft({ ...draft, domainLogin: e.target.value })}
+            />
+          </label>
+          <label>
+            <span>Server login ID</span>
+            <input
+              autoComplete="off"
+              placeholder="Username only — no password"
+              value={draft.serverLogin}
+              onChange={(e) => setDraft({ ...draft, serverLogin: e.target.value })}
+            />
+          </label>
+          <label>
             <span>Domain renewal</span>
             <input
               type="date"
@@ -2345,7 +2503,7 @@ function RenewalsModule({
           </label>
           <button className="button button-primary" type="submit">
             <Check size={16} />
-            Save renewal
+            {editingId ? 'Update' : 'Save'} renewal
           </button>
         </form>
       )}
@@ -2362,7 +2520,7 @@ function RenewalsModule({
               <thead>
                 <tr>
                   <th>Website</th>
-                  <th>Login</th>
+                  <th>Access IDs</th>
                   <th>Domain</th>
                   <th>Hosting</th>
                   <th>Link</th>
@@ -2375,7 +2533,16 @@ function RenewalsModule({
                     <td>
                       <strong>{item.website}</strong>
                     </td>
-                    <td>{item.username || '—'}</td>
+                    <td>
+                      <strong>{item.username || '—'}</strong>
+                      {(item.domainLogin || item.serverLogin) && (
+                        <small>
+                          {item.domainLogin ? `Domain: ${item.domainLogin}` : ''}
+                          {item.domainLogin && item.serverLogin ? ' · ' : ''}
+                          {item.serverLogin ? `Server: ${item.serverLogin}` : ''}
+                        </small>
+                      )}
+                    </td>
                     <td>{item.domainDue || '—'}</td>
                     <td>{item.hostingDue || '—'}</td>
                     <td>
@@ -2393,6 +2560,13 @@ function RenewalsModule({
                       )}
                     </td>
                     <td>
+                      <button
+                        aria-label={`Edit ${item.website}`}
+                        title="Edit renewal"
+                        onClick={() => editRenewal(item)}
+                      >
+                        <Pencil size={15} />
+                      </button>
                       <button
                         className="local-delete"
                         aria-label={`Delete ${item.website}`}
@@ -2852,6 +3026,7 @@ function CalendarModule({
 }) {
   const [month, setMonth] = useState(thisMonth());
   const [eventDate, setEventDate] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const derived: CalendarEvent[] = [
     ...items,
     ...documents
@@ -2927,24 +3102,48 @@ function CalendarModule({
           month={month}
           events={derived}
           onDateClick={(date) => {
+            setSelectedEvent(null);
             setEventDate(date);
+            setFormOpen(true);
+          }}
+          onEventClick={(event) => {
+            setSelectedEvent(event);
+            setEventDate(event.date);
             setFormOpen(true);
           }}
         />
       </section>
       {formOpen && eventDate && (
         <CalendarEventModal
-          key={eventDate}
+          key={`${selectedEvent?.id ?? 'new'}-${eventDate}`}
           initialDate={eventDate}
+          initialEvent={selectedEvent ?? undefined}
+          readOnly={Boolean(selectedEvent && !items.some((event) => event.id === selectedEvent.id))}
           onClose={() => {
             setFormOpen(false);
             setEventDate(null);
+            setSelectedEvent(null);
           }}
           onSave={(event) => {
-            onChange([...items, { id: crypto.randomUUID(), ...event }]);
+            onChange(
+              selectedEvent
+                ? items.map((item) => (item.id === selectedEvent.id ? { id: item.id, ...event } : item))
+                : [...items, { id: crypto.randomUUID(), ...event }],
+            );
             setFormOpen(false);
             setEventDate(null);
+            setSelectedEvent(null);
           }}
+          onDelete={
+            selectedEvent && items.some((event) => event.id === selectedEvent.id)
+              ? () => {
+                  onChange(items.filter((event) => event.id !== selectedEvent.id));
+                  setFormOpen(false);
+                  setEventDate(null);
+                  setSelectedEvent(null);
+                }
+              : undefined
+          }
         />
       )}
     </>
