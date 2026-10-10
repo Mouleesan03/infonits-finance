@@ -7493,12 +7493,13 @@ tfoot td {
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
-  .sales-document-panel .office-row-actions {
+  .sales-document-panel .office-table td.office-row-actions {
     display: flex;
+    flex-wrap: nowrap;
     justify-content: flex-end;
     gap: 7px;
   }
-  .sales-document-panel .office-row-actions::before {
+  .sales-document-panel .office-table td.office-row-actions::before {
     margin-right: auto;
   }
   .office-calendar {
