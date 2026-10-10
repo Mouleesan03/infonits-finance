@@ -7415,6 +7415,9 @@ tfoot td {
 }
 
 @media (max-width: 720px) {
+  .local-main {
+    padding-bottom: calc(112px + env(safe-area-inset-bottom));
+  }
   .local-actions {
     width: 100%;
     display: grid;
