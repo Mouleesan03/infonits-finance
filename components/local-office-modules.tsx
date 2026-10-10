@@ -139,12 +139,12 @@ const storeKey = 'infonits-finance-office-v1';
 const today = () => new Date().toISOString().slice(0, 10);
 const thisMonth = () => today().slice(0, 7);
 const addDays = (date: string, days: number) => {
-  const value = new Date(`${date}T00:00:00`);
-  value.setDate(value.getDate() + days);
+  const value = new Date(`${date}T00:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
   return value.toISOString().slice(0, 10);
 };
 const invoiceDueDate = (item: Pick<SalesDocument, 'issueDate' | 'dueDate'>) =>
-  item.dueDate && item.dueDate > item.issueDate ? item.dueDate : addDays(item.issueDate, 10);
+  addDays(item.issueDate, 10);
 const currentDocumentStatus = (item: SalesDocument) => {
   if (item.kind !== 'Invoice' || item.status === 'Paid') return item.status;
   return invoiceDueDate(item) < today() ? 'Overdue' : item.status;
@@ -544,7 +544,7 @@ function SalesDocuments({
         clientId: draft.clientId,
         projectId: draft.projectId,
         issueDate: draft.issueDate,
-        dueDate: draft.dueDate,
+        dueDate: kind === 'Invoice' ? addDays(draft.issueDate, 10) : draft.dueDate,
         amount,
         currency: draft.currency,
         exchangeRate: draft.currency === 'LKR' ? 1 : (rates[draft.currency] ?? 1),
@@ -683,8 +683,10 @@ function SalesDocuments({
             <input
               type="date"
               value={draft.dueDate}
-              onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })}
+              readOnly={kind === 'Invoice'}
+              onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })}
             />
+            {kind === 'Invoice' ? <small>Automatically set to 10 days after issue.</small> : null}
           </label>
           <label>
             <span>Currency</span>
