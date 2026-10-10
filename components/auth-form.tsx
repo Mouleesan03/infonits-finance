@@ -153,7 +153,7 @@ export function AuthForm({
           );
         }
       }
-      router.push('/');
+      router.push('/local');
       router.refresh();
     } catch (caught) {
       setError((caught as Error).message);
