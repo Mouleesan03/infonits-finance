@@ -1120,6 +1120,10 @@ function Dashboard({
 }) {
   const now = new Date(`${today()}T00:00:00`).getTime();
   const day = 86_400_000;
+  const totalOutcome = totals.work + totals.expenses;
+  const collectionRate = totals.value
+    ? Math.min(100, Math.round((totals.received / totals.value) * 100))
+    : 0;
   const actions = [
     ...office.documents
       .filter((item) => item.kind === 'Invoice' && item.status !== 'Paid')
@@ -1178,6 +1182,9 @@ function Dashboard({
         title="Dashboard"
         subtitle="Your current financial picture, without the spreadsheet noise."
       >
+        <button className="button button-outline" onClick={() => onSection('projects')}>
+          <BriefcaseBusiness size={16} /> View projects
+        </button>
         <button className="button button-primary" onClick={onAddProject}>
           <Plus size={16} /> Add project
         </button>
@@ -1186,21 +1193,27 @@ function Dashboard({
         <article>
           <span>Project value</span>
           <strong>{money(totals.value)}</strong>
+          <small>{rows.length} projects in this workspace</small>
           <WalletCards size={18} />
         </article>
         <article className="income">
           <span>Income received</span>
           <strong>{money(totals.received)}</strong>
+          <small>{collectionRate}% of project value collected</small>
           <ArrowUpRight size={18} />
         </article>
         <article className="outcome">
           <span>Total outcome</span>
-          <strong>{money(totals.work + totals.expenses)}</strong>
+          <strong>{money(totalOutcome)}</strong>
+          <small>
+            {money(totals.work)} work · {money(totals.expenses)} expenses
+          </small>
           <ArrowDownRight size={18} />
         </article>
         <article className="highlight">
           <span>Estimated profit</span>
           <strong>{money(totals.net)}</strong>
+          <small>After all recorded costs</small>
           <TrendingUp size={18} />
         </article>
       </section>

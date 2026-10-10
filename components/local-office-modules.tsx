@@ -757,7 +757,7 @@ function SalesDocuments({
           </button>
         </form>
       )}
-      <section className="office-panel">
+      <section className="office-panel sales-document-panel">
         <div className="office-toolbar">
           <SearchBox
             value={search}
@@ -803,13 +803,13 @@ function SalesDocuments({
               <tbody>
                 {visible.map((item) => (
                   <tr key={item.id}>
-                    <td>
+                    <td data-label="Number">
                       <strong>{item.number}</strong>
                     </td>
-                    <td>{names.get(item.clientId) ?? 'Unknown client'}</td>
-                    <td>{item.issueDate}</td>
-                    <td>{item.dueDate}</td>
-                    <td>
+                    <td data-label="Client">{names.get(item.clientId) ?? 'Unknown client'}</td>
+                    <td data-label="Date">{item.issueDate}</td>
+                    <td data-label="Due">{item.dueDate}</td>
+                    <td data-label="Status">
                       <select
                         className={`office-status ${item.status.toLowerCase()}`}
                         value={item.status}
@@ -829,13 +829,13 @@ function SalesDocuments({
                         ))}
                       </select>
                     </td>
-                    <td>
+                    <td data-label="Total">
                       <strong>
                         {item.currency} {documentTotal(item).toLocaleString()}
                       </strong>
                       <small>{money(lkr(documentTotal(item), item.exchangeRate))}</small>
                     </td>
-                    <td className="office-row-actions">
+                    <td className="office-row-actions" data-label="Actions">
                       <button
                         aria-label={`Preview ${item.number}`}
                         title="Preview"

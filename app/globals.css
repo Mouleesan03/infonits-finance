@@ -7334,3 +7334,171 @@ tfoot td {
     min-height: 44px;
   }
 }
+
+/* UX polish: denser records, clearer dashboard context, and mobile-first document cards. */
+.local-summary article {
+  min-height: 116px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.local-summary article > small {
+  display: block;
+  margin-top: 7px;
+  padding-right: 24px;
+  color: #8090a5;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.local-summary .highlight > small {
+  color: rgba(255, 255, 255, 0.78);
+}
+.local-action-list:has(> button:only-child) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.local-action-list > button {
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    transform 0.16s ease;
+}
+.local-action-list > button:hover {
+  transform: translateY(-1px);
+}
+.local-project-record {
+  min-height: 108px;
+  padding-block: 10px;
+}
+.local-project-name-input {
+  min-height: 34px !important;
+}
+.local-project-payments label {
+  padding: 7px;
+  border: 1px solid transparent;
+}
+.local-project-payments label.income {
+  border-color: #dff1e8;
+}
+.local-project-payments label.outcome {
+  border-color: #f5e3e3;
+}
+.local-project-record .local-card-actions,
+.office-row-actions {
+  align-items: center;
+}
+.office-row-actions .local-delete {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+}
+.office-calendar {
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 12px;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.office-calendar > article {
+  min-height: 104px;
+  border: 1px solid #e0e6ed;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(32, 50, 79, 0.04);
+}
+.office-calendar > article:hover {
+  border-color: #cbd9e8;
+  box-shadow: 0 9px 24px rgba(32, 50, 79, 0.07);
+}
+.office-calendar > .office-empty {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 720px) {
+  .local-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .local-actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+  .local-summary article {
+    min-height: 126px;
+    padding: 15px;
+  }
+  .local-summary article > small {
+    font-size: 10px;
+  }
+  .local-project-record {
+    min-height: 0;
+  }
+  .sales-document-panel {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .sales-document-panel .office-toolbar {
+    margin-bottom: 12px;
+    border: 1px solid #e0e6ed;
+    border-radius: 12px;
+    background: #fff;
+  }
+  .sales-document-panel .office-table-wrap {
+    overflow: visible;
+  }
+  .sales-document-panel .office-table,
+  .sales-document-panel .office-table tbody,
+  .sales-document-panel .office-table tr,
+  .sales-document-panel .office-table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+  .sales-document-panel .office-table {
+    min-width: 0;
+  }
+  .sales-document-panel .office-table thead {
+    display: none;
+  }
+  .sales-document-panel .office-table tbody {
+    display: grid;
+    gap: 12px;
+  }
+  .sales-document-panel .office-table tr {
+    overflow: hidden;
+    border: 1px solid #e0e6ed;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 5px 18px rgba(32, 50, 79, 0.05);
+  }
+  .sales-document-panel .office-table td {
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    padding: 10px 13px;
+  }
+  .sales-document-panel .office-table td::before {
+    content: attr(data-label);
+    color: #8996a8;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .sales-document-panel .office-row-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 7px;
+  }
+  .sales-document-panel .office-row-actions::before {
+    margin-right: auto;
+  }
+  .office-calendar {
+    grid-template-columns: 1fr;
+  }
+}
