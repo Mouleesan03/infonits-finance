@@ -2559,7 +2559,7 @@ function RenewalsModule({
                         '—'
                       )}
                     </td>
-                    <td>
+                    <td className="office-row-actions">
                       <button
                         aria-label={`Edit ${item.website}`}
                         title="Edit renewal"
