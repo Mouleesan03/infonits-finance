@@ -1150,7 +1150,7 @@ async function imageDataUrl(path: string) {
   });
 }
 
-async function downloadInvoicePdf(
+export async function createInvoicePdf(
   item: SalesDocument,
   client: ClientRef | undefined,
   project: string,
@@ -1332,6 +1332,15 @@ async function downloadInvoicePdf(
   pdf.setFontSize(7);
   pdf.text('CREATED WITH CARE BY INFONITS', 16, 284);
   pdf.text('hello@infonits.io  |  www.infonits.io', 194, 284, { align: 'right' });
+  return pdf;
+}
+
+async function downloadInvoicePdf(
+  item: SalesDocument,
+  client: ClientRef | undefined,
+  project: string,
+) {
+  const pdf = await createInvoicePdf(item, client, project);
   pdf.save(`${item.number}.pdf`);
 }
 
