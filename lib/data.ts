@@ -21,7 +21,6 @@ export async function getWorkspace(): Promise<WorkspaceData> {
     auth = await authorize();
   } catch (error) {
     const code = (error as Error).message;
-    if (code === 'MFA_REQUIRED') redirect('/login?step=mfa');
     if (code === 'FORBIDDEN') redirect('/login?error=membership');
     redirect('/local');
   }

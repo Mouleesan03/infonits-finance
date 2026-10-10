@@ -91,12 +91,7 @@ function failure(error: unknown) {
   return NextResponse.json(
     { error: message },
     {
-      status:
-        message === 'UNAUTHORIZED'
-          ? 401
-          : ['FORBIDDEN', 'MFA_REQUIRED'].includes(message)
-            ? 403
-            : 400,
+      status: message === 'UNAUTHORIZED' ? 401 : message === 'FORBIDDEN' ? 403 : 400,
     },
   );
 }

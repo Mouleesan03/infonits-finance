@@ -41,12 +41,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: message },
       {
-        status:
-          message === 'UNAUTHORIZED'
-            ? 401
-            : message === 'FORBIDDEN' || message === 'MFA_REQUIRED'
-              ? 403
-              : 400,
+        status: message === 'UNAUTHORIZED' ? 401 : message === 'FORBIDDEN' ? 403 : 400,
       },
     );
   }

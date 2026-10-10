@@ -5,7 +5,6 @@ export default async function Login({
   searchParams,
 }: {
   searchParams: Promise<{
-    step?: string;
     error?: string;
     code?: string;
     token_hash?: string;
@@ -15,9 +14,7 @@ export default async function Login({
   const query = await searchParams;
   if (query.code) redirect(`/auth/callback?code=${encodeURIComponent(query.code)}`);
   if (query.token_hash && (query.type === 'invite' || query.type === 'recovery')) {
-    redirect(
-      `/auth/confirm?token_hash=${encodeURIComponent(query.token_hash)}&type=${query.type}`,
-    );
+    redirect(`/auth/confirm?token_hash=${encodeURIComponent(query.token_hash)}&type=${query.type}`);
   }
-  return <AuthForm configured={configured()} initialStep={query.step} initialError={query.error} />;
+  return <AuthForm configured={configured()} initialError={query.error} />;
 }

@@ -37,10 +37,5 @@ export async function authorize() {
     .eq('id', user.id)
     .single();
   if (profileError || !profile?.active) throw new Error('FORBIDDEN');
-  if (profile.role === 'admin') {
-    const { data: assurance, error: assuranceError } =
-      await db.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (assuranceError || assurance?.currentLevel !== 'aal2') throw new Error('MFA_REQUIRED');
-  }
   return { db, user, profile };
 }

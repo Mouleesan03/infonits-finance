@@ -1,10 +1,8 @@
 'use client';
-import Link from 'next/link';
 import { useState } from 'react';
 import {
   ShieldCheck,
   Database,
-  KeyRound,
   Plus,
   Pencil,
   Trash2,
@@ -75,7 +73,7 @@ export function Settings({
             </span>
             <span>
               <CheckCircle2 size={15} />
-              MFA required for administrators
+              Email and six-digit PIN sign-in
             </span>
           </div>
           <div className="account-detail">
@@ -83,14 +81,6 @@ export function Settings({
             <strong>{data.email || 'Not connected'}</strong>
             {data.role && <Badge>{data.role}</Badge>}
           </div>
-          {data.configured && (
-            <Button variant="outline" asChild>
-              <Link href="/login?step=mfa">
-                <KeyRound size={15} />
-                Authenticator settings
-              </Link>
-            </Button>
-          )}
         </section>
       </div>
       <section className="panel">

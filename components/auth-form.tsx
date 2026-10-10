@@ -18,18 +18,15 @@ import { browserClient } from '@/lib/supabase/browser';
 import { isSixDigitPin, normalizeEmail, pinCredential } from '@/lib/auth';
 import { Button } from './ui/button';
 
-type AuthStep = 'login' | 'complete' | 'mfa';
-type LoginMode = 'pin' | 'password';
+type AuthStep = 'login' | 'complete';
 const rememberedEmailKey = 'infonits-finance-login-email';
 
 export function AuthForm({
   configured,
-  initialStep,
   initialError,
   complete = false,
 }: {
   configured: boolean;
-  initialStep?: string;
   initialError?: string;
   complete?: boolean;
 }) {
@@ -38,8 +35,6 @@ export function AuthForm({
   const [credential, setCredential] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [showCredential, setShowCredential] = useState(false);
-  const [loginMode, setLoginMode] = useState<LoginMode>('pin');
-  const [code, setCode] = useState('');
   const [error, setError] = useState(
     initialError === 'membership'
       ? 'Your account has no active workspace membership. Contact the workspace administrator.'
@@ -49,12 +44,7 @@ export function AuthForm({
   );
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
-  const [step, setStep] = useState<AuthStep>(
-    complete ? 'complete' : initialStep === 'mfa' ? 'mfa' : 'login',
-  );
-  const [factor, setFactor] = useState('');
-  const [qr, setQr] = useState('');
-  const [secret, setSecret] = useState('');
+  const [step, setStep] = useState<AuthStep>(complete ? 'complete' : 'login');
   const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
@@ -85,48 +75,6 @@ export function AuthForm({
       subscription.unsubscribe();
     };
   }, [configured]);
-
-  async function prepareMfa() {
-    setError('');
-    setNotice('');
-    setBusy(true);
-    try {
-      const db = browserClient();
-      const {
-        data: { user },
-      } = await db.auth.getUser();
-      if (!user) throw new Error('Sign in before setting up your authenticator.');
-      const { data, error } = await db.auth.mfa.listFactors();
-      if (error) throw error;
-      const existing = data.totp.find((item) => item.status === 'verified');
-      if (existing) {
-        setFactor(existing.id);
-        setQr('');
-        setSecret('');
-      } else {
-        for (const pending of data.all.filter(
-          (item) => item.factor_type === 'totp' && item.status === 'unverified',
-        )) {
-          const { error } = await db.auth.mfa.unenroll({ factorId: pending.id });
-          if (error) throw error;
-        }
-        const result = await db.auth.mfa.enroll({
-          factorType: 'totp',
-          friendlyName: 'Infonits Finance',
-          issuer: 'Infonits Finance',
-        });
-        if (result.error) throw result.error;
-        setFactor(result.data.id);
-        setQr(result.data.totp.qr_code);
-        setSecret(result.data.totp.secret);
-      }
-      setStep('mfa');
-    } catch (caught) {
-      setError((caught as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function sendPinLink() {
     setError('');
@@ -161,21 +109,16 @@ export function AuthForm({
       const db = browserClient();
       if (step === 'login') {
         const normalizedEmail = normalizeEmail(email);
-        if (loginMode === 'pin' && !isSixDigitPin(credential)) {
+        if (!isSixDigitPin(credential)) {
           throw new Error('Enter your 6-digit PIN.');
         }
-        const password =
-          loginMode === 'pin' ? await pinCredential(normalizedEmail, credential) : credential;
+        const password = await pinCredential(normalizedEmail, credential);
         const { error } = await db.auth.signInWithPassword({
           email: normalizedEmail,
           password,
         });
         if (error) {
-          throw new Error(
-            loginMode === 'pin'
-              ? 'Email or PIN is incorrect. You can reset the PIN below.'
-              : 'Email or password is incorrect.',
-          );
+          throw new Error('Email or PIN is incorrect. You can reset the PIN below.');
         }
         window.localStorage.setItem(rememberedEmailKey, normalizedEmail);
         setSessionReady(true);
@@ -184,7 +127,7 @@ export function AuthForm({
         } = await db.auth.getUser();
         const { data: profile } = await db
           .from('profiles')
-          .select('role,active')
+          .select('active')
           .eq('id', user!.id)
           .single();
         if (!profile?.active) {
@@ -192,11 +135,6 @@ export function AuthForm({
           throw new Error(
             'Your account has no active workspace membership. Contact the administrator.',
           );
-        }
-        const { data: assurance } = await db.auth.mfa.getAuthenticatorAssuranceLevel();
-        if (profile.role === 'admin' && assurance?.currentLevel !== 'aal2') {
-          await prepareMfa();
-          return;
         }
       } else if (step === 'complete') {
         if (!isSixDigitPin(credential)) throw new Error('Choose exactly 6 numbers for your PIN.');
@@ -214,18 +152,6 @@ export function AuthForm({
               : 'Unable to save this PIN right now. Wait a moment and try again.',
           );
         }
-      } else {
-        if (!factor) throw new Error('Choose “Prepare authenticator” first.');
-        const { data: challenge, error } = await db.auth.mfa.challenge({ factorId: factor });
-        if (error) throw error;
-        const verified = await db.auth.mfa.verify({
-          factorId: factor,
-          challengeId: challenge.id,
-          code,
-        });
-        if (verified.error) {
-          throw new Error('That code could not be verified. Try the current six-digit code.');
-        }
       }
       router.push('/');
       router.refresh();
@@ -236,18 +162,11 @@ export function AuthForm({
     }
   }
 
-  const title =
-    step === 'mfa'
-      ? 'One last security check'
-      : step === 'complete'
-        ? 'Create your PIN'
-        : 'Welcome back';
+  const title = step === 'complete' ? 'Create your PIN' : 'Welcome back';
   const description =
-    step === 'mfa'
-      ? 'Enter the current code from your authenticator app.'
-      : step === 'complete'
-        ? 'Choose six numbers you can enter quickly on any device.'
-        : 'Use your email and 6-digit PIN to open your workspace.';
+    step === 'complete'
+      ? 'Choose six numbers you can enter quickly on any device.'
+      : 'Use your email and 6-digit PIN to open your workspace.';
 
   return (
     <div className="auth-page auth-page-v2">
@@ -315,24 +234,20 @@ export function AuthForm({
                   </span>
                 </label>
                 <label className="field auth-icon-field">
-                  <span>{loginMode === 'pin' ? '6-digit PIN' : 'Current password'}</span>
+                  <span>6-digit PIN</span>
                   <span className="auth-input-wrap">
                     <KeyRound size={17} aria-hidden="true" />
                     <input
                       type={showCredential ? 'text' : 'password'}
-                      inputMode={loginMode === 'pin' ? 'numeric' : 'text'}
+                      inputMode="numeric"
                       autoComplete="current-password"
-                      pattern={loginMode === 'pin' ? '[0-9]{6}' : undefined}
-                      maxLength={loginMode === 'pin' ? 6 : undefined}
+                      pattern="[0-9]{6}"
+                      maxLength={6}
                       value={credential}
                       onChange={(event) =>
-                        setCredential(
-                          loginMode === 'pin'
-                            ? event.target.value.replace(/\D/g, '').slice(0, 6)
-                            : event.target.value,
-                        )
+                        setCredential(event.target.value.replace(/\D/g, '').slice(0, 6))
                       }
-                      placeholder={loginMode === 'pin' ? '••••••' : 'Enter current password'}
+                      placeholder="••••••"
                       required
                     />
                     <button
@@ -348,17 +263,6 @@ export function AuthForm({
                 <div className="auth-login-options">
                   <button type="button" onClick={() => void sendPinLink()} disabled={busy}>
                     Set or reset PIN
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCredential('');
-                      setError('');
-                      setNotice('');
-                      setLoginMode((value) => (value === 'pin' ? 'password' : 'pin'));
-                    }}
-                  >
-                    {loginMode === 'pin' ? 'Use existing password' : 'Use 6-digit PIN'}
                   </button>
                 </div>
               </>
@@ -403,49 +307,6 @@ export function AuthForm({
               </div>
             )}
 
-            {step === 'mfa' && (
-              <>
-                {!factor && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={busy || !configured}
-                    onClick={() => void prepareMfa()}
-                  >
-                    Prepare authenticator
-                  </Button>
-                )}
-                {qr && (
-                  <div className="qr-setup">
-                    <img
-                      src={qr}
-                      alt="Scan this QR code with your authenticator app"
-                      width={200}
-                      height={200}
-                    />
-                    <p>Scan with your authenticator app, or enter this setup key:</p>
-                    <code>{secret}</code>
-                  </div>
-                )}
-                {factor && (
-                  <label className="field">
-                    <span>Six-digit authenticator code</span>
-                    <input
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      pattern="[0-9]{6}"
-                      maxLength={6}
-                      value={code}
-                      onChange={(event) =>
-                        setCode(event.target.value.replace(/\D/g, '').slice(0, 6))
-                      }
-                      required
-                    />
-                  </label>
-                )}
-              </>
-            )}
-
             {notice && (
               <p className="auth-success" role="status">
                 <CheckCircle2 size={17} />
@@ -458,19 +319,9 @@ export function AuthForm({
               </p>
             )}
 
-            <Button
-              className="auth-submit"
-              type="submit"
-              disabled={busy || !configured || (step === 'mfa' && !factor)}
-            >
+            <Button className="auth-submit" type="submit" disabled={busy || !configured}>
               {busy ? <LoaderCircle size={17} className="spin" /> : null}
-              {step === 'login'
-                ? loginMode === 'pin'
-                  ? 'Open workspace'
-                  : 'Sign in'
-                : step === 'complete'
-                  ? 'Save PIN & continue'
-                  : 'Verify & continue'}
+              {step === 'login' ? 'Open workspace' : 'Save PIN & continue'}
               <ArrowRight size={16} />
             </Button>
           </form>
@@ -487,9 +338,6 @@ export function AuthForm({
                 await browserClient().auth.signOut();
                 setStep('login');
                 setSessionReady(false);
-                setFactor('');
-                setQr('');
-                setSecret('');
               }}
             >
               Sign out and use another account

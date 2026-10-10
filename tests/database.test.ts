@@ -30,6 +30,7 @@ beforeAll(async () => {
   );
   await db.exec(migration);
   await db.exec(readFileSync('supabase/migrations/202610110001_foreign_key_indexes.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/202610110002_pin_only_auth.sql', 'utf8'));
   await db.exec(
     `insert into auth.users values('${editor}'),('${admin}'),('${other}'),('${outsider}');insert into public.profiles(id,role,organization_id) values('${editor}','editor','${org}'),('${admin}','admin','${org}'),('${other}','editor','${otherOrg}');`,
   );
@@ -270,11 +271,8 @@ describe('PostgreSQL security boundaries', () => {
     ).rejects.toThrow(/permission denied/);
     await expect(db.query('delete from audit_logs')).rejects.toThrow(/permission denied/);
   });
-  it('requires MFA on administrator reads and writes', async () => {
+  it('allows active administrators without a separate authenticator challenge', async () => {
     await identity(admin);
-    expect((await db.query('select * from project_financials')).rows).toHaveLength(0);
-    await expect(db.query("insert into clients(name) values('MFA bypass')")).rejects.toThrow();
-    await identity(admin, 'aal2');
     expect((await db.query('select * from project_financials')).rows.length).toBeGreaterThan(0);
   });
   it('isolates organizations and cross-organization foreign keys', async () => {
