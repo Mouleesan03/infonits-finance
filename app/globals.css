@@ -8541,3 +8541,355 @@ tfoot td {
     font-size: 9px;
   }
 }
+
+/* Reference-inspired post management and full calendar views. */
+@media (min-width: 821px) {
+  .local-sidebar {
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+  .local-sidebar-note {
+    margin-bottom: 3px;
+  }
+}
+
+.office-post-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.office-post-summary article {
+  min-height: 98px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #e0e7ef;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(32, 50, 79, 0.04);
+}
+.office-post-summary article > span {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 13px;
+  background: #edf4ff;
+  color: #1769d9;
+}
+.office-post-summary article.purple > span {
+  background: #f1eaff;
+  color: #8548df;
+}
+.office-post-summary article.orange > span {
+  background: #fff0e8;
+  color: #e5672d;
+}
+.office-post-summary article.red > span {
+  background: #ffeaea;
+  color: #df4141;
+}
+.office-post-summary small,
+.office-post-summary strong {
+  display: block;
+}
+.office-post-summary small {
+  color: #6e7e92;
+  font-size: 12px;
+  font-weight: 700;
+}
+.office-post-summary strong {
+  margin-top: 5px;
+  color: #1f3048;
+  font-size: 25px;
+  line-height: 1;
+}
+.office-plan-form {
+  margin-bottom: 14px;
+}
+.office-post-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(330px, 0.65fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.office-post-projects,
+.office-post-records,
+.office-main-calendar {
+  overflow: hidden;
+  border: 1px solid #dfe6ee;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(32, 50, 79, 0.04);
+}
+.office-post-projects > header,
+.office-post-records > header,
+.office-main-calendar > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e7ecf2;
+}
+.office-post-projects h2,
+.office-post-records h2,
+.office-main-calendar h2 {
+  color: #263950;
+  font-size: 15px;
+}
+.office-post-projects header p,
+.office-post-records header p,
+.office-main-calendar header p {
+  margin-top: 2px;
+  color: #78879a;
+  font-size: 11px;
+}
+.office-post-project-table {
+  min-width: 780px;
+}
+.office-post-project-table th,
+.office-post-project-table td {
+  padding-block: 11px;
+}
+.office-post-project-table small {
+  color: #8996a7;
+  font-size: 11px;
+}
+.office-inline-select {
+  width: 100%;
+  min-width: 125px;
+  min-height: 35px;
+  padding: 5px 28px 5px 9px;
+  border: 1px solid #dce4ed;
+  border-radius: 8px;
+  background: #fff;
+  color: #34465d;
+  font-size: 11px;
+}
+.office-post-records {
+  margin-bottom: 14px;
+}
+.office-post-records .office-table {
+  min-width: 820px;
+}
+.office-table-empty {
+  padding: 24px !important;
+  color: #7c899b;
+  text-align: center !important;
+}
+
+.office-post-calendar.compact {
+  margin: 0;
+}
+.office-post-calendar.compact > header {
+  min-height: 69px;
+}
+.office-month-grid {
+  overflow: hidden;
+}
+.office-month-grid .office-post-days > button,
+.office-month-grid .office-post-days > .is-blank {
+  min-height: 104px;
+}
+.office-month-grid.compact .office-post-days > button,
+.office-month-grid.compact .office-post-days > .is-blank {
+  min-height: 61px;
+  padding: 6px;
+}
+.office-month-grid.compact .office-post-days button > span {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  padding: 0;
+  border-radius: 50%;
+  background: #7a45df;
+}
+.office-month-grid.compact .office-post-days small {
+  font-size: 8px;
+}
+.office-post-days button > span.invoice,
+.office-post-days button > span.quotation {
+  background: #eaf3ff;
+  color: #246bb1;
+}
+.office-post-days button > span.renewal {
+  background: #fff1dc;
+  color: #a55d00;
+}
+.office-post-days button > span.post {
+  background: #f0e9ff;
+  color: #7641ce;
+}
+.office-post-days button > span.meeting,
+.office-post-days button > span.task,
+.office-post-days button > span.reminder,
+.office-post-days button > span.holiday {
+  background: #e9f7f1;
+  color: #147555;
+}
+.office-month-grid.compact .office-post-days button > span.invoice,
+.office-month-grid.compact .office-post-days button > span.quotation {
+  background: #397cd1;
+}
+.office-month-grid.compact .office-post-days button > span.renewal {
+  background: #e6a01b;
+}
+.office-month-grid.compact .office-post-days button > span.post {
+  background: #8548df;
+}
+.office-month-grid.compact .office-post-days button > span.meeting,
+.office-month-grid.compact .office-post-days button > span.task,
+.office-month-grid.compact .office-post-days button > span.reminder,
+.office-month-grid.compact .office-post-days button > span.holiday {
+  background: #18a273;
+}
+
+.office-main-calendar {
+  margin-bottom: 14px;
+}
+.office-main-calendar > header {
+  min-height: 68px;
+}
+.office-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+}
+.office-calendar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #6e7d91;
+  font-size: 10px;
+  font-weight: 700;
+}
+.office-calendar-legend span::before {
+  width: 7px;
+  height: 7px;
+  content: '';
+  border-radius: 50%;
+  background: #18a273;
+}
+.office-calendar-legend .post::before {
+  background: #8548df;
+}
+.office-calendar-legend .invoice::before {
+  background: #397cd1;
+}
+.office-calendar-legend .renewal::before {
+  background: #e6a01b;
+}
+
+.office-event-modal {
+  width: min(640px, 100%);
+}
+.office-event-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 20px 22px 0;
+}
+.office-event-form label.wide,
+.office-event-form footer {
+  grid-column: 1 / -1;
+}
+.office-event-form label > span {
+  display: block;
+  margin-bottom: 6px;
+  color: #62738a;
+  font-size: 11px;
+  font-weight: 700;
+}
+.office-event-form input,
+.office-event-form select,
+.office-event-form textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #d8e1eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #263950;
+  font: inherit;
+  font-size: 13px;
+}
+.office-event-form textarea {
+  resize: vertical;
+}
+.office-event-form input:focus,
+.office-event-form select:focus,
+.office-event-form textarea:focus {
+  border-color: #2d79c7;
+  outline: 0;
+  box-shadow: 0 0 0 3px #e5f1ff;
+}
+.office-event-form footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-inline: -22px;
+  padding: 15px 22px;
+  border-top: 1px solid #e7ebf0;
+  background: #fbfcfe;
+}
+
+@media (max-width: 1100px) {
+  .office-post-workspace {
+    grid-template-columns: 1fr;
+  }
+  .office-post-calendar.compact {
+    max-width: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .office-post-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .office-post-summary article {
+    min-height: 88px;
+    gap: 10px;
+    padding: 12px;
+  }
+  .office-post-summary article > span {
+    width: 41px;
+    height: 41px;
+  }
+  .office-post-summary small {
+    font-size: 10px;
+  }
+  .office-post-summary strong {
+    font-size: 21px;
+  }
+  .office-post-projects > header,
+  .office-post-records > header,
+  .office-main-calendar > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .office-month-grid .office-post-days > button,
+  .office-month-grid .office-post-days > .is-blank {
+    min-height: 68px;
+  }
+  .office-event-form {
+    grid-template-columns: 1fr;
+    padding: 17px 16px 0;
+  }
+  .office-event-form label.wide,
+  .office-event-form footer {
+    grid-column: 1;
+  }
+  .office-event-form footer {
+    margin-inline: -16px;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  }
+  .office-event-form footer .button {
+    flex: 1;
+  }
+}

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   CalendarDays,
   Check,
   CircleDollarSign,
@@ -9,10 +10,12 @@ import {
   Eye,
   FileDown,
   FileText,
+  Folder,
   Globe2,
   Plus,
   Printer,
   Search,
+  Send,
   ShieldCheck,
   Trash2,
   UserRound,
@@ -123,7 +126,17 @@ type WorkspaceUser = {
   access: string;
   status: 'Active' | 'Inactive';
 };
-type CalendarEvent = { id: string; title: string; date: string; type: string };
+type CalendarEvent = {
+  id: string;
+  title: string;
+  date: string;
+  type: string;
+  clientId?: string;
+  projectId?: string;
+  platform?: string;
+  count?: number;
+  remarks?: string;
+};
 type Store = {
   documents: SalesDocument[];
   payments: Payment[];
@@ -317,6 +330,7 @@ export function LocalOfficeModule({
       <PostsModule
         items={store.posts}
         events={store.events}
+        renewals={store.renewals}
         clients={clients}
         projects={projects}
         team={store.team}
@@ -438,6 +452,243 @@ function Empty({ icon, title, text }: { icon: React.ReactNode; title: string; te
       <span>{icon}</span>
       <strong>{title}</strong>
       <p>{text}</p>
+    </div>
+  );
+}
+
+function MonthCalendar({
+  month,
+  events,
+  onDateClick,
+  compact = false,
+}: {
+  month: string;
+  events: CalendarEvent[];
+  onDateClick: (date: string) => void;
+  compact?: boolean;
+}) {
+  const [year, monthNumber] = month.split('-').map(Number);
+  const firstWeekday = new Date(year, monthNumber - 1, 1).getDay();
+  const daysInMonth = new Date(year, monthNumber, 0).getDate();
+  const cells = Array.from({ length: firstWeekday + daysInMonth }, (_, index) =>
+    index < firstWeekday ? null : index - firstWeekday + 1,
+  );
+  const eventsByDate = new Map<string, CalendarEvent[]>();
+  events.forEach((event) => {
+    const current = eventsByDate.get(event.date) ?? [];
+    current.push(event);
+    eventsByDate.set(event.date, current);
+  });
+  return (
+    <div className={`office-month-grid ${compact ? 'compact' : ''}`}>
+      <div className="office-post-weekdays" aria-hidden="true">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+          <span key={day}>{day}</span>
+        ))}
+      </div>
+      <div className="office-post-days">
+        {cells.map((day, index) => {
+          if (!day) return <span className="is-blank" key={`blank-${index}`} />;
+          const date = `${month}-${String(day).padStart(2, '0')}`;
+          const dayEvents = eventsByDate.get(date) ?? [];
+          return (
+            <button
+              type="button"
+              key={date}
+              className={date === today() ? 'is-today' : ''}
+              onClick={() => onDateClick(date)}
+              aria-label={`Add event on ${date}`}
+            >
+              <b>{day}</b>
+              {dayEvents.slice(0, compact ? 3 : 2).map((event) => (
+                <span key={event.id} title={event.title} className={event.type.toLowerCase()}>
+                  {compact ? '' : event.title}
+                </span>
+              ))}
+              {dayEvents.length > (compact ? 3 : 2) && (
+                <small>+{dayEvents.length - (compact ? 3 : 2)} more</small>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CalendarEventModal({
+  initialDate,
+  postMode = false,
+  clients = [],
+  projects = [],
+  onClose,
+  onSave,
+}: {
+  initialDate: string;
+  postMode?: boolean;
+  clients?: ClientRef[];
+  projects?: ProjectRef[];
+  onClose: () => void;
+  onSave: (event: Omit<CalendarEvent, 'id'>) => void;
+}) {
+  const [draft, setDraft] = useState({
+    title: '',
+    date: initialDate,
+    type: postMode ? 'Post' : 'Task',
+    clientId: '',
+    projectId: '',
+    platform: 'Instagram',
+    count: '1',
+    remarks: '',
+  });
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!draft.title.trim()) return;
+    onSave({
+      title: draft.title.trim(),
+      date: draft.date,
+      type: postMode ? 'Post' : draft.type,
+      clientId: draft.clientId || undefined,
+      projectId: draft.projectId || undefined,
+      platform: postMode ? draft.platform : undefined,
+      count: postMode ? Math.max(1, Number(draft.count) || 1) : undefined,
+      remarks: draft.remarks.trim() || undefined,
+    });
+  };
+  return (
+    <div className="local-modal-layer" role="presentation" onMouseDown={onClose}>
+      <section
+        className="local-modal office-event-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="office-event-modal-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <span className="local-modal-icon">
+              <CalendarDays size={19} />
+            </span>
+            <div>
+              <h2 id="office-event-modal-title">{postMode ? 'Add posted update' : 'Add event'}</h2>
+              <p>
+                {postMode
+                  ? 'Record content for the selected date.'
+                  : 'Add a reminder to your calendar.'}
+              </p>
+            </div>
+          </div>
+          <button type="button" aria-label="Close event form" onClick={onClose}>
+            <X size={19} />
+          </button>
+        </header>
+        <form className="office-event-form" onSubmit={submit}>
+          <label className="wide">
+            <span>{postMode ? 'Update title' : 'Event'} *</span>
+            <input
+              autoFocus
+              required
+              placeholder={postMode ? 'e.g. Published campaign reel' : 'e.g. Client review meeting'}
+              value={draft.title}
+              onChange={(event) => setDraft({ ...draft, title: event.target.value })}
+            />
+          </label>
+          <label>
+            <span>Date</span>
+            <input
+              type="date"
+              value={draft.date}
+              onChange={(event) => setDraft({ ...draft, date: event.target.value })}
+            />
+          </label>
+          {postMode ? (
+            <>
+              <label>
+                <span>Client</span>
+                <select
+                  value={draft.clientId}
+                  onChange={(event) => setDraft({ ...draft, clientId: event.target.value })}
+                >
+                  <option value="">Select client</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Project</span>
+                <select
+                  value={draft.projectId}
+                  onChange={(event) => setDraft({ ...draft, projectId: event.target.value })}
+                >
+                  <option value="">Select project</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.project}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Platform</span>
+                <select
+                  value={draft.platform}
+                  onChange={(event) => setDraft({ ...draft, platform: event.target.value })}
+                >
+                  <option>Instagram</option>
+                  <option>Facebook</option>
+                  <option>LinkedIn</option>
+                  <option>TikTok</option>
+                  <option>YouTube</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              <label>
+                <span>Post count</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={draft.count}
+                  onChange={(event) => setDraft({ ...draft, count: event.target.value })}
+                />
+              </label>
+            </>
+          ) : (
+            <label>
+              <span>Type</span>
+              <select
+                value={draft.type}
+                onChange={(event) => setDraft({ ...draft, type: event.target.value })}
+              >
+                <option>Task</option>
+                <option>Meeting</option>
+                <option>Reminder</option>
+                <option>Holiday</option>
+                <option>Post</option>
+              </select>
+            </label>
+          )}
+          <label className="wide">
+            <span>Notes</span>
+            <textarea
+              rows={3}
+              value={draft.remarks}
+              onChange={(event) => setDraft({ ...draft, remarks: event.target.value })}
+              placeholder="Optional details"
+            />
+          </label>
+          <footer>
+            <button className="button button-outline" type="button" onClick={onClose}>
+              Cancel
+            </button>
+            <button className="button button-primary" type="submit">
+              <Check size={16} /> Save
+            </button>
+          </footer>
+        </form>
+      </section>
     </div>
   );
 }
@@ -1527,6 +1778,7 @@ function TeamModule({
 function PostsModule({
   items,
   events,
+  renewals,
   clients,
   projects,
   team,
@@ -1537,6 +1789,7 @@ function PostsModule({
 }: {
   items: PostPlan[];
   events: CalendarEvent[];
+  renewals: Renewal[];
   clients: ClientRef[];
   projects: ProjectRef[];
   team: TeamMember[];
@@ -1554,157 +1807,138 @@ function PostsModule({
     memberId: '',
   });
   const [calendarMonth, setCalendarMonth] = useState(thisMonth());
-  const [eventDraft, setEventDraft] = useState({ title: '', date: today() });
-  const [eventOpen, setEventOpen] = useState(false);
-  const names = new Map(clients.map((x) => [x.id, x.name]));
-  const members = new Map(team.map((x) => [x.id, x.name]));
-  const total = items.reduce(
-    (s, x) => ({ required: s.required + x.required, posted: s.posted + x.posted }),
-    { required: 0, posted: 0 },
+  const [eventDate, setEventDate] = useState<string | null>(null);
+  const names = new Map(clients.map((client) => [client.id, client.name]));
+  const projectNames = new Map(projects.map((project) => [project.id, project.project]));
+  const members = new Map(team.map((member) => [member.id, member.name]));
+  const monthPlans = items.filter((item) => item.month === calendarMonth);
+  const postEvents = events.filter(
+    (event) => event.type === 'Post' && event.date.startsWith(calendarMonth),
   );
-  const [calendarYear, calendarMonthNumber] = calendarMonth.split('-').map(Number);
-  const firstWeekday = new Date(calendarYear, calendarMonthNumber - 1, 1).getDay();
-  const daysInMonth = new Date(calendarYear, calendarMonthNumber, 0).getDate();
-  const calendarCells = Array.from({ length: firstWeekday + daysInMonth }, (_, index) =>
-    index < firstWeekday ? null : index - firstWeekday + 1,
+  const postCalendarEvents: CalendarEvent[] = [
+    ...events,
+    ...renewals
+      .flatMap((renewal) => [
+        {
+          id: `post-domain-${renewal.id}`,
+          title: `${renewal.website} domain`,
+          date: renewal.domainDue,
+          type: 'Renewal',
+        },
+        {
+          id: `post-hosting-${renewal.id}`,
+          title: `${renewal.website} hosting`,
+          date: renewal.hostingDue,
+          type: 'Renewal',
+        },
+      ])
+      .filter((event) => event.date),
+  ].filter((event) => event.date.startsWith(calendarMonth));
+  const required = monthPlans.reduce((sum, item) => sum + item.required, 0);
+  const recordedPosts = postEvents.reduce((sum, event) => sum + (event.count ?? 1), 0);
+  const legacyPosted = monthPlans.reduce((sum, item) => sum + item.posted, 0);
+  const posted = Math.max(recordedPosts, legacyPosted);
+  const remaining = Math.max(0, required - posted);
+  const [, selectedMonth] = calendarMonth.split('-').map(Number);
+  const selectedYear = Number(calendarMonth.slice(0, 4));
+  const selectedDays = new Date(selectedYear, selectedMonth, 0).getDate();
+  const elapsedRatio =
+    calendarMonth < thisMonth()
+      ? 1
+      : calendarMonth > thisMonth()
+        ? 0
+        : Math.min(1, new Date().getDate() / selectedDays);
+  const expected = monthPlans.reduce(
+    (sum, item) => sum + Math.floor(item.required * elapsedRatio),
+    0,
   );
-  const monthEvents = events.filter((event) => event.date.startsWith(calendarMonth));
-  const openEvent = (date: string) => {
-    setEventDraft({ title: '', date });
-    setEventOpen(true);
-  };
-  const submitEvent = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!eventDraft.title.trim()) return;
-    onEventsChange([
-      ...events,
-      {
-        id: crypto.randomUUID(),
-        title: eventDraft.title.trim(),
-        date: eventDraft.date,
-        type: 'Post',
-      },
-    ]);
-    setEventOpen(false);
-  };
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const required = Number(draft.required);
-    if (!draft.clientId || required <= 0) return;
-    onChange([{ id: crypto.randomUUID(), ...draft, required, posted: 0 }, ...items]);
+  const missed = Math.max(0, expected - posted);
+  const activeProjects = projects.length;
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    const planRequired = Number(draft.required);
+    if (!draft.clientId || planRequired <= 0) return;
+    onChange([{ id: crypto.randomUUID(), ...draft, required: planRequired, posted: 0 }, ...items]);
+    setCalendarMonth(draft.month);
     setFormOpen(false);
   }
+
+  const defaultUpdateDate = calendarMonth === thisMonth() ? today() : `${calendarMonth}-01`;
+
   return (
     <>
       <ModuleHeader
         eyebrow="DELIVERY"
         title="Post tracker"
-        subtitle="Track monthly social content without a complicated board."
+        subtitle="Plan monthly content, assign work and record every posted update."
         action="Add post plan"
         onAction={() => setFormOpen(!formOpen)}
-      />
-      <section className="office-metrics office-post-metrics">
-        <Metric label="Required" value={total.required} raw />
-        <Metric label="Posted" value={total.posted} raw tone="green" />
-        <Metric
-          label="Remaining"
-          value={Math.max(0, total.required - total.posted)}
-          raw
-          tone="amber"
+      >
+        <input
+          className="office-month"
+          type="month"
+          value={calendarMonth}
+          onChange={(event) => setCalendarMonth(event.target.value)}
+          aria-label="Post tracker month"
         />
-      </section>
-      <section className="office-post-calendar" aria-label="Post and event calendar">
-        <header>
+        <button className="button button-outline" onClick={() => setEventDate(defaultUpdateDate)}>
+          <Plus size={16} /> Add posted update
+        </button>
+      </ModuleHeader>
+
+      <section className="office-post-summary" aria-label="Post tracker totals">
+        <article className="blue">
+          <span>
+            <Folder size={20} />
+          </span>
           <div>
-            <CalendarDays size={20} />
-            <span>
-              <strong>Content calendar</strong>
-              <small>Choose a date to schedule a post or event.</small>
-            </span>
+            <small>Active projects</small>
+            <strong>{activeProjects}</strong>
           </div>
-          <input
-            className="office-month"
-            type="month"
-            value={calendarMonth}
-            onChange={(e) => setCalendarMonth(e.target.value)}
-            aria-label="Calendar month"
-          />
-        </header>
-        <div className="office-post-weekdays" aria-hidden="true">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-            <span key={day}>{day}</span>
-          ))}
-        </div>
-        <div className="office-post-days">
-          {calendarCells.map((day, index) => {
-            if (!day) return <span className="is-blank" key={`blank-${index}`} />;
-            const date = `${calendarMonth}-${String(day).padStart(2, '0')}`;
-            const dayEvents = monthEvents.filter((event) => event.date === date);
-            return (
-              <button
-                type="button"
-                key={date}
-                className={date === today() ? 'is-today' : ''}
-                onClick={() => openEvent(date)}
-                aria-label={`Add event on ${date}`}
-              >
-                <b>{day}</b>
-                {dayEvents.slice(0, 2).map((event) => (
-                  <span key={event.id} title={event.title}>
-                    {event.title}
-                  </span>
-                ))}
-                {dayEvents.length > 2 && <small>+{dayEvents.length - 2} more</small>}
-              </button>
-            );
-          })}
-        </div>
-        {eventOpen && (
-          <form className="office-post-event-form" onSubmit={submitEvent}>
-            <label>
-              <span>Post or event *</span>
-              <input
-                autoFocus
-                required
-                placeholder="e.g. Publish campaign reel"
-                value={eventDraft.title}
-                onChange={(e) => setEventDraft({ ...eventDraft, title: e.target.value })}
-              />
-            </label>
-            <label>
-              <span>Date</span>
-              <input
-                type="date"
-                value={eventDraft.date}
-                onChange={(e) => setEventDraft({ ...eventDraft, date: e.target.value })}
-              />
-            </label>
-            <button className="button button-primary" type="submit">
-              <Plus size={16} /> Add to calendar
-            </button>
-            <button
-              className="button button-outline"
-              type="button"
-              onClick={() => setEventOpen(false)}
-            >
-              Cancel
-            </button>
-          </form>
-        )}
+        </article>
+        <article className="purple">
+          <span>
+            <Send size={20} />
+          </span>
+          <div>
+            <small>Posted this month</small>
+            <strong>{posted}</strong>
+          </div>
+        </article>
+        <article className="orange">
+          <span>
+            <FileText size={20} />
+          </span>
+          <div>
+            <small>Remaining posts</small>
+            <strong>{remaining}</strong>
+          </div>
+        </article>
+        <article className="red">
+          <span>
+            <AlertTriangle size={20} />
+          </span>
+          <div>
+            <small>Missed posts</small>
+            <strong>{missed}</strong>
+          </div>
+        </article>
       </section>
+
       {formOpen && (
-        <form className="office-form" onSubmit={submit}>
+        <form className="office-form office-plan-form" onSubmit={submit}>
           <label>
             <span>Client *</span>
             <select
               required
               value={draft.clientId}
-              onChange={(e) => setDraft({ ...draft, clientId: e.target.value })}
+              onChange={(event) => setDraft({ ...draft, clientId: event.target.value })}
             >
               <option value="">Choose client</option>
-              {clients.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.name}
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
                 </option>
               ))}
             </select>
@@ -1713,12 +1947,12 @@ function PostsModule({
             <span>Project</span>
             <select
               value={draft.projectId}
-              onChange={(e) => setDraft({ ...draft, projectId: e.target.value })}
+              onChange={(event) => setDraft({ ...draft, projectId: event.target.value })}
             >
               <option value="">No project</option>
-              {projects.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.project}
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.project}
                 </option>
               ))}
             </select>
@@ -1727,7 +1961,7 @@ function PostsModule({
             <span>Platform</span>
             <select
               value={draft.platform}
-              onChange={(e) => setDraft({ ...draft, platform: e.target.value })}
+              onChange={(event) => setDraft({ ...draft, platform: event.target.value })}
             >
               <option>Instagram</option>
               <option>Facebook</option>
@@ -1742,7 +1976,7 @@ function PostsModule({
             <input
               type="month"
               value={draft.month}
-              onChange={(e) => setDraft({ ...draft, month: e.target.value })}
+              onChange={(event) => setDraft({ ...draft, month: event.target.value })}
             />
           </label>
           <label>
@@ -1751,104 +1985,225 @@ function PostsModule({
               type="number"
               min="1"
               value={draft.required}
-              onChange={(e) => setDraft({ ...draft, required: e.target.value })}
+              onChange={(event) => setDraft({ ...draft, required: event.target.value })}
             />
           </label>
           <label>
             <span>Assign to</span>
             <select
               value={draft.memberId}
-              onChange={(e) => setDraft({ ...draft, memberId: e.target.value })}
+              onChange={(event) => setDraft({ ...draft, memberId: event.target.value })}
             >
               <option value="">Unassigned</option>
-              {team.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.name}
+              {team.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
                 </option>
               ))}
             </select>
           </label>
           <button className="button button-primary" type="submit">
-            <Check size={16} />
-            Save plan
+            <Check size={16} /> Save plan
           </button>
         </form>
       )}
-      <section className="office-panel">
-        {!items.length ? (
-          <Empty
-            icon={<CalendarDays size={25} />}
-            title="No post plans"
-            text="Add a monthly content target for a client."
+
+      <section className="office-post-workspace">
+        <article className="office-post-projects">
+          <header>
+            <div>
+              <h2>Projects</h2>
+              <p>Team, platforms and monthly count</p>
+            </div>
+          </header>
+          {!items.length ? (
+            <Empty
+              icon={<Folder size={24} />}
+              title="No post plans"
+              text="Add a monthly target for a client project."
+            />
+          ) : (
+            <div className="office-table-wrap">
+              <table className="office-table office-post-project-table">
+                <thead>
+                  <tr>
+                    <th>Client</th>
+                    <th>Project</th>
+                    <th>Platform</th>
+                    <th>Team</th>
+                    <th>This month</th>
+                    <th>Remaining</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => {
+                    const tracked = item.month === calendarMonth;
+                    const eventCount = postEvents
+                      .filter(
+                        (event) =>
+                          event.clientId === item.clientId &&
+                          (!event.projectId || event.projectId === item.projectId),
+                      )
+                      .reduce((sum, event) => sum + (event.count ?? 1), 0);
+                    const postedCount = Math.max(item.posted, eventCount);
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <strong>{names.get(item.clientId) || 'Unknown'}</strong>
+                        </td>
+                        <td>{projectNames.get(item.projectId) || 'No project'}</td>
+                        <td>
+                          <span className="office-pill">{item.platform}</span>
+                        </td>
+                        <td>
+                          <select
+                            className="office-inline-select"
+                            value={item.memberId}
+                            onChange={(event) =>
+                              onChange(
+                                items.map((plan) =>
+                                  plan.id === item.id
+                                    ? { ...plan, memberId: event.target.value }
+                                    : plan,
+                                ),
+                              )
+                            }
+                          >
+                            <option value="">Not assigned</option>
+                            {team.map((member) => (
+                              <option key={member.id} value={member.id}>
+                                {member.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          {tracked ? (
+                            `${postedCount} / ${item.required}`
+                          ) : (
+                            <small>Not tracked</small>
+                          )}
+                        </td>
+                        <td>
+                          <strong>
+                            {tracked ? Math.max(0, item.required - postedCount) : '—'}
+                          </strong>
+                        </td>
+                        <td>
+                          <button
+                            className="local-delete"
+                            aria-label="Delete post plan"
+                            onClick={() => onChange(items.filter((plan) => plan.id !== item.id))}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </article>
+
+        <article className="office-post-calendar compact" aria-label="Post calendar">
+          <header>
+            <div>
+              <CalendarDays size={20} />
+              <span>
+                <strong>Post calendar</strong>
+                <small>Posted updates and events</small>
+              </span>
+            </div>
+          </header>
+          <MonthCalendar
+            month={calendarMonth}
+            events={postCalendarEvents}
+            onDateClick={setEventDate}
+            compact
           />
-        ) : (
-          <div className="office-table-wrap">
-            <table className="office-table">
-              <thead>
-                <tr>
-                  <th>Client</th>
-                  <th>Platform</th>
-                  <th>Month</th>
-                  <th>Assigned</th>
-                  <th>Progress</th>
-                  <th>Posted</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => {
-                  const pct = Math.min(100, (item.posted / item.required) * 100);
-                  return (
-                    <tr key={item.id}>
-                      <td>
-                        <strong>{names.get(item.clientId) || 'Unknown'}</strong>
-                      </td>
-                      <td>{item.platform}</td>
-                      <td>{item.month}</td>
-                      <td>{members.get(item.memberId) || 'Unassigned'}</td>
-                      <td>
-                        <div className="office-progress">
-                          <i style={{ width: `${pct}%` }} />
-                        </div>
-                        <small>
-                          {item.posted} of {item.required}
-                        </small>
-                      </td>
-                      <td>
-                        <input
-                          className="office-number"
-                          type="number"
-                          min="0"
-                          max={item.required}
-                          value={item.posted}
-                          onChange={(e) =>
-                            onChange(
-                              items.map((x) =>
-                                x.id === item.id
-                                  ? { ...x, posted: Math.min(x.required, Number(e.target.value)) }
-                                  : x,
-                              ),
-                            )
-                          }
-                        />
-                      </td>
-                      <td>
-                        <button
-                          className="local-delete"
-                          aria-label="Delete post plan"
-                          onClick={() => onChange(items.filter((x) => x.id !== item.id))}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        </article>
       </section>
+
+      <section className="office-post-records">
+        <header>
+          <div>
+            <h2>Posted records</h2>
+            <p>
+              {postEvents.length
+                ? `${postEvents.length} updates this month`
+                : 'No posted records for this month'}
+            </p>
+          </div>
+        </header>
+        <div className="office-table-wrap">
+          <table className="office-table">
+            <thead>
+              <tr>
+                <th>No.</th>
+                <th>Date</th>
+                <th>Client</th>
+                <th>Project</th>
+                <th>Platform</th>
+                <th>Count</th>
+                <th>Remarks</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {!postEvents.length ? (
+                <tr>
+                  <td colSpan={8} className="office-table-empty">
+                    Click a calendar date to add the first posted update.
+                  </td>
+                </tr>
+              ) : (
+                postEvents.map((event, index) => (
+                  <tr key={event.id}>
+                    <td>{String(index + 1).padStart(2, '0')}</td>
+                    <td>{event.date}</td>
+                    <td>
+                      <strong>{names.get(event.clientId || '') || '—'}</strong>
+                    </td>
+                    <td>{projectNames.get(event.projectId || '') || '—'}</td>
+                    <td>{event.platform || '—'}</td>
+                    <td>{event.count ?? 1}</td>
+                    <td>{event.remarks || event.title}</td>
+                    <td>
+                      <button
+                        className="local-delete"
+                        aria-label={`Delete ${event.title}`}
+                        onClick={() =>
+                          onEventsChange(events.filter((item) => item.id !== event.id))
+                        }
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {eventDate && (
+        <CalendarEventModal
+          key={eventDate}
+          initialDate={eventDate}
+          postMode
+          clients={clients}
+          projects={projects}
+          onClose={() => setEventDate(null)}
+          onSave={(event) => {
+            onEventsChange([...events, { id: crypto.randomUUID(), ...event }]);
+            setEventDate(null);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -2288,118 +2643,102 @@ function CalendarModule({
   onChange: (v: CalendarEvent[]) => void;
 }) {
   const [month, setMonth] = useState(thisMonth());
-  const [draft, setDraft] = useState({ title: '', date: today(), type: 'Task' });
-  const derived = [
+  const [eventDate, setEventDate] = useState<string | null>(null);
+  const derived: CalendarEvent[] = [
     ...items,
     ...documents
-      .filter((x) => x.dueDate)
-      .map((x) => ({ id: `doc-${x.id}`, title: `${x.number} due`, date: x.dueDate, type: x.kind })),
+      .filter((document) => document.dueDate)
+      .map((document) => ({
+        id: `doc-${document.id}`,
+        title: `${document.number} due`,
+        date: document.dueDate,
+        type: document.kind,
+      })),
     ...renewals
-      .flatMap((x) => [
-        { id: `domain-${x.id}`, title: `${x.website} domain`, date: x.domainDue, type: 'Renewal' },
+      .flatMap((renewal) => [
         {
-          id: `hosting-${x.id}`,
-          title: `${x.website} hosting`,
-          date: x.hostingDue,
+          id: `domain-${renewal.id}`,
+          title: `${renewal.website} domain`,
+          date: renewal.domainDue,
+          type: 'Renewal',
+        },
+        {
+          id: `hosting-${renewal.id}`,
+          title: `${renewal.website} hosting`,
+          date: renewal.hostingDue,
           type: 'Renewal',
         },
       ])
-      .filter((x) => x.date),
-  ]
-    .filter((x) => x.date.startsWith(month))
-    .sort((a, b) => a.date.localeCompare(b.date));
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!draft.title.trim()) return;
-    onChange([...items, { id: crypto.randomUUID(), ...draft, title: draft.title.trim() }]);
-    setFormOpen(false);
-  }
+      .filter((event) => event.date),
+  ].filter((event) => event.date.startsWith(month));
+  const defaultDate = month === thisMonth() ? today() : `${month}-01`;
+
+  useEffect(() => {
+    if (formOpen && !eventDate) setEventDate(defaultDate);
+  }, [defaultDate, eventDate, formOpen]);
+
   return (
     <>
       <ModuleHeader
         eyebrow="SCHEDULE"
         title="Calendar"
-        subtitle="Invoice due dates, renewals and custom tasks in one timeline."
+        subtitle="Invoices, renewals, posts and custom events in one monthly view."
         action="Add event"
-        onAction={() => setFormOpen(!formOpen)}
+        onAction={() => {
+          setEventDate(defaultDate);
+          setFormOpen(true);
+        }}
       >
         <input
           className="office-month"
           type="month"
           value={month}
-          onChange={(e) => setMonth(e.target.value)}
+          onChange={(event) => setMonth(event.target.value)}
+          aria-label="Calendar month"
         />
       </ModuleHeader>
-      {formOpen && (
-        <form className="office-form" onSubmit={submit}>
-          <label className="wide">
-            <span>Event *</span>
-            <input
-              required
-              value={draft.title}
-              onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-            />
-          </label>
-          <label>
-            <span>Date</span>
-            <input
-              type="date"
-              value={draft.date}
-              onChange={(e) => setDraft({ ...draft, date: e.target.value })}
-            />
-          </label>
-          <label>
-            <span>Type</span>
-            <select
-              value={draft.type}
-              onChange={(e) => setDraft({ ...draft, type: e.target.value })}
-            >
-              <option>Task</option>
-              <option>Meeting</option>
-              <option>Holiday</option>
-              <option>Reminder</option>
-            </select>
-          </label>
-          <button className="button button-primary" type="submit">
-            <Check size={16} />
-            Save event
-          </button>
-        </form>
-      )}
-      <section className="office-calendar">
-        {!derived.length ? (
-          <Empty
-            icon={<CalendarDays size={25} />}
-            title="Nothing scheduled"
-            text="Due dates and events for this month appear here."
-          />
-        ) : (
-          derived.map((item) => (
-            <article key={item.id}>
-              <time>
-                <strong>{new Date(`${item.date}T00:00:00`).getDate()}</strong>
-                <span>
-                  {new Date(`${item.date}T00:00:00`).toLocaleDateString('en', { weekday: 'short' })}
-                </span>
-              </time>
-              <div>
-                <span className="office-pill">{item.type}</span>
-                <h3>{item.title}</h3>
-                <p>{item.date}</p>
-              </div>
-              {items.some((event) => event.id === item.id) && (
-                <button
-                  className="local-delete"
-                  aria-label={`Delete ${item.title}`}
-                  onClick={() => onChange(items.filter((x) => x.id !== item.id))}
-                >
-                  <Trash2 size={15} />
-                </button>
-              )}
-            </article>
-          ))
-        )}
+      <section className="office-main-calendar">
+        <header>
+          <div>
+            <h2>
+              {new Date(`${month}-01T00:00:00`).toLocaleDateString('en', {
+                month: 'long',
+                year: 'numeric',
+              })}
+            </h2>
+            <p>Click any date to add an event.</p>
+          </div>
+          <div className="office-calendar-legend" aria-label="Calendar event types">
+            <span className="post">Posts</span>
+            <span className="invoice">Invoices</span>
+            <span className="renewal">Renewals</span>
+            <span className="task">Events</span>
+          </div>
+        </header>
+        <MonthCalendar
+          month={month}
+          events={derived}
+          onDateClick={(date) => {
+            setEventDate(date);
+            setFormOpen(true);
+          }}
+        />
       </section>
+      {formOpen && eventDate && (
+        <CalendarEventModal
+          key={eventDate}
+          initialDate={eventDate}
+          onClose={() => {
+            setFormOpen(false);
+            setEventDate(null);
+          }}
+          onSave={(event) => {
+            onChange([...items, { id: crypto.randomUUID(), ...event }]);
+            setFormOpen(false);
+            setEventDate(null);
+          }}
+        />
+      )}
     </>
   );
 }
