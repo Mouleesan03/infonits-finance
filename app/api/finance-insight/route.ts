@@ -1,4 +1,4 @@
-import { openai } from '@ai-sdk/openai';
+import { anthropic } from '@ai-sdk/anthropic';
 import { generateText } from 'ai';
 import { z } from 'zod';
 import { authorize } from '@/lib/supabase/server';
@@ -25,27 +25,21 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Request too large.' }, { status: 413 });
     }
     await authorize();
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.ANTHROPIC_API_KEY) {
       return Response.json(
-        { error: 'Add OPENAI_API_KEY to the server environment to enable AI insights.' },
+        { error: 'Add ANTHROPIC_API_KEY to the server environment to enable AI insights.' },
         { status: 503 },
       );
     }
 
     const snapshot = financeSnapshotSchema.parse(await request.json());
     const { text } = await generateText({
-      model: openai('gpt-5.6-luna'),
+      model: anthropic('claude-sonnet-4-6'),
       instructions:
         'You are a concise finance operations assistant for a small service business. ' +
         'Use only the supplied aggregate figures. Give one clear observation and one practical next action. ' +
         'Do not invent forecasts, tax advice, or missing facts. Keep the answer under 55 words.',
       prompt: `Finance snapshot in LKR: ${JSON.stringify(snapshot)}`,
-      providerOptions: {
-        openai: {
-          store: false,
-          reasoningEffort: 'low',
-        },
-      },
     });
 
     return Response.json({ insight: text.trim() });
