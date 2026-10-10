@@ -72,6 +72,7 @@ type OfficeOverview = {
     kind: 'Invoice' | 'Quotation';
     number: string;
     projectId: string;
+    clientId?: string;
     dueDate: string;
     status: string;
     amount: number;
@@ -669,6 +670,7 @@ export function LocalFinance() {
               chart={chart}
               chartMax={chartMax}
               rows={rows}
+              clients={clients}
               expenses={expenses}
               fxDate={fxDate}
               fxStatus={fxStatus}
@@ -1107,6 +1109,7 @@ function Dashboard({
   chart,
   chartMax,
   rows,
+  clients,
   expenses,
   fxDate,
   fxStatus,
@@ -1118,6 +1121,7 @@ function Dashboard({
   chart: Array<{ label: string; value: number; tone: string }>;
   chartMax: number;
   rows: LocalRow[];
+  clients: LocalClient[];
   expenses: LocalExpense[];
   fxDate: string;
   fxStatus: string;
@@ -1181,6 +1185,17 @@ function Dashboard({
   ]
     .toSorted((left, right) => left.date - right.date)
     .slice(0, 5);
+  const outstandingInvoices = office.documents.filter(
+    (item) => item.kind === 'Invoice' && item.status !== 'Paid',
+  );
+  const outstandingTotal = outstandingInvoices.reduce(
+    (sum, item) => sum + localValue(item.amount, item.exchangeRate),
+    0,
+  );
+  const outstandingClientCount = new Set(
+    outstandingInvoices.map((item) => item.clientId).filter(Boolean),
+  ).size;
+  const clientNames = new Map(clients.map((client) => [client.id, client.name]));
 
   return (
     <>
@@ -1224,44 +1239,53 @@ function Dashboard({
           <TrendingUp size={18} />
         </article>
       </section>
-      <section className="local-action-center" aria-label="Action center">
-        <div className="local-card-heading">
-          <div>
-            <Clock3 size={18} />
+      <section className="local-dashboard-middle">
+        <article className="local-outstanding-card">
+          <div className="local-card-heading">
             <div>
-              <strong>Action center</strong>
-              <small>Payments, invoices and renewals that need attention</small>
+              <Clock3 size={18} />
+              <div>
+                <strong>Outstanding client payments</strong>
+                <small>Invoices and payments that need attention</small>
+              </div>
             </div>
+            <b>{actions.length}</b>
           </div>
-          <b>{actions.length}</b>
-        </div>
-        {actions.length ? (
-          <div className="local-action-list">
-            {actions.map((item) => (
-              <button key={item.id} onClick={() => onSection(item.section)}>
-                <span className={item.tone} />
-                <div>
-                  <strong>{item.title}</strong>
-                  <small>{item.meta}</small>
-                </div>
-                <span>Open</span>
-              </button>
-            ))}
+          <div className="local-outstanding-total">
+            <strong title={money(outstandingTotal)}>{compactMoney(outstandingTotal)}</strong>
+            <span>
+              {outstandingInvoices.length} invoice{outstandingInvoices.length === 1 ? '' : 's'}
+              {outstandingClientCount ? ` from ${outstandingClientCount} clients` : ''}
+            </span>
+            <button className="button button-outline" onClick={() => onSection('invoices')}>
+              View outstanding <ArrowUpRight size={15} />
+            </button>
           </div>
-        ) : (
-          <div className="local-action-empty">
-            <ShieldCheck size={19} /> Everything is up to date.
-          </div>
-        )}
-      </section>
-      <section className="local-dashboard-grid">
+          {actions.length ? (
+            <div className="local-attention-preview">
+              {actions.slice(0, 2).map((item) => (
+                <button key={item.id} onClick={() => onSection(item.section)}>
+                  <i className={item.tone} />
+                  <span>
+                    <strong>{item.title}</strong>
+                    <small>{item.meta}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="local-action-empty">
+              <ShieldCheck size={19} /> Everything is up to date.
+            </div>
+          )}
+        </article>
         <article className="local-chart-card">
           <div className="local-card-heading">
             <div>
               <BarChart3 size={18} />
               <div>
-                <strong>Money overview</strong>
-                <small>Income and outcomes in LKR</small>
+                <strong>Financial overview</strong>
+                <small>Project value, income and costs in LKR</small>
               </div>
             </div>
             <span className={`local-fx-badge ${fxStatus}`}>
@@ -1276,11 +1300,59 @@ function Dashboard({
                 </div>
                 <div
                   className={`local-bar ${item.tone}`}
-                  style={{ height: `${Math.max(10, (item.value / chartMax) * 155)}px` }}
+                  style={{ height: `${Math.max(10, (item.value / chartMax) * 135)}px` }}
                 />
                 <span>{item.label}</span>
               </div>
             ))}
+          </div>
+        </article>
+      </section>
+      <section className="local-dashboard-lower">
+        <article className="local-project-finance-card">
+          <div className="local-card-heading">
+            <div>
+              <BriefcaseBusiness size={18} />
+              <div>
+                <strong>Project finance</strong>
+                <small>Latest projects and current profitability</small>
+              </div>
+            </div>
+            <button className="local-card-link" onClick={() => onSection('projects')}>
+              View all <ArrowUpRight size={14} />
+            </button>
+          </div>
+          <div className="local-project-preview-head" aria-hidden="true">
+            <span>#</span>
+            <span>Project</span>
+            <span>Value</span>
+            <span>Received</span>
+            <span>Profit</span>
+            <span>Status</span>
+          </div>
+          <div className="local-project-preview-list">
+            {rows.slice(0, 5).map((row, index) => {
+              const value = localValue(row.value, row.exchangeRate);
+              const profit = value - row.advance - row.workDue - row.workPaid;
+              return (
+                <button key={row.id} onClick={() => onSection('projects')}>
+                  <span>{String(index + 1).padStart(2, '0')}</span>
+                  <span>
+                    <strong>{row.project}</strong>
+                    <small>{clientNames.get(row.clientId) ?? 'No client'}</small>
+                  </span>
+                  <b title={money(value)}>{compactMoney(value)}</b>
+                  <b className="positive" title={money(row.advance)}>
+                    {compactMoney(row.advance)}
+                  </b>
+                  <b className={profit < 0 ? 'negative' : 'positive'} title={money(profit)}>
+                    {compactMoney(profit)}
+                  </b>
+                  <em className={row.status.toLowerCase()}>{row.status}</em>
+                </button>
+              );
+            })}
+            {!rows.length && <div className="local-empty-activity">Add your first project.</div>}
           </div>
         </article>
         <article className="local-activity-card">
@@ -1288,7 +1360,7 @@ function Dashboard({
             <div>
               <RefreshCw size={18} />
               <div>
-                <strong>Current activity</strong>
+                <strong>Recent activity</strong>
                 <small>Latest projects and expenses</small>
               </div>
             </div>
@@ -1302,7 +1374,7 @@ function Dashboard({
                 <div>
                   <strong>{row.project}</strong>
                   <small>
-                    {row.currency} {row.value.toLocaleString()}
+                    {row.currency} {compactNumber(row.value)}
                   </small>
                 </div>
                 <b title={money(localValue(row.value, row.exchangeRate))}>
