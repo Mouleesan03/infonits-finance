@@ -1175,7 +1175,7 @@ function Dashboard({
   const clientNames = new Map(clients.map((client) => [client.id, client.name]));
 
   return (
-    <>
+    <div className="local-dashboard-page">
       <PageHeading
         eyebrow="OVERVIEW"
         title="Finance dashboard"
@@ -1387,7 +1387,7 @@ function Dashboard({
           </div>
         </article>
       </section>
-    </>
+    </div>
   );
 }
 
