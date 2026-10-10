@@ -7732,6 +7732,15 @@ tfoot td {
 }
 
 @media (max-width: 520px) {
+  .local-sheet-toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .local-sheet-toolbar input {
+    width: 100%;
+    max-width: none;
+  }
   .local-project-status select {
     width: 86px;
     font-size: 10px;
