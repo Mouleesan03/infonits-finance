@@ -666,6 +666,7 @@ export function LocalFinance() {
 
   function openDashboardInvoice(id: string, mode: 'view' | 'edit') {
     localStorage.setItem(`infonits-invoice-${mode}-id`, id);
+    setNotificationsOpen(false);
     setSection('invoices');
   }
 
