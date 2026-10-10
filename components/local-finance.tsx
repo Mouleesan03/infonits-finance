@@ -23,6 +23,7 @@ import {
   MessagesSquare,
   PanelLeftClose,
   PanelLeftOpen,
+  Pencil,
   PieChart,
   Plus,
   ReceiptText,
@@ -1518,6 +1519,7 @@ function ProjectTable({
   onInvoice: (row: LocalRow) => void;
   onDelete: (id: string) => void;
 }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
   const totals = rows.reduce(
     (sum, row) => ({
       value: sum.value + localValue(row.value, row.exchangeRate),
@@ -1547,112 +1549,46 @@ function ProjectTable({
         <span>#</span>
         <span>Project</span>
         <span>Value</span>
-        <span>Payments</span>
-        <span>For me</span>
+        <span>Received</span>
+        <span>Work cost</span>
+        <span>Balance</span>
         <span>Status</span>
         <span>Actions</span>
       </div>
       <div className="local-project-records">
         {rows.map((row, index) => {
           const value = localValue(row.value, row.exchangeRate);
-          const mine = value - row.advance - row.workDue - row.workPaid;
+          const workCost = row.workDue + row.workPaid;
+          const mine = value - row.advance - workCost;
+          const clientName = clients.find((client) => client.id === row.clientId)?.name;
+          const isEditing = editingId === row.id;
           return (
             <article className="local-project-record" key={row.id}>
               <span className="local-project-number">{String(index + 1).padStart(2, '0')}</span>
               <div className="local-project-main">
-                <input
-                  className="local-project-name-input"
-                  aria-label="Project name"
-                  value={row.project}
-                  onChange={(event) => onUpdate(row.id, { project: event.target.value })}
-                />
-                <div>
-                  <select
-                    aria-label="Client"
-                    value={row.clientId}
-                    onChange={(event) => onUpdate(row.id, { clientId: event.target.value })}
-                  >
-                    <option value="">No client</option>
-                    {clients.map((client) => (
-                      <option key={client.id} value={client.id}>
-                        {client.name}
-                      </option>
-                    ))}
-                  </select>
-                  <small>Created {row.createdAt}</small>
-                </div>
+                <strong>{row.project}</strong>
+                <small>
+                  {clientName || 'No client'} · {row.createdAt}
+                </small>
               </div>
               <div className="local-project-value">
-                <div>
-                  <select
-                    aria-label="Currency"
-                    value={row.currency}
-                    onChange={(event) =>
-                      onUpdate(row.id, {
-                        currency: event.target.value,
-                        exchangeRate:
-                          event.target.value === 'LKR'
-                            ? 1
-                            : (rates[event.target.value] ?? row.exchangeRate),
-                      })
-                    }
-                  >
-                    {currencies.map((currency) => (
-                      <option key={currency}>{currency}</option>
-                    ))}
-                  </select>
-                  <input
-                    aria-label="Project amount"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={row.value || ''}
-                    onChange={(event) => onUpdate(row.id, { value: Number(event.target.value) })}
-                  />
-                </div>
-                <strong>{money(value)}</strong>
-                <label>
-                  Rate
-                  <input
-                    aria-label="Exchange rate to LKR"
-                    type="number"
-                    min="0"
-                    step="0.0001"
-                    value={row.exchangeRate}
-                    onChange={(event) =>
-                      onUpdate(row.id, { exchangeRate: Number(event.target.value) })
-                    }
-                  />
-                </label>
+                <strong title={money(value)}>{compactMoney(value)}</strong>
+                <small>
+                  {row.currency} {compactNumber(row.value)}
+                </small>
               </div>
-              <div className="local-project-payments">
-                {(
-                  [
-                    ['advance', 'Received'],
-                    ['workDue', 'To pay'],
-                    ['workPaid', 'Paid'],
-                  ] as const
-                ).map(([field, label]) => (
-                  <label key={field} className={field === 'advance' ? 'income' : 'outcome'}>
-                    <span>{label}</span>
-                    <input
-                      aria-label={label}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={row[field] || ''}
-                      placeholder="0.00"
-                      onChange={(event) =>
-                        onUpdate(row.id, { [field]: Number(event.target.value) })
-                      }
-                    />
-                  </label>
-                ))}
-              </div>
-              <div className="local-project-profit">
-                <small>For me</small>
-                <strong>{money(mine)}</strong>
-              </div>
+              <strong className="local-project-money income" title={money(row.advance)}>
+                {compactMoney(row.advance)}
+              </strong>
+              <strong className="local-project-money outcome" title={money(workCost)}>
+                {compactMoney(workCost)}
+              </strong>
+              <strong
+                className={`local-project-money ${mine < 0 ? 'negative' : 'profit'}`}
+                title={money(mine)}
+              >
+                {compactMoney(mine)}
+              </strong>
               <div className="local-project-status">
                 <select
                   aria-label="Payment status"
@@ -1668,6 +1604,14 @@ function ProjectTable({
                 </select>
               </div>
               <div className="local-card-actions">
+                <button
+                  className={`local-row-action neutral ${isEditing ? 'active' : ''}`}
+                  aria-label={`${isEditing ? 'Close editor for' : 'Edit'} ${row.project}`}
+                  title={isEditing ? 'Close editor' : 'Edit project'}
+                  onClick={() => setEditingId(isEditing ? null : row.id)}
+                >
+                  {isEditing ? <X size={16} /> : <Pencil size={16} />}
+                </button>
                 <button
                   className="local-row-action neutral"
                   aria-label={`View ${row.project} details`}
@@ -1692,6 +1636,107 @@ function ProjectTable({
                   <Trash2 size={16} />
                 </button>
               </div>
+              {isEditing && (
+                <div className="local-project-editor">
+                  <label>
+                    <span>Project</span>
+                    <input
+                      aria-label="Project name"
+                      value={row.project}
+                      onChange={(event) => onUpdate(row.id, { project: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    <span>Client</span>
+                    <select
+                      aria-label="Client"
+                      value={row.clientId}
+                      onChange={(event) => onUpdate(row.id, { clientId: event.target.value })}
+                    >
+                      <option value="">No client</option>
+                      {clients.map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="local-project-editor-amount">
+                    <span>Amount</span>
+                    <div>
+                      <select
+                        aria-label="Currency"
+                        value={row.currency}
+                        onChange={(event) =>
+                          onUpdate(row.id, {
+                            currency: event.target.value,
+                            exchangeRate:
+                              event.target.value === 'LKR'
+                                ? 1
+                                : (rates[event.target.value] ?? row.exchangeRate),
+                          })
+                        }
+                      >
+                        {currencies.map((currency) => (
+                          <option key={currency}>{currency}</option>
+                        ))}
+                      </select>
+                      <input
+                        aria-label="Project amount"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={row.value || ''}
+                        onChange={(event) =>
+                          onUpdate(row.id, { value: Number(event.target.value) })
+                        }
+                      />
+                    </div>
+                  </label>
+                  <label>
+                    <span>Rate to LKR</span>
+                    <input
+                      aria-label="Exchange rate to LKR"
+                      type="number"
+                      min="0"
+                      step="0.0001"
+                      value={row.exchangeRate}
+                      onChange={(event) =>
+                        onUpdate(row.id, { exchangeRate: Number(event.target.value) })
+                      }
+                    />
+                  </label>
+                  {(
+                    [
+                      ['advance', 'Received'],
+                      ['workDue', 'To pay'],
+                      ['workPaid', 'Paid'],
+                    ] as const
+                  ).map(([field, label]) => (
+                    <label key={field}>
+                      <span>{label}</span>
+                      <input
+                        aria-label={label}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={row[field] || ''}
+                        placeholder="0.00"
+                        onChange={(event) =>
+                          onUpdate(row.id, { [field]: Number(event.target.value) })
+                        }
+                      />
+                    </label>
+                  ))}
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    onClick={() => setEditingId(null)}
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
             </article>
           );
         })}
@@ -1699,19 +1744,21 @@ function ProjectTable({
       <footer className="local-project-totals">
         <div>
           <span>Total value</span>
-          <strong>{money(totals.value)}</strong>
+          <strong title={money(totals.value)}>{compactMoney(totals.value)}</strong>
         </div>
         <div className="positive">
           <span>Received</span>
-          <strong>{money(totals.advance)}</strong>
+          <strong title={money(totals.advance)}>{compactMoney(totals.advance)}</strong>
         </div>
         <div className="negative">
           <span>Work cost</span>
-          <strong>{money(totals.workDue + totals.workPaid)}</strong>
+          <strong title={money(totals.workDue + totals.workPaid)}>
+            {compactMoney(totals.workDue + totals.workPaid)}
+          </strong>
         </div>
         <div>
-          <span>For me</span>
-          <strong>{money(totals.mine)}</strong>
+          <span>Balance</span>
+          <strong title={money(totals.mine)}>{compactMoney(totals.mine)}</strong>
         </div>
       </footer>
     </section>

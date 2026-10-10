@@ -7507,6 +7507,243 @@ tfoot td {
   }
 }
 
+/* Projects: compact read-first rows with editing kept behind one clear action. */
+.local-project-ledger-head,
+.local-project-record {
+  grid-template-columns: 36px minmax(190px, 1.6fr) repeat(4, minmax(82px, 0.7fr)) 100px 150px;
+}
+.local-project-ledger-head {
+  min-height: 42px;
+  padding-inline: 14px;
+}
+.local-project-record {
+  min-height: 74px;
+  padding: 10px 14px;
+}
+.local-project-record > div {
+  padding-inline: 8px;
+}
+.local-project-main {
+  gap: 4px;
+}
+.local-project-main > strong {
+  color: #25364d;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.local-project-main > small,
+.local-project-value > small {
+  color: #8795a8;
+  font-size: 10px;
+  line-height: 1.25;
+}
+.local-project-value {
+  gap: 3px;
+}
+.local-project-value > strong,
+.local-project-money {
+  color: #263950;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.local-project-money.income,
+.local-project-money.profit {
+  color: #087b58;
+}
+.local-project-money.outcome,
+.local-project-money.negative {
+  color: #c84b4b;
+}
+.local-project-status select {
+  min-height: 32px;
+  padding: 5px 8px;
+}
+.local-project-record .local-card-actions {
+  gap: 3px;
+}
+.local-project-record .local-row-action,
+.local-project-record .local-delete {
+  width: 30px;
+  height: 30px;
+}
+.local-project-record .local-row-action.active {
+  border-color: #bcd4fa;
+  background: #eaf3ff;
+  color: #1767d1;
+}
+.local-project-editor {
+  grid-column: 2 / -1;
+  display: grid;
+  grid-template-columns: 1.4fr 1.1fr 1.1fr repeat(4, minmax(90px, 0.75fr)) auto;
+  align-items: end;
+  gap: 9px;
+  margin-top: 10px;
+  padding: 13px !important;
+  border: 1px solid #dce6f1;
+  border-radius: 11px;
+  background: #f8fbff;
+}
+.local-project-editor label {
+  min-width: 0;
+}
+.local-project-editor label > span {
+  display: block;
+  margin-bottom: 5px;
+  color: #6e7e92;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.local-project-editor input,
+.local-project-editor select {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 1px solid #d6e0eb;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 11px;
+}
+.local-project-editor-amount > div {
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr);
+  gap: 5px;
+}
+.local-project-editor .button {
+  min-height: 36px;
+  padding-inline: 14px;
+}
+.local-project-totals > div {
+  padding: 11px 15px;
+}
+.local-project-totals strong {
+  margin-top: 3px;
+  font-size: 14px;
+}
+
+@media (max-width: 1120px) {
+  .local-project-ledger-head {
+    display: none;
+  }
+  .local-project-ledger {
+    display: grid;
+    gap: 10px;
+    background: transparent;
+  }
+  .local-project-records {
+    display: grid;
+    gap: 10px;
+  }
+  .local-project-record {
+    grid-template-columns: 34px minmax(190px, 1.4fr) repeat(4, minmax(76px, 0.65fr)) 96px 140px;
+    border: 1px solid #e1e7ee;
+    border-radius: 12px;
+    background: #fff;
+  }
+}
+
+@media (max-width: 1120px) {
+  .local-project-record {
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    gap: 9px 8px;
+    padding: 13px;
+  }
+  .local-project-record > div {
+    padding: 0;
+  }
+  .local-project-number {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .local-project-main {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .local-project-status {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .local-project-value,
+  .local-project-money {
+    min-width: 0;
+    padding: 9px 10px !important;
+    border-radius: 9px;
+    background: #f6f8fb;
+    white-space: normal;
+  }
+  .local-project-value {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .local-project-value::before,
+  .local-project-money::before {
+    display: block;
+    margin-bottom: 3px;
+    color: #8491a3;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .local-project-value::before {
+    content: 'Value';
+  }
+  .local-project-money.income::before {
+    content: 'Received';
+  }
+  .local-project-money.outcome::before {
+    content: 'Work cost';
+  }
+  .local-project-money.profit::before,
+  .local-project-money.negative::before {
+    content: 'Balance';
+  }
+  .local-project-money.income {
+    grid-column: 3;
+    grid-row: 2;
+  }
+  .local-project-money.outcome {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .local-project-money.profit,
+  .local-project-money.negative {
+    grid-column: 3;
+    grid-row: 3;
+  }
+  .local-project-record .local-card-actions {
+    grid-column: 2 / 4;
+    grid-row: 4;
+    justify-content: flex-start;
+    padding-top: 3px;
+  }
+  .local-project-editor {
+    grid-column: 1 / -1;
+    grid-row: 5;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 2px;
+  }
+  .local-project-editor .button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .local-project-status select {
+    width: 86px;
+    font-size: 10px;
+  }
+  .local-project-editor {
+    grid-template-columns: 1fr;
+  }
+  .local-project-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* Dashboard structure based on quick scanning: totals, outstanding work, projects, activity. */
 .local-dashboard-middle,
 .local-dashboard-lower {
