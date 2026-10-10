@@ -10821,6 +10821,9 @@ tfoot td {
 }
 
 /* Final workspace QA: hierarchy, modal sizing and touch-safe controls. */
+.local-main {
+  z-index: auto;
+}
 .local-modal-layer {
   z-index: 1000;
   padding: 18px;
