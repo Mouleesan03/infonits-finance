@@ -115,6 +115,12 @@ const money = (value: number) =>
     currency: 'LKR',
     maximumFractionDigits: 2,
   }).format(value);
+const compactNumber = (value: number) =>
+  new Intl.NumberFormat('en', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value);
+const compactMoney = (value: number) => `LKR ${compactNumber(value)}`;
 const localValue = (value: number, rate: number) => value * rate;
 const navGroupFor = (section: Section): NavGroup => {
   if (section === 'dashboard' || section === 'calendar') return 'overview';
@@ -150,8 +156,7 @@ export function LocalFinance() {
   const [section, setSection] = useState<Section>('dashboard');
   const [navGroup, setNavGroup] = useState<NavGroup | null>('overview');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [sidebarPreferenceLoaded, setSidebarPreferenceLoaded] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [projectFormOpen, setProjectFormOpen] = useState(false);
   const [clientFormOpen, setClientFormOpen] = useState(false);
   const [expenseFormOpen, setExpenseFormOpen] = useState(false);
@@ -268,15 +273,9 @@ export function LocalFinance() {
   }, []);
 
   useEffect(() => {
-    setSidebarCollapsed(localStorage.getItem('infonits-sidebar-collapsed') === 'true');
-    setSidebarPreferenceLoaded(true);
+    const savedPreference = localStorage.getItem('infonits-sidebar-collapsed');
+    setSidebarCollapsed(savedPreference === null ? true : savedPreference === 'true');
   }, []);
-
-  useEffect(() => {
-    if (sidebarPreferenceLoaded) {
-      localStorage.setItem('infonits-sidebar-collapsed', String(sidebarCollapsed));
-    }
-  }, [sidebarCollapsed, sidebarPreferenceLoaded]);
 
   const totals = useMemo(() => {
     const projects = rows.reduce(
@@ -319,6 +318,14 @@ export function LocalFinance() {
     setSection(next);
     setNavGroup(navGroupFor(next));
     setMenuOpen(false);
+  }
+
+  function toggleSidebar() {
+    setSidebarCollapsed((collapsed) => {
+      const next = !collapsed;
+      localStorage.setItem('infonits-sidebar-collapsed', String(next));
+      return next;
+    });
   }
 
   function rateFor(currency: string) {
@@ -494,7 +501,7 @@ export function LocalFinance() {
             className="local-sidebar-toggle"
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Minimize sidebar'}
             title={sidebarCollapsed ? 'Expand sidebar' : 'Minimize sidebar'}
-            onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+            onClick={toggleSidebar}
           >
             {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
@@ -1133,7 +1140,7 @@ function Dashboard({
         return {
           id: `invoice-${item.id}`,
           title: `${item.number} ${overdue ? 'is overdue' : 'needs payment'}`,
-          meta: `${item.currency} ${item.amount.toLocaleString()} · ${item.dueDate || 'No due date'}`,
+          meta: `${item.currency} ${compactNumber(item.amount)} · ${item.dueDate || 'No due date'}`,
           tone: overdue ? 'urgent' : 'waiting',
           date: due,
           section: 'invoices' as Section,
@@ -1144,7 +1151,7 @@ function Dashboard({
       .map((item) => ({
         id: `payment-${item.id}`,
         title: item.note || item.category || 'Pending payment',
-        meta: `${item.currency} ${item.amount.toLocaleString()} · ${item.date}`,
+        meta: `${item.currency} ${compactNumber(item.amount)} · ${item.date}`,
         tone: 'waiting',
         date: item.date ? new Date(`${item.date}T00:00:00`).getTime() : now,
         section: 'payments' as Section,
@@ -1179,8 +1186,8 @@ function Dashboard({
     <>
       <PageHeading
         eyebrow="OVERVIEW"
-        title="Dashboard"
-        subtitle="Your current financial picture, without the spreadsheet noise."
+        title="Finance dashboard"
+        subtitle="Projects, cash received and profitability at a glance."
       >
         <button className="button button-outline" onClick={() => onSection('projects')}>
           <BriefcaseBusiness size={16} /> View projects
@@ -1192,27 +1199,27 @@ function Dashboard({
       <section className="local-summary" aria-label="Finance totals">
         <article>
           <span>Project value</span>
-          <strong>{money(totals.value)}</strong>
+          <strong title={money(totals.value)}>{compactMoney(totals.value)}</strong>
           <small>{rows.length} projects in this workspace</small>
           <WalletCards size={18} />
         </article>
         <article className="income">
           <span>Income received</span>
-          <strong>{money(totals.received)}</strong>
+          <strong title={money(totals.received)}>{compactMoney(totals.received)}</strong>
           <small>{collectionRate}% of project value collected</small>
           <ArrowUpRight size={18} />
         </article>
         <article className="outcome">
           <span>Total outcome</span>
-          <strong>{money(totalOutcome)}</strong>
+          <strong title={money(totalOutcome)}>{compactMoney(totalOutcome)}</strong>
           <small>
-            {money(totals.work)} work · {money(totals.expenses)} expenses
+            {compactMoney(totals.work)} work · {compactMoney(totals.expenses)} expenses
           </small>
           <ArrowDownRight size={18} />
         </article>
         <article className="highlight">
           <span>Estimated profit</span>
-          <strong>{money(totals.net)}</strong>
+          <strong title={money(totals.net)}>{compactMoney(totals.net)}</strong>
           <small>After all recorded costs</small>
           <TrendingUp size={18} />
         </article>
@@ -1264,7 +1271,9 @@ function Dashboard({
           <div className="local-bar-chart">
             {chart.map((item) => (
               <div className="local-bar-column" key={item.label}>
-                <div className="local-bar-value">{money(item.value)}</div>
+                <div className="local-bar-value" title={money(item.value)}>
+                  {compactMoney(item.value)}
+                </div>
                 <div
                   className={`local-bar ${item.tone}`}
                   style={{ height: `${Math.max(10, (item.value / chartMax) * 155)}px` }}
@@ -1296,7 +1305,9 @@ function Dashboard({
                     {row.currency} {row.value.toLocaleString()}
                   </small>
                 </div>
-                <b>{money(localValue(row.value, row.exchangeRate))}</b>
+                <b title={money(localValue(row.value, row.exchangeRate))}>
+                  {compactMoney(localValue(row.value, row.exchangeRate))}
+                </b>
               </button>
             ))}
             {expenses.slice(0, 3).map((expense) => (
@@ -1309,7 +1320,7 @@ function Dashboard({
                   <small>{expense.category}</small>
                 </div>
                 <b className="negative">
-                  −{money(localValue(expense.amount, expense.exchangeRate))}
+                  −{compactMoney(localValue(expense.amount, expense.exchangeRate))}
                 </b>
               </button>
             ))}

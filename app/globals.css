@@ -7506,3 +7506,58 @@ tfoot td {
     grid-template-columns: 1fr;
   }
 }
+
+/* Compact dashboard: scan totals quickly while exact values remain available on hover. */
+.local-titlebar {
+  margin-bottom: 15px;
+}
+.local-summary {
+  gap: 11px;
+  margin-bottom: 14px;
+}
+.local-summary article {
+  min-height: 94px;
+  padding: 15px 16px;
+}
+.local-summary strong {
+  margin-top: 7px;
+  font-size: clamp(18px, 1.45vw, 22px);
+}
+.local-summary article > small {
+  margin-top: 5px;
+  font-size: 10px;
+}
+.local-action-center {
+  margin-bottom: 14px;
+  padding: 15px 16px;
+}
+.local-action-center .local-card-heading {
+  margin-bottom: 11px;
+}
+.local-action-list > button {
+  min-height: 56px;
+  padding-block: 9px;
+}
+.local-chart-card,
+.local-activity-card {
+  min-height: 320px;
+  padding: 18px;
+}
+.local-bar-chart {
+  height: 240px;
+  margin-top: 15px;
+  background-size: 100% 52px;
+}
+
+@media (max-width: 720px) {
+  .local-summary article {
+    min-height: 108px;
+    padding: 14px;
+  }
+  .local-summary strong {
+    font-size: 17px;
+  }
+  .local-action-center {
+    padding: 14px;
+  }
+}
