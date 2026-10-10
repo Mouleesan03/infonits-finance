@@ -316,12 +316,14 @@ export function LocalOfficeModule({
     return (
       <PostsModule
         items={store.posts}
+        events={store.events}
         clients={clients}
         projects={projects}
         team={store.team}
         formOpen={formOpen}
         setFormOpen={setFormOpen}
         onChange={(items) => update('posts', items)}
+        onEventsChange={(items) => update('events', items)}
       />
     );
   if (section === 'renewals')
@@ -1524,20 +1526,24 @@ function TeamModule({
 
 function PostsModule({
   items,
+  events,
   clients,
   projects,
   team,
   formOpen,
   setFormOpen,
   onChange,
+  onEventsChange,
 }: {
   items: PostPlan[];
+  events: CalendarEvent[];
   clients: ClientRef[];
   projects: ProjectRef[];
   team: TeamMember[];
   formOpen: boolean;
   setFormOpen: (v: boolean) => void;
   onChange: (v: PostPlan[]) => void;
+  onEventsChange: (v: CalendarEvent[]) => void;
 }) {
   const [draft, setDraft] = useState({
     clientId: '',
@@ -1547,12 +1553,40 @@ function PostsModule({
     required: '12',
     memberId: '',
   });
+  const [calendarMonth, setCalendarMonth] = useState(thisMonth());
+  const [eventDraft, setEventDraft] = useState({ title: '', date: today() });
+  const [eventOpen, setEventOpen] = useState(false);
   const names = new Map(clients.map((x) => [x.id, x.name]));
   const members = new Map(team.map((x) => [x.id, x.name]));
   const total = items.reduce(
     (s, x) => ({ required: s.required + x.required, posted: s.posted + x.posted }),
     { required: 0, posted: 0 },
   );
+  const [calendarYear, calendarMonthNumber] = calendarMonth.split('-').map(Number);
+  const firstWeekday = new Date(calendarYear, calendarMonthNumber - 1, 1).getDay();
+  const daysInMonth = new Date(calendarYear, calendarMonthNumber, 0).getDate();
+  const calendarCells = Array.from({ length: firstWeekday + daysInMonth }, (_, index) =>
+    index < firstWeekday ? null : index - firstWeekday + 1,
+  );
+  const monthEvents = events.filter((event) => event.date.startsWith(calendarMonth));
+  const openEvent = (date: string) => {
+    setEventDraft({ title: '', date });
+    setEventOpen(true);
+  };
+  const submitEvent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventDraft.title.trim()) return;
+    onEventsChange([
+      ...events,
+      {
+        id: crypto.randomUUID(),
+        title: eventDraft.title.trim(),
+        date: eventDraft.date,
+        type: 'Post',
+      },
+    ]);
+    setEventOpen(false);
+  };
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const required = Number(draft.required);
@@ -1569,7 +1603,7 @@ function PostsModule({
         action="Add post plan"
         onAction={() => setFormOpen(!formOpen)}
       />
-      <section className="office-metrics">
+      <section className="office-metrics office-post-metrics">
         <Metric label="Required" value={total.required} raw />
         <Metric label="Posted" value={total.posted} raw tone="green" />
         <Metric
@@ -1578,6 +1612,85 @@ function PostsModule({
           raw
           tone="amber"
         />
+      </section>
+      <section className="office-post-calendar" aria-label="Post and event calendar">
+        <header>
+          <div>
+            <CalendarDays size={20} />
+            <span>
+              <strong>Content calendar</strong>
+              <small>Choose a date to schedule a post or event.</small>
+            </span>
+          </div>
+          <input
+            className="office-month"
+            type="month"
+            value={calendarMonth}
+            onChange={(e) => setCalendarMonth(e.target.value)}
+            aria-label="Calendar month"
+          />
+        </header>
+        <div className="office-post-weekdays" aria-hidden="true">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+            <span key={day}>{day}</span>
+          ))}
+        </div>
+        <div className="office-post-days">
+          {calendarCells.map((day, index) => {
+            if (!day) return <span className="is-blank" key={`blank-${index}`} />;
+            const date = `${calendarMonth}-${String(day).padStart(2, '0')}`;
+            const dayEvents = monthEvents.filter((event) => event.date === date);
+            return (
+              <button
+                type="button"
+                key={date}
+                className={date === today() ? 'is-today' : ''}
+                onClick={() => openEvent(date)}
+                aria-label={`Add event on ${date}`}
+              >
+                <b>{day}</b>
+                {dayEvents.slice(0, 2).map((event) => (
+                  <span key={event.id} title={event.title}>
+                    {event.title}
+                  </span>
+                ))}
+                {dayEvents.length > 2 && <small>+{dayEvents.length - 2} more</small>}
+              </button>
+            );
+          })}
+        </div>
+        {eventOpen && (
+          <form className="office-post-event-form" onSubmit={submitEvent}>
+            <label>
+              <span>Post or event *</span>
+              <input
+                autoFocus
+                required
+                placeholder="e.g. Publish campaign reel"
+                value={eventDraft.title}
+                onChange={(e) => setEventDraft({ ...eventDraft, title: e.target.value })}
+              />
+            </label>
+            <label>
+              <span>Date</span>
+              <input
+                type="date"
+                value={eventDraft.date}
+                onChange={(e) => setEventDraft({ ...eventDraft, date: e.target.value })}
+              />
+            </label>
+            <button className="button button-primary" type="submit">
+              <Plus size={16} /> Add to calendar
+            </button>
+            <button
+              className="button button-outline"
+              type="button"
+              onClick={() => setEventOpen(false)}
+            >
+              Cancel
+            </button>
+          </form>
+        )}
       </section>
       {formOpen && (
         <form className="office-form" onSubmit={submit}>

@@ -8208,3 +8208,330 @@ tfoot td {
     white-space: normal;
   }
 }
+
+/* Workspace density and readable controls. */
+@media (min-width: 821px) {
+  .local-sidebar {
+    padding: 13px 10px;
+  }
+  .local-brand {
+    min-height: 36px;
+  }
+  .local-brand img {
+    width: 142px;
+    height: auto;
+  }
+  .local-nav {
+    margin-top: 5px;
+    overflow: visible;
+  }
+  .local-nav-group + .local-nav-group {
+    margin-top: 1px;
+  }
+  .local-nav .local-nav-group-toggle {
+    min-height: 24px;
+    padding-inline: 10px;
+  }
+  .local-nav-group-links {
+    gap: 1px;
+    padding-top: 1px;
+  }
+  .local-nav button {
+    min-height: 34px;
+    padding-inline: 10px;
+  }
+  .local-sidebar-note {
+    margin-top: 7px;
+    padding: 9px;
+  }
+}
+
+.local-main {
+  padding-top: 20px;
+}
+.local-titlebar {
+  align-items: center;
+  margin-bottom: 11px;
+}
+.local-titlebar h1 {
+  margin-block: 1px 2px;
+  font-size: 22px;
+}
+.local-titlebar p {
+  font-size: 13px;
+}
+.local-action-empty {
+  margin-top: 14px;
+  padding-block: 14px;
+  font-size: 13px;
+}
+
+/* A dense horizontal comparison uses the chart card without large empty columns. */
+.local-dashboard-middle .local-chart-card {
+  min-height: 244px;
+}
+.local-dashboard-middle .local-bar-chart {
+  height: auto;
+  display: grid;
+  align-items: initial;
+  gap: 13px;
+  margin-top: 14px;
+  padding: 16px 2px 2px;
+  border-top: 1px solid #edf1f5;
+  border-bottom: 0;
+  background: none;
+}
+.local-bar-row {
+  display: grid;
+  grid-template-columns: 76px minmax(80px, 1fr) 76px;
+  align-items: center;
+  gap: 12px;
+}
+.local-bar-row > span {
+  color: #52647a;
+  font-size: 12px;
+  font-weight: 700;
+}
+.local-bar-track {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf2f7;
+}
+.local-bar-track .local-bar {
+  width: 0;
+  height: 100%;
+  min-height: 0;
+  border-radius: inherit;
+}
+.local-bar-row .local-bar-value {
+  color: #33465e;
+  font-size: 12px;
+  text-align: right;
+}
+
+.local-project-status select {
+  min-width: 98px;
+  min-height: 34px;
+  padding: 6px 28px 6px 12px;
+  font-size: 12px;
+  text-align: left;
+  text-align-last: left;
+}
+
+/* Post Tracker: compact totals and a date-first scheduling calendar. */
+.office-post-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 690px;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.office-post-metrics .office-metric {
+  min-height: 72px;
+  padding: 12px 14px;
+}
+.office-post-metrics .office-metric span {
+  font-size: 12px;
+}
+.office-post-metrics .office-metric strong {
+  margin-top: 5px;
+  font-size: 20px;
+}
+.office-post-calendar {
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid #dfe6ee;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(32, 50, 79, 0.04);
+}
+.office-post-calendar > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 15px;
+  border-bottom: 1px solid #e7ecf2;
+}
+.office-post-calendar > header > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #3276b8;
+}
+.office-post-calendar > header strong,
+.office-post-calendar > header small {
+  display: block;
+}
+.office-post-calendar > header strong {
+  color: #263950;
+  font-size: 14px;
+}
+.office-post-calendar > header small {
+  margin-top: 2px;
+  color: #78879a;
+  font-size: 12px;
+}
+.office-post-calendar .office-month {
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1px solid #d9e2ec;
+  border-radius: 9px;
+  background: #fff;
+  color: #34465d;
+  font-size: 13px;
+}
+.office-post-weekdays,
+.office-post-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.office-post-weekdays {
+  background: #f7f9fc;
+  border-bottom: 1px solid #e7ecf2;
+}
+.office-post-weekdays span {
+  padding: 8px;
+  color: #708096;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+.office-post-days > button,
+.office-post-days > .is-blank {
+  min-height: 82px;
+  padding: 8px;
+  border-right: 1px solid #edf1f5;
+  border-bottom: 1px solid #edf1f5;
+}
+.office-post-days > button {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  color: #33465d;
+  text-align: left;
+}
+.office-post-days > button:hover {
+  background: #f4f8fd;
+}
+.office-post-days > button.is-today {
+  background: #eef6ff;
+  box-shadow: inset 0 0 0 2px #4a8bd0;
+}
+.office-post-days b {
+  font-size: 13px;
+}
+.office-post-days button > span {
+  overflow: hidden;
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: #e9f7f1;
+  color: #147555;
+  font-size: 10px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.office-post-days small {
+  color: #718096;
+  font-size: 10px;
+}
+.office-post-event-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 170px auto auto;
+  align-items: end;
+  gap: 9px;
+  padding: 13px 15px;
+  border-top: 1px solid #dfe7ef;
+  background: #f7faff;
+}
+.office-post-event-form label > span {
+  display: block;
+  margin-bottom: 5px;
+  color: #5f7087;
+  font-size: 11px;
+  font-weight: 700;
+}
+.office-post-event-form input {
+  width: 100%;
+  min-height: 38px;
+  padding: 7px 9px;
+  border: 1px solid #d7e1ec;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+}
+.office-empty strong {
+  font-size: 16px;
+}
+.office-empty p {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+  .local-main {
+    padding-top: 15px;
+  }
+  .local-titlebar h1 {
+    font-size: 21px;
+  }
+  .local-dashboard-middle .local-bar-chart {
+    height: auto;
+    padding-top: 14px;
+  }
+  .local-bar-row {
+    grid-template-columns: 62px minmax(70px, 1fr) 72px;
+    gap: 8px;
+  }
+  .local-bar-row > span,
+  .local-bar-row .local-bar-value {
+    font-size: 11px;
+  }
+  .office-post-metrics {
+    max-width: none;
+  }
+  .office-post-calendar > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .office-post-calendar .office-month {
+    width: 100%;
+  }
+  .office-post-days > button,
+  .office-post-days > .is-blank {
+    min-height: 61px;
+    padding: 5px;
+  }
+  .office-post-days button > span {
+    padding: 2px 3px;
+    font-size: 9px;
+  }
+  .office-post-event-form {
+    grid-template-columns: 1fr;
+  }
+  .office-post-event-form .button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .office-post-metrics {
+    gap: 6px;
+  }
+  .office-post-metrics .office-metric {
+    min-height: 68px;
+    padding: 10px;
+  }
+  .office-post-metrics .office-metric span {
+    font-size: 10px;
+  }
+  .office-post-metrics .office-metric strong {
+    font-size: 17px;
+  }
+  .office-post-weekdays span {
+    padding: 7px 2px;
+    font-size: 9px;
+  }
+}

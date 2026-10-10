@@ -516,7 +516,6 @@ export function LocalFinance() {
             <X size={20} />
           </button>
         </div>
-        <div className="local-mode-chip">Personal cloud</div>
         <nav className="local-nav" aria-label="Workspace navigation">
           <SidebarGroup label="Overview">
             <button
@@ -1271,17 +1270,21 @@ function Dashboard({
               {fxDate ? shortDate(fxDate, false) : 'offline'}
             </span>
           </div>
-          <div className="local-bar-chart">
+          <div className="local-bar-chart" aria-label="Financial totals comparison">
             {chart.map((item) => (
-              <div className="local-bar-column" key={item.label}>
-                <div className="local-bar-value" title={money(item.value)}>
-                  {compactMoney(item.value)}
-                </div>
-                <div
-                  className={`local-bar ${item.tone}`}
-                  style={{ height: `${Math.max(10, (item.value / chartMax) * 135)}px` }}
-                />
+              <div className="local-bar-row" key={item.label}>
                 <span>{item.label}</span>
+                <div className="local-bar-track" aria-hidden="true">
+                  <div
+                    className={`local-bar ${item.tone}`}
+                    style={{
+                      width: `${item.value ? Math.max(5, (item.value / chartMax) * 100) : 0}%`,
+                    }}
+                  />
+                </div>
+                <strong className="local-bar-value" title={money(item.value)}>
+                  {compactMoney(item.value)}
+                </strong>
               </div>
             ))}
           </div>
