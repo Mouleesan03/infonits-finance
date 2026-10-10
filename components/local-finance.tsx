@@ -413,6 +413,7 @@ export function LocalFinance() {
   function changeSection(next: Section) {
     setSection(next);
     setMenuOpen(false);
+    setNotificationsOpen(false);
   }
 
   function rateFor(currency: string) {
@@ -1461,15 +1462,16 @@ function Dashboard({
     outstandingInvoices.map((item) => item.clientId).filter(Boolean),
   ).size;
   const clientNames = new Map(clients.map((client) => [client.id, client.name]));
-  const recentInvoices = office.documents
-    .filter((item) => item.kind === 'Invoice')
-    .map((item) => {
-      const due = item.dueDate ? new Date(`${item.dueDate}T00:00:00`).getTime() : now;
-      return {
-        ...item,
-        status: item.status !== 'Paid' && due < now ? 'Overdue' : item.status,
-      };
-    })
+  const invoiceDocuments = office.documents.filter((item) => item.kind === 'Invoice');
+  const invoiceOverview = invoiceDocuments.map((item) => {
+    const due = item.dueDate ? new Date(`${item.dueDate}T00:00:00`).getTime() : now;
+    return {
+      ...item,
+      status: item.status !== 'Paid' && due < now ? 'Overdue' : item.status,
+    };
+  });
+  const openInvoices = invoiceOverview.filter((item) => item.status !== 'Paid');
+  const recentInvoices = invoiceOverview
     .filter((item) => invoiceFilter === 'All' || item.status === invoiceFilter)
     .slice(0, 4);
 
@@ -1601,6 +1603,11 @@ function Dashboard({
             ) : (
               <p className="local-invoice-empty">No {invoiceFilter.toLowerCase()} invoices.</p>
             )}
+          </div>
+          <div className="local-invoice-summary">
+            <span><small>Total invoices</small><strong>{invoiceDocuments.length}</strong></span>
+            <span><small>Open</small><strong>{openInvoices.length}</strong></span>
+            <span><small>Outstanding</small><strong>{compactMoney(outstandingTotal)}</strong></span>
           </div>
         </article>
       </section>

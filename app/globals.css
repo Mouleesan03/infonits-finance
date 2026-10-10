@@ -187,6 +187,8 @@
 
 .local-recent-invoices-card {
   overflow: hidden;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
@@ -226,6 +228,35 @@
 .local-invoice-preview-list small { margin-top: 3px; color: #8290a3; font-size: 9px; }
 .local-invoice-preview-list b { color: #1d314a; font-size: 10px; text-align: right; }
 .local-invoice-empty { padding: 35px 15px; color: #8090a4; font-size: 11px; text-align: center; }
+.local-invoice-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  border-top: 1px solid #e5ebf2;
+  background: #e5ebf2;
+}
+.local-invoice-summary > span {
+  min-width: 0;
+  padding: 12px 15px;
+  background: #f6f9fc;
+}
+.local-invoice-summary small,
+.local-invoice-summary strong { display: block; }
+.local-invoice-summary small {
+  color: #7b8ba0;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.local-invoice-summary strong {
+  margin-top: 4px;
+  overflow: hidden;
+  color: #1e344f;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .invoice-state {
   min-width: 70px;
   padding: 6px 9px;
@@ -425,6 +456,8 @@
   .local-dashboard-middle { grid-template-columns: 1fr; }
   .local-invoice-preview-list > button { grid-template-columns: minmax(0, 1fr) auto; }
   .local-invoice-preview-list b { grid-column: 1 / -1; text-align: left; }
+  .local-invoice-summary > span { padding: 10px; }
+  .local-invoice-summary strong { font-size: 10px; }
   .assistant-page { min-height: calc(100dvh - 128px); border-radius: 14px; }
   .assistant-header { grid-template-columns: 42px minmax(0, 1fr); padding: 15px; }
   .assistant-header > span { width: 42px; height: 42px; }
