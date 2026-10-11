@@ -86,6 +86,10 @@ type OfficeOverview = {
     amount: number;
     currency: string;
     exchangeRate: number;
+    description?: string;
+    notes?: string;
+    includeBankDetails?: boolean;
+    bankDetails?: string;
   }>;
   payments: Array<{
     id: string;
@@ -106,6 +110,8 @@ type OfficeOverview = {
     domainDue: string;
     hostingDue: string;
   }>;
+  events: Array<{ id: string; title: string; date: string; type: string }>;
+  letters: Array<{ id: string; client: string; subject: string; date: string }>;
 };
 
 const storageKey = 'infonits-finance-local-v1';
@@ -185,9 +191,11 @@ function readOfficeOverview(): OfficeOverview {
       documents: saved.documents ?? [],
       payments: saved.payments ?? [],
       renewals: saved.renewals ?? [],
+      events: saved.events ?? [],
+      letters: saved.letters ?? [],
     };
   } catch {
-    return { documents: [], payments: [], renewals: [] };
+    return { documents: [], payments: [], renewals: [], events: [], letters: [] };
   }
 }
 
@@ -211,6 +219,8 @@ export function LocalFinance() {
     documents: [],
     payments: [],
     renewals: [],
+    events: [],
+    letters: [],
   });
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -424,28 +434,64 @@ export function LocalFinance() {
   const unreadNotifications = notifications.filter(
     (notification) => !seenNotifications.includes(notification.id),
   ).length;
-  const assistantContext = useMemo(() => ({
-    today: today(),
-    totals: {
-      projectValue: totals.value,
-      received: totals.received,
-      workCost: totals.work,
-      expenses: totals.expenses,
-      estimatedProfit: totals.net,
-    },
-    clients: clients.map((client) => ({ id: client.id, name: client.name })),
-    projects: effectiveRows.map((row) => ({ id: row.id, name: row.project })),
-    recentInvoices: officeOverview.documents
-      .filter((document) => document.kind === 'Invoice')
-      .slice(0, 20)
-      .map((document) => ({
-        number: document.number,
-        client: clients.find((client) => client.id === document.clientId)?.name ?? 'Unknown',
-        status: document.status,
-        amount: document.amount,
-        currency: document.currency,
+  const assistantContext = useMemo(
+    () => ({
+      today: today(),
+      totals: {
+        projectValue: totals.value,
+        received: totals.received,
+        workCost: totals.work,
+        expenses: totals.expenses,
+        estimatedProfit: totals.net,
+      },
+      clients: clients.map((client) => ({ id: client.id, name: clientLabel(client) })),
+      projects: effectiveRows.map((row) => ({ id: row.id, name: row.project })),
+      recentInvoices: officeOverview.documents
+        .filter((document) => document.kind === 'Invoice')
+        .slice(0, 20)
+        .map((document) => ({
+          number: document.number,
+          client: clients.find((client) => client.id === document.clientId)?.name ?? 'Unknown',
+          status: document.status,
+          amount: document.amount,
+          currency: document.currency,
+          project: effectiveRows.find((row) => row.id === document.projectId)?.project ?? '',
+          dueDate: document.dueDate,
+        })),
+      recentExpenses: expenses.slice(0, 20).map((expense) => ({
+        description: expense.description,
+        category: expense.category,
+        amount: expense.amount,
+        currency: expense.currency,
+        date: expense.date,
       })),
-  }), [clients, effectiveRows, officeOverview.documents, totals]);
+      recentPayments: officeOverview.payments.slice(0, 20).map((payment) => ({
+        type: payment.type,
+        category: payment.category,
+        note: payment.note,
+        amount: payment.amount,
+        currency: payment.currency,
+        date: payment.date,
+        status: payment.status,
+      })),
+      renewals: officeOverview.renewals.slice(0, 20).map((renewal) => ({
+        website: renewal.website,
+        domainDue: renewal.domainDue,
+        hostingDue: renewal.hostingDue,
+      })),
+      events: officeOverview.events.slice(0, 20).map((event) => ({
+        title: event.title,
+        date: event.date,
+        type: event.type,
+      })),
+      letters: officeOverview.letters.slice(0, 20).map((letter) => ({
+        client: letter.client,
+        subject: letter.subject,
+        date: letter.date,
+      })),
+    }),
+    [clients, effectiveRows, expenses, officeOverview, totals],
+  );
 
   const selectedProject = effectiveRows.find((row) => row.id === selectedProjectId);
   const selectedProjectClient = clients.find((client) => client.id === selectedProject?.clientId);
@@ -551,8 +597,15 @@ export function LocalFinance() {
   }
 
   function applyAssistantAction(action: Exclude<AssistantAction, { type: 'none' }>) {
-    const findClient = (name: string) =>
-      clients.find((client) => client.name.toLowerCase() === name.trim().toLowerCase());
+    const findClient = (name: string) => {
+      const target = name.trim().toLowerCase();
+      return clients.find(
+        (client) =>
+          client.name.toLowerCase() === target ||
+          client.company.toLowerCase() === target ||
+          clientLabel(client).toLowerCase() === target,
+      );
+    };
     const findProject = (name: string) =>
       rows.find((row) => row.project.toLowerCase() === name.trim().toLowerCase());
     const rate = (currency: string) => (currency === 'LKR' ? 1 : (fxRates[currency] ?? 1));
@@ -621,10 +674,19 @@ export function LocalFinance() {
     const payments = (saved.payments ?? []) as OfficeOverview['payments'];
     const renewals = (saved.renewals ?? []) as OfficeOverview['renewals'];
     const events = (saved.events ?? []) as Array<Record<string, unknown>>;
+    const letters = (saved.letters ?? []) as Array<{
+      id: string;
+      date: string;
+      client: string;
+      subject: string;
+      preparedBy: string;
+      body: string;
+    }>;
 
     if (action.type === 'create_invoice' || action.type === 'create_quotation') {
       const client = findClient(action.clientName);
-      if (!client) return `I could not apply this because client “${action.clientName}” was not found.`;
+      if (!client)
+        return `I could not apply this because client “${action.clientName}” was not found.`;
       const project = findProject(action.projectName);
       const kind = action.type === 'create_invoice' ? 'Invoice' : 'Quotation';
       const prefix = kind === 'Invoice' ? 'INV' : 'QUO';
@@ -647,13 +709,31 @@ export function LocalFinance() {
         currency: action.currency,
         exchangeRate: rate(action.currency),
         issueDate: today(),
+        description: action.description,
         notes: action.notes,
+        includeBankDetails: action.includeBankDetails,
+        bankDetails: action.bankDetails,
       } as OfficeOverview['documents'][number]);
       saved.documents = documents;
       localStorage.setItem(officeStorageKey, JSON.stringify(saved));
       setOfficeOverview(readOfficeOverview());
       window.dispatchEvent(new Event('infonits:local-change'));
       return `${kind} ${prefix}-${new Date().getFullYear()}-${String(next).padStart(3, '0')} was created for ${client.name}.`;
+    }
+    if (action.type === 'create_letter') {
+      letters.unshift({
+        id: crypto.randomUUID(),
+        date: action.date || today(),
+        client: action.clientName,
+        subject: action.subject,
+        preparedBy: action.preparedBy || 'Infonits (Pvt) Ltd',
+        body: action.body,
+      });
+      saved.letters = letters;
+      localStorage.setItem(officeStorageKey, JSON.stringify(saved));
+      setOfficeOverview(readOfficeOverview());
+      window.dispatchEvent(new Event('infonits:local-change'));
+      return `The service letter “${action.subject}” was added to Documents.`;
     }
     if (action.type === 'create_payment') {
       payments.unshift({
@@ -775,11 +855,17 @@ export function LocalFinance() {
       <main className="workspace-loader" role="status">
         <div className="workspace-loader-mark">
           <img src="/infonits-logo.png" alt="" width={136} height={34} />
-          <span><i /><i /><i /></span>
+          <span>
+            <i />
+            <i />
+            <i />
+          </span>
         </div>
         <strong>Preparing your workspace</strong>
         <p>Syncing projects, invoices and finance data…</p>
-        <div className="workspace-loader-line"><i /></div>
+        <div className="workspace-loader-line">
+          <i />
+        </div>
       </main>
     );
 
@@ -969,7 +1055,10 @@ export function LocalFinance() {
               {notificationsOpen && (
                 <section className="local-notification-panel" aria-label="Notifications panel">
                   <header>
-                    <div><strong>Notifications</strong><small>Invoices and renewals</small></div>
+                    <div>
+                      <strong>Notifications</strong>
+                      <small>Invoices and renewals</small>
+                    </div>
                     {unreadNotifications > 0 && (
                       <button
                         type="button"
@@ -993,17 +1082,25 @@ export function LocalFinance() {
                           onClick={() => {
                             const next = [...new Set([...seenNotifications, notification.id])];
                             setSeenNotifications(next);
-                            localStorage.setItem('infonits-seen-notifications', JSON.stringify(next));
+                            localStorage.setItem(
+                              'infonits-seen-notifications',
+                              JSON.stringify(next),
+                            );
                             setNotificationsOpen(false);
                             changeSection(notification.section);
                           }}
                         >
                           <i className={notification.tone} />
-                          <span><strong>{notification.title}</strong><small>{notification.detail}</small></span>
+                          <span>
+                            <strong>{notification.title}</strong>
+                            <small>{notification.detail}</small>
+                          </span>
                         </button>
                       ))
                     ) : (
-                      <p><ShieldCheck size={18} /> You are all caught up.</p>
+                      <p>
+                        <ShieldCheck size={18} /> You are all caught up.
+                      </p>
                     )}
                   </div>
                 </section>
@@ -1189,7 +1286,9 @@ export function LocalFinance() {
                 onAdd={() => setExpenseFormOpen(true)}
                 onUpdate={(id, patch) =>
                   setExpenses((current) =>
-                    current.map((expense) => (expense.id === id ? { ...expense, ...patch } : expense)),
+                    current.map((expense) =>
+                      expense.id === id ? { ...expense, ...patch } : expense,
+                    ),
                   )
                 }
                 onDelete={(id) =>
@@ -1436,7 +1535,7 @@ function ProjectDetail({
         </dl>
         {row.note ? (
           <div className="local-detail-note">
-            <span>Note</span>
+            <span>Description</span>
             <p>{row.note}</p>
           </div>
         ) : null}
@@ -1698,13 +1797,17 @@ function Dashboard({
             {recentInvoices.length ? (
               recentInvoices.map((invoice) => (
                 <div className="local-invoice-preview-row" key={invoice.id}>
-                  <button className="local-invoice-preview-main" onClick={() => onInvoiceView(invoice.id)}>
+                  <button
+                    className="local-invoice-preview-main"
+                    onClick={() => onInvoiceView(invoice.id)}
+                  >
                     <span>
-                    <strong>{invoice.number}</strong>
-                    <small>
-                      {(invoice.clientId && clientNames.get(invoice.clientId)) ?? 'Unknown client'} ·{' '}
-                      {shortDate(invoice.dueDate)}
-                    </small>
+                      <strong>{invoice.number}</strong>
+                      <small>
+                        {(invoice.clientId && clientNames.get(invoice.clientId)) ??
+                          'Unknown client'}{' '}
+                        · {shortDate(invoice.dueDate)}
+                      </small>
                     </span>
                   </button>
                   <em className={`invoice-state ${invoice.status.toLowerCase()}`}>
@@ -1714,9 +1817,28 @@ function Dashboard({
                     {invoice.currency} {compactNumber(invoice.amount)}
                   </b>
                   <span className="local-invoice-preview-actions">
-                    <button title="View invoice" aria-label={`View ${invoice.number}`} onClick={() => onInvoiceView(invoice.id)}><Eye size={14} /></button>
-                    <button title="Edit invoice" aria-label={`Edit ${invoice.number}`} onClick={() => onInvoiceEdit(invoice.id)}><Pencil size={14} /></button>
-                    <button className="delete" title="Delete invoice" aria-label={`Delete ${invoice.number}`} onClick={() => onInvoiceDelete(invoice.id)}><Trash2 size={14} /></button>
+                    <button
+                      title="View invoice"
+                      aria-label={`View ${invoice.number}`}
+                      onClick={() => onInvoiceView(invoice.id)}
+                    >
+                      <Eye size={14} />
+                    </button>
+                    <button
+                      title="Edit invoice"
+                      aria-label={`Edit ${invoice.number}`}
+                      onClick={() => onInvoiceEdit(invoice.id)}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      className="delete"
+                      title="Delete invoice"
+                      aria-label={`Delete ${invoice.number}`}
+                      onClick={() => onInvoiceDelete(invoice.id)}
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </span>
                 </div>
               ))
@@ -1726,15 +1848,36 @@ function Dashboard({
           </div>
           {invoicePageCount > 1 && (
             <div className="local-invoice-pagination">
-              <button disabled={safeInvoicePage === 0} onClick={() => setInvoicePage((page) => Math.max(0, page - 1))}>Previous</button>
-              <span>{safeInvoicePage + 1} / {invoicePageCount}</span>
-              <button disabled={safeInvoicePage + 1 >= invoicePageCount} onClick={() => setInvoicePage((page) => Math.min(invoicePageCount - 1, page + 1))}>Next</button>
+              <button
+                disabled={safeInvoicePage === 0}
+                onClick={() => setInvoicePage((page) => Math.max(0, page - 1))}
+              >
+                Previous
+              </button>
+              <span>
+                {safeInvoicePage + 1} / {invoicePageCount}
+              </span>
+              <button
+                disabled={safeInvoicePage + 1 >= invoicePageCount}
+                onClick={() => setInvoicePage((page) => Math.min(invoicePageCount - 1, page + 1))}
+              >
+                Next
+              </button>
             </div>
           )}
           <div className="local-invoice-summary">
-            <span><small>Total invoices</small><strong>{invoiceDocuments.length}</strong></span>
-            <span><small>Open</small><strong>{openInvoices.length}</strong></span>
-            <span><small>Outstanding</small><strong>{compactMoney(outstandingTotal)}</strong></span>
+            <span>
+              <small>Total invoices</small>
+              <strong>{invoiceDocuments.length}</strong>
+            </span>
+            <span>
+              <small>Open</small>
+              <strong>{openInvoices.length}</strong>
+            </span>
+            <span>
+              <small>Outstanding</small>
+              <strong>{compactMoney(outstandingTotal)}</strong>
+            </span>
           </div>
         </article>
       </section>
@@ -1799,14 +1942,19 @@ function Dashboard({
             {visibleActivity.map((item) => (
               <button key={item.id} onClick={() => onSection(item.section)}>
                 <span className={item.kind}>
-                  {item.kind === 'income' ? <BriefcaseBusiness size={15} /> : <ReceiptText size={15} />}
+                  {item.kind === 'income' ? (
+                    <BriefcaseBusiness size={15} />
+                  ) : (
+                    <ReceiptText size={15} />
+                  )}
                 </span>
                 <div>
                   <strong>{item.title}</strong>
                   <small>{item.meta}</small>
                 </div>
                 <b className={item.kind === 'outcome' ? 'negative' : ''} title={money(item.value)}>
-                  {item.kind === 'outcome' ? '−' : ''}{compactMoney(item.value)}
+                  {item.kind === 'outcome' ? '−' : ''}
+                  {compactMoney(item.value)}
                 </b>
               </button>
             ))}
@@ -1819,9 +1967,21 @@ function Dashboard({
           </div>
           {activityPageCount > 1 && (
             <div className="local-invoice-pagination">
-              <button disabled={safeActivityPage === 0} onClick={() => setActivityPage((page) => Math.max(0, page - 1))}>Previous</button>
-              <span>{safeActivityPage + 1} / {activityPageCount}</span>
-              <button disabled={safeActivityPage + 1 >= activityPageCount} onClick={() => setActivityPage((page) => Math.min(activityPageCount - 1, page + 1))}>Next</button>
+              <button
+                disabled={safeActivityPage === 0}
+                onClick={() => setActivityPage((page) => Math.max(0, page - 1))}
+              >
+                Previous
+              </button>
+              <span>
+                {safeActivityPage + 1} / {activityPageCount}
+              </span>
+              <button
+                disabled={safeActivityPage + 1 >= activityPageCount}
+                onClick={() => setActivityPage((page) => Math.min(activityPageCount - 1, page + 1))}
+              >
+                Next
+              </button>
             </div>
           )}
         </article>
@@ -1896,11 +2056,12 @@ function ProjectForm({
         />
       </label>
       <label className="wide">
-        <span>Note</span>
-        <input
+        <span>Project description</span>
+        <textarea
+          rows={3}
           value={draft.note}
           onChange={(event) => setDraft({ ...draft, note: event.target.value })}
-          placeholder="Optional project note"
+          placeholder="Scope, deliverables and important project details"
         />
       </label>
       <div className="local-rate-preview">
@@ -2127,6 +2288,16 @@ function ProjectTable({
                       }
                     />
                   </label>
+                  <label className="wide">
+                    <span>Description</span>
+                    <textarea
+                      aria-label="Project description"
+                      rows={3}
+                      value={row.note}
+                      onChange={(event) => onUpdate(row.id, { note: event.target.value })}
+                      placeholder="Scope, deliverables and project details"
+                    />
+                  </label>
                   {(
                     [
                       ['advance', 'Received'],
@@ -2271,69 +2442,196 @@ function ClientList({
     );
   return (
     <>
-    <section className="local-client-grid">
-      {clients.map((client) => {
-        const clientRows = rows.filter((row) => row.clientId === client.id);
-        const value = clientRows.reduce(
-          (sum, row) => sum + localValue(row.value, row.exchangeRate),
-          0,
-        );
-        return (
-          <article className="local-client-card" key={client.id}>
-            <div className="local-client-avatar">{client.name.slice(0, 2).toUpperCase()}</div>
-            <div className="local-client-details">
-              <h2>{client.name}</h2>
-              <p>{client.company || 'Independent client'}</p>
-              <div className="local-client-meta">
-                <span className="local-client-country-display">
-                  {countryFlags[client.country] ?? '🌐'} {client.country || 'Country not set'}
+      <section className="local-client-grid">
+        {clients.map((client) => {
+          const clientRows = rows.filter((row) => row.clientId === client.id);
+          const value = clientRows.reduce(
+            (sum, row) => sum + localValue(row.value, row.exchangeRate),
+            0,
+          );
+          return (
+            <article className="local-client-card" key={client.id}>
+              <div className="local-client-avatar">{client.name.slice(0, 2).toUpperCase()}</div>
+              <div className="local-client-details">
+                <h2>{client.name}</h2>
+                <p>{client.company || 'Independent client'}</p>
+                <div className="local-client-meta">
+                  <span className="local-client-country-display">
+                    {countryFlags[client.country] ?? '🌐'} {client.country || 'Country not set'}
+                  </span>
+                </div>
+              </div>
+              <div className="local-client-stats">
+                <span>
+                  <small>Projects</small>
+                  <strong>{clientRows.length}</strong>
+                </span>
+                <span>
+                  <small>Total value</small>
+                  <strong>{money(value)}</strong>
                 </span>
               </div>
-            </div>
-            <div className="local-client-stats">
-              <span><small>Projects</small><strong>{clientRows.length}</strong></span>
-              <span><small>Total value</small><strong>{money(value)}</strong></span>
-            </div>
-            <div className="local-client-actions">
-              <button className="local-row-action neutral" aria-label={`View ${client.name}`} onClick={() => { setSelectedId(client.id); setEditingId(''); }}><Eye size={16} /></button>
-              <button className="local-row-action neutral" aria-label={`Edit ${client.name}`} onClick={() => { setSelectedId(client.id); setEditingId(client.id); }}><Pencil size={16} /></button>
-              <button className="local-delete" aria-label={`Remove ${client.name}`} onClick={() => onRemove(client.id)}><Trash2 size={16} /></button>
-            </div>
-          </article>
-        );
-      })}
-    </section>
-    {selected && (
-      <div className="local-modal-layer" role="presentation" onMouseDown={() => setSelectedId('')}>
-        <section className="local-modal local-client-modal" role="dialog" aria-modal="true" aria-labelledby="client-detail-title" onMouseDown={(event) => event.stopPropagation()}>
-          <header>
-            <div><span className="local-modal-icon"><Users size={19} /></span><div><h2 id="client-detail-title">{selected.name}</h2><p>{selected.company || 'Independent client'}</p></div></div>
-            <button aria-label="Close client details" onClick={() => setSelectedId('')}><X size={19} /></button>
-          </header>
-          {editingId === selected.id ? (
-            <div className="local-client-editor modal-editor">
-              <label><span>Name</span><input value={selected.name} onChange={(event) => onUpdate(selected.id, { name: event.target.value })} /></label>
-              <label><span>Company / business</span><input value={selected.company} onChange={(event) => onUpdate(selected.id, { company: event.target.value })} /></label>
-              <label><span>Email</span><input type="email" value={selected.email} onChange={(event) => onUpdate(selected.id, { email: event.target.value })} /></label>
-              <label><span>Phone</span><input value={selected.phone} onChange={(event) => onUpdate(selected.id, { phone: event.target.value })} /></label>
-              <label><span>Country</span><select value={selected.country} onChange={(event) => onUpdate(selected.id, { country: event.target.value })}>{countries.map((country) => <option key={country} value={country}>{countryFlags[country]} {country}</option>)}</select></label>
-              <button className="button button-primary" type="button" onClick={() => setEditingId('')}><Check size={16} /> Save changes</button>
-            </div>
-          ) : (
-            <div className="local-client-profile">
-              <div className="local-client-profile-facts">
-                <span><small>Business</small><strong>{selected.company || 'Independent client'}</strong></span>
-                <span><small>Country</small><strong>{countryFlags[selected.country] ?? '🌐'} {selected.country || 'Not set'}</strong></span>
-                <span><small>Email</small><strong>{selected.email || 'Not added'}</strong></span>
-                <span><small>Phone</small><strong>{selected.phone || 'Not added'}</strong></span>
+              <div className="local-client-actions">
+                <button
+                  className="local-row-action neutral"
+                  aria-label={`View ${client.name}`}
+                  onClick={() => {
+                    setSelectedId(client.id);
+                    setEditingId('');
+                  }}
+                >
+                  <Eye size={16} />
+                </button>
+                <button
+                  className="local-row-action neutral"
+                  aria-label={`Edit ${client.name}`}
+                  onClick={() => {
+                    setSelectedId(client.id);
+                    setEditingId(client.id);
+                  }}
+                >
+                  <Pencil size={16} />
+                </button>
+                <button
+                  className="local-delete"
+                  aria-label={`Remove ${client.name}`}
+                  onClick={() => onRemove(client.id)}
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
-              <div className="local-client-profile-projects"><div><strong>Projects</strong><small>{selectedRows.length} connected</small></div>{selectedRows.length ? selectedRows.map((row) => <button key={row.id}><span><b>{row.project}</b><small>{row.status}</small></span><strong>{money(localValue(row.value, row.exchangeRate))}</strong></button>) : <p>No projects connected.</p>}</div>
-              <button className="button button-primary" onClick={() => setEditingId(selected.id)}><Pencil size={16} /> Edit client</button>
-            </div>
-          )}
-        </section>
-      </div>
-    )}
+            </article>
+          );
+        })}
+      </section>
+      {selected && (
+        <div
+          className="local-modal-layer"
+          role="presentation"
+          onMouseDown={() => setSelectedId('')}
+        >
+          <section
+            className="local-modal local-client-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="client-detail-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <span className="local-modal-icon">
+                  <Users size={19} />
+                </span>
+                <div>
+                  <h2 id="client-detail-title">{selected.name}</h2>
+                  <p>{selected.company || 'Independent client'}</p>
+                </div>
+              </div>
+              <button aria-label="Close client details" onClick={() => setSelectedId('')}>
+                <X size={19} />
+              </button>
+            </header>
+            {editingId === selected.id ? (
+              <div className="local-client-editor modal-editor">
+                <label>
+                  <span>Name</span>
+                  <input
+                    value={selected.name}
+                    onChange={(event) => onUpdate(selected.id, { name: event.target.value })}
+                  />
+                </label>
+                <label>
+                  <span>Company / business</span>
+                  <input
+                    value={selected.company}
+                    onChange={(event) => onUpdate(selected.id, { company: event.target.value })}
+                  />
+                </label>
+                <label>
+                  <span>Email</span>
+                  <input
+                    type="email"
+                    value={selected.email}
+                    onChange={(event) => onUpdate(selected.id, { email: event.target.value })}
+                  />
+                </label>
+                <label>
+                  <span>Phone</span>
+                  <input
+                    value={selected.phone}
+                    onChange={(event) => onUpdate(selected.id, { phone: event.target.value })}
+                  />
+                </label>
+                <label>
+                  <span>Country</span>
+                  <select
+                    value={selected.country}
+                    onChange={(event) => onUpdate(selected.id, { country: event.target.value })}
+                  >
+                    {countries.map((country) => (
+                      <option key={country} value={country}>
+                        {countryFlags[country]} {country}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  className="button button-primary"
+                  type="button"
+                  onClick={() => setEditingId('')}
+                >
+                  <Check size={16} /> Save changes
+                </button>
+              </div>
+            ) : (
+              <div className="local-client-profile">
+                <div className="local-client-profile-facts">
+                  <span>
+                    <small>Business</small>
+                    <strong>{selected.company || 'Independent client'}</strong>
+                  </span>
+                  <span>
+                    <small>Country</small>
+                    <strong>
+                      {countryFlags[selected.country] ?? '🌐'} {selected.country || 'Not set'}
+                    </strong>
+                  </span>
+                  <span>
+                    <small>Email</small>
+                    <strong>{selected.email || 'Not added'}</strong>
+                  </span>
+                  <span>
+                    <small>Phone</small>
+                    <strong>{selected.phone || 'Not added'}</strong>
+                  </span>
+                </div>
+                <div className="local-client-profile-projects">
+                  <div>
+                    <strong>Projects</strong>
+                    <small>{selectedRows.length} connected</small>
+                  </div>
+                  {selectedRows.length ? (
+                    selectedRows.map((row) => (
+                      <button key={row.id}>
+                        <span>
+                          <b>{row.project}</b>
+                          <small>{row.status}</small>
+                        </span>
+                        <strong>{money(localValue(row.value, row.exchangeRate))}</strong>
+                      </button>
+                    ))
+                  ) : (
+                    <p>No projects connected.</p>
+                  )}
+                </div>
+                <button className="button button-primary" onClick={() => setEditingId(selected.id)}>
+                  <Pencil size={16} /> Edit client
+                </button>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
     </>
   );
 }
@@ -2495,12 +2793,64 @@ function ExpenseList({
           </button>
           {editingId === expense.id && (
             <div className="local-expense-editor">
-              <label><span>Description</span><input value={expense.description} onChange={(event) => onUpdate(expense.id, { description: event.target.value })} /></label>
-              <label><span>Category</span><input value={expense.category} onChange={(event) => onUpdate(expense.id, { category: event.target.value })} /></label>
-              <label><span>Amount</span><input type="number" min="0" step="0.01" value={expense.amount} onChange={(event) => onUpdate(expense.id, { amount: Number(event.target.value) || 0 })} /></label>
-              <label><span>Currency</span><select value={expense.currency} onChange={(event) => onUpdate(expense.id, { currency: event.target.value, exchangeRate: event.target.value === 'LKR' ? 1 : (rates[event.target.value] ?? 1) })}>{currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></label>
-              <label><span>Date</span><input type="date" value={expense.date} onChange={(event) => onUpdate(expense.id, { date: event.target.value })} /></label>
-              <button className="button button-primary" type="button" onClick={() => setEditingId('')}>Done</button>
+              <label>
+                <span>Description</span>
+                <input
+                  value={expense.description}
+                  onChange={(event) => onUpdate(expense.id, { description: event.target.value })}
+                />
+              </label>
+              <label>
+                <span>Category</span>
+                <input
+                  value={expense.category}
+                  onChange={(event) => onUpdate(expense.id, { category: event.target.value })}
+                />
+              </label>
+              <label>
+                <span>Amount</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={expense.amount}
+                  onChange={(event) =>
+                    onUpdate(expense.id, { amount: Number(event.target.value) || 0 })
+                  }
+                />
+              </label>
+              <label>
+                <span>Currency</span>
+                <select
+                  value={expense.currency}
+                  onChange={(event) =>
+                    onUpdate(expense.id, {
+                      currency: event.target.value,
+                      exchangeRate:
+                        event.target.value === 'LKR' ? 1 : (rates[event.target.value] ?? 1),
+                    })
+                  }
+                >
+                  {currencies.map((currency) => (
+                    <option key={currency}>{currency}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Date</span>
+                <input
+                  type="date"
+                  value={expense.date}
+                  onChange={(event) => onUpdate(expense.id, { date: event.target.value })}
+                />
+              </label>
+              <button
+                className="button button-primary"
+                type="button"
+                onClick={() => setEditingId('')}
+              >
+                Done
+              </button>
             </div>
           )}
         </article>

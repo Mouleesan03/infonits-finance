@@ -1,7 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowUp, Bot, CheckCircle2, LoaderCircle, Sparkles } from 'lucide-react';
+import {
+  ArrowUp,
+  Bot,
+  CheckCircle2,
+  FilePlus2,
+  Globe2,
+  LoaderCircle,
+  Search,
+  Sparkles,
+} from 'lucide-react';
 
 export type AssistantAction =
   | { type: 'none' }
@@ -35,7 +44,10 @@ export type AssistantAction =
       projectName: string;
       amount: number;
       currency: string;
+      description: string;
       notes: string;
+      includeBankDetails: boolean;
+      bankDetails: string;
     }
   | {
       type: 'create_payment';
@@ -47,13 +59,24 @@ export type AssistantAction =
       date: string;
     }
   | { type: 'create_event'; title: string; date: string; eventType: string }
-  | { type: 'create_renewal'; website: string; domainDue: string; hostingDue: string };
+  | { type: 'create_renewal'; website: string; domainDue: string; hostingDue: string }
+  | {
+      type: 'create_letter';
+      clientName: string;
+      subject: string;
+      body: string;
+      preparedBy: string;
+      date: string;
+    };
+
+type AssistantSource = { title: string; url: string };
 
 type ChatMessage = {
   id: string;
   role: 'assistant' | 'user';
   text: string;
   action?: AssistantAction;
+  sources?: AssistantSource[];
   applied?: boolean;
 };
 
@@ -86,7 +109,9 @@ function FormattedMessage({ text }: { text: string }) {
         return (
           <p className={bullet ? 'bullet' : ''} key={`${line}-${index}`}>
             {bullet && <i aria-hidden="true" />}
-            <span><InlineMessage text={bullet ? line.slice(2) : line} /></span>
+            <span>
+              <InlineMessage text={bullet ? line.slice(2) : line} />
+            </span>
           </p>
         );
       })}
@@ -105,7 +130,7 @@ export function InfonitsAssistant({
     {
       id: 'welcome',
       role: 'assistant',
-      text: 'Hello! I can review your workspace or prepare clients, projects, invoices, quotations, expenses, payments, events and renewals.',
+      text: 'Hello! I can analyse your workspace, search the live web with sources, and prepare clients, projects, invoices, quotations, service letters, expenses, payments, events and renewals.',
     },
   ]);
   const [input, setInput] = useState('');
@@ -117,20 +142,25 @@ export function InfonitsAssistant({
     if (!clean || busy) return;
     setInput('');
     setError('');
-    setMessages((current) => [
-      ...current,
-      { id: crypto.randomUUID(), role: 'user', text: clean },
-    ]);
+    setMessages((current) => [...current, { id: crypto.randomUUID(), role: 'user', text: clean }]);
     setBusy(true);
     try {
       const response = await fetch('/api/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: clean, context }),
+        body: JSON.stringify({
+          message: clean,
+          context,
+          history: messages
+            .filter((item) => item.id !== 'welcome')
+            .slice(-10)
+            .map((item) => ({ role: item.role, text: item.text })),
+        }),
       });
       const data = (await response.json()) as {
         reply?: string;
         action?: AssistantAction;
+        sources?: AssistantSource[];
         error?: string;
       };
       if (!response.ok || !data.reply || !data.action) {
@@ -138,7 +168,13 @@ export function InfonitsAssistant({
       }
       setMessages((current) => [
         ...current,
-        { id: crypto.randomUUID(), role: 'assistant', text: data.reply!, action: data.action },
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          text: data.reply!,
+          action: data.action,
+          sources: data.sources,
+        },
       ]);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Infonits GPT is unavailable.');
@@ -159,11 +195,13 @@ export function InfonitsAssistant({
   return (
     <section className="assistant-page" aria-label="Infonits GPT">
       <header className="assistant-header">
-        <span><Sparkles size={22} /></span>
+        <span>
+          <Sparkles size={22} />
+        </span>
         <div>
           <small>INFONITS AI</small>
           <h1>Infonits GPT</h1>
-          <p>Ask about your business or prepare a workspace action.</p>
+          <p>Analyse, create, research and manage your workspace.</p>
         </div>
         <i>Claude connected</i>
       </header>
@@ -171,9 +209,23 @@ export function InfonitsAssistant({
         <div className="assistant-messages" aria-live="polite">
           {messages.map((message) => (
             <article className={message.role} key={message.id}>
-              {message.role === 'assistant' && <span><Bot size={17} /></span>}
+              {message.role === 'assistant' && (
+                <span>
+                  <Bot size={17} />
+                </span>
+              )}
               <div>
                 <FormattedMessage text={message.text} />
+                {message.sources && message.sources.length > 0 && (
+                  <div className="assistant-sources" aria-label="Web sources">
+                    <strong>Sources</strong>
+                    {message.sources.map((source) => (
+                      <a key={source.url} href={source.url} target="_blank" rel="noreferrer">
+                        <Globe2 size={12} /> {source.title}
+                      </a>
+                    ))}
+                  </div>
+                )}
                 {message.action && message.action.type !== 'none' && (
                   <button type="button" disabled={message.applied} onClick={() => apply(message)}>
                     {message.applied ? <CheckCircle2 size={15} /> : <Sparkles size={15} />}
@@ -185,15 +237,45 @@ export function InfonitsAssistant({
           ))}
           {busy && (
             <article className="assistant assistant-thinking">
-              <span><Bot size={17} /></span>
-              <div><LoaderCircle className="spin" size={17} /> Thinking…</div>
+              <span>
+                <Bot size={17} />
+              </span>
+              <div>
+                <LoaderCircle className="spin" size={17} /> Thinking…
+              </div>
             </article>
           )}
           {error && <p className="assistant-error">{error}</p>}
         </div>
+        <div className="assistant-capabilities" aria-label="Assistant capabilities">
+          <span>
+            <Sparkles size={15} />
+            <b>Workspace</b>
+            <small>Analyse finance and records</small>
+          </span>
+          <span>
+            <FilePlus2 size={15} />
+            <b>Create</b>
+            <small>Invoices, quotes and letters</small>
+          </span>
+          <span>
+            <Search size={15} />
+            <b>Web search</b>
+            <small>Current answers with sources</small>
+          </span>
+        </div>
         <div className="assistant-prompts">
-          {['Summarise my finance', 'Create an invoice', 'What needs attention?'].map((prompt) => (
-            <button type="button" key={prompt} onClick={() => void send(prompt)}>{prompt}</button>
+          {[
+            'Summarise my finance',
+            'Create an invoice',
+            'Create a quotation',
+            'Draft a service letter',
+            'Search the web',
+            'What needs attention?',
+          ].map((prompt) => (
+            <button type="button" key={prompt} onClick={() => void send(prompt)}>
+              {prompt}
+            </button>
           ))}
         </div>
         <form
@@ -219,7 +301,10 @@ export function InfonitsAssistant({
             <ArrowUp size={18} />
           </button>
         </form>
-        <small className="assistant-footnote">Record changes are only made after you select Review &amp; apply.</small>
+        <small className="assistant-footnote">
+          Workspace changes happen only after you select Review &amp; apply. Web answers include
+          source links.
+        </small>
       </div>
     </section>
   );

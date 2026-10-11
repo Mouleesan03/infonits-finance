@@ -35,7 +35,10 @@ const actionSchema = z.discriminatedUnion('type', [
     projectName: z.string().default(''),
     amount: z.number().positive(),
     currency: z.string().default('LKR'),
+    description: z.string().default('Professional services'),
     notes: z.string().default(''),
+    includeBankDetails: z.boolean().default(false),
+    bankDetails: z.string().default(''),
   }),
   z.object({
     type: z.literal('create_payment'),
@@ -58,10 +61,27 @@ const actionSchema = z.discriminatedUnion('type', [
     domainDue: z.string().default(''),
     hostingDue: z.string().default(''),
   }),
+  z.object({
+    type: z.literal('create_letter'),
+    clientName: z.string().min(1),
+    subject: z.string().min(1),
+    body: z.string().min(1),
+    preparedBy: z.string().default('Infonits (Pvt) Ltd'),
+    date: z.string().default(''),
+  }),
 ]);
 
 const requestSchema = z.object({
   message: z.string().trim().min(1).max(800),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(['assistant', 'user']),
+        text: z.string().min(1).max(1400),
+      }),
+    )
+    .max(10)
+    .default([]),
   context: z
     .object({
       today: z.string(),
@@ -76,15 +96,55 @@ const requestSchema = z.object({
             status: z.string(),
             amount: z.number(),
             currency: z.string(),
+            project: z.string().optional(),
+            dueDate: z.string().optional(),
           }),
         )
         .max(20),
+      recentExpenses: z
+        .array(
+          z.object({
+            description: z.string(),
+            category: z.string(),
+            amount: z.number(),
+            currency: z.string(),
+            date: z.string(),
+          }),
+        )
+        .max(20)
+        .default([]),
+      recentPayments: z
+        .array(
+          z.object({
+            type: z.string(),
+            category: z.string(),
+            note: z.string(),
+            amount: z.number(),
+            currency: z.string(),
+            date: z.string(),
+            status: z.string(),
+          }),
+        )
+        .max(20)
+        .default([]),
+      renewals: z
+        .array(z.object({ website: z.string(), domainDue: z.string(), hostingDue: z.string() }))
+        .max(20)
+        .default([]),
+      events: z
+        .array(z.object({ title: z.string(), date: z.string(), type: z.string() }))
+        .max(20)
+        .default([]),
+      letters: z
+        .array(z.object({ client: z.string(), subject: z.string(), date: z.string() }))
+        .max(20)
+        .default([]),
     })
     .strict(),
 });
 
 const responseSchema = z.object({
-  reply: z.string().min(1).max(700),
+  reply: z.string().min(1).max(1400),
   action: actionSchema,
 });
 
@@ -105,20 +165,49 @@ export async function POST(request: Request) {
     }
 
     const input = requestSchema.parse(await request.json());
-    const { output } = await generateText({
+    const wantsWebSearch =
+      /\b(search|online|web|internet|latest|current|today|news|price|compare|research|find)\b/i.test(
+        input.message,
+      );
+    const { output, sources } = await generateText({
       model: anthropic('claude-sonnet-4-6'),
+      tools: wantsWebSearch
+        ? {
+            web_search: anthropic.tools.webSearch_20260318({
+              maxUses: 3,
+              responseInclusion: 'full',
+              userLocation: {
+                type: 'approximate',
+                country: 'LK',
+                timezone: 'Asia/Colombo',
+              },
+            }),
+          }
+        : undefined,
       output: Output.object({ schema: responseSchema }),
       instructions:
-        'You are Infonits GPT, an operations assistant inside a small finance workspace. ' +
-        'Answer briefly and use only the supplied workspace context. You may propose exactly one supported action. ' +
+        'You are Infonits GPT, an advanced operations assistant inside a small finance workspace. ' +
+        'Use the supplied workspace context for business records and conversation history for follow-up requests. ' +
+        'When web search is available and the user asks for online, current, latest, research, comparison, or news information, use it and summarise the answer clearly. ' +
+        'You may propose exactly one supported workspace action. ' +
         'Never claim an action has already happened: the user must review and apply it in the UI. ' +
         'If required details such as amount, client, or date are missing, ask one focused question and return action type none. ' +
         'Use YYYY-MM-DD dates and an existing client or project name when possible. ' +
-        'For questions that do not require a record change, return action type none.',
+        'For an invoice or quotation, write a useful service description and include bank details only when the user asks for them. ' +
+        'For a letter, draft a complete professional body. For questions that do not require a record change, return action type none.',
       prompt: JSON.stringify(input),
     });
 
-    return Response.json(output);
+    return Response.json({
+      ...output,
+      sources: sources
+        .filter((source) => source.sourceType === 'url')
+        .map((source) => ({ title: source.title || source.url, url: source.url }))
+        .filter(
+          (source, index, list) => list.findIndex((item) => item.url === source.url) === index,
+        )
+        .slice(0, 5),
+    });
   } catch (error) {
     const message =
       error instanceof z.ZodError

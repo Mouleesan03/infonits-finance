@@ -85,7 +85,10 @@ type SalesDocument = {
   taxRate?: number;
   discount?: number;
   advance?: number;
+  description?: string;
   notes?: string;
+  includeBankDetails?: boolean;
+  bankDetails?: string;
 };
 type Payment = {
   id: string;
@@ -518,11 +521,13 @@ function MonthCalendar({
           const date = `${month}-${String(day).padStart(2, '0')}`;
           const dayEvents = eventsByDate.get(date) ?? [];
           return (
-            <div
-              key={date}
-              className={`office-calendar-day ${date === today() ? 'is-today' : ''}`}
-            >
-              <button type="button" className="office-calendar-date-hit" onClick={() => onDateClick(date)} aria-label={`Add event on ${date}`}>
+            <div key={date} className={`office-calendar-day ${date === today() ? 'is-today' : ''}`}>
+              <button
+                type="button"
+                className="office-calendar-date-hit"
+                onClick={() => onDateClick(date)}
+                aria-label={`Add event on ${date}`}
+              >
                 <b>{day}</b>
               </button>
               {dayEvents.slice(0, compact ? 3 : 2).map((event) => (
@@ -620,8 +625,8 @@ function CalendarEventModal({
                 {readOnly
                   ? 'This item is managed from its original invoice or renewal record.'
                   : postMode
-                  ? 'Record content for the selected date.'
-                  : 'Add a reminder to your calendar.'}
+                    ? 'Record content for the selected date.'
+                    : 'Add a reminder to your calendar.'}
               </p>
             </div>
           </div>
@@ -813,7 +818,10 @@ function SalesDocuments({
     taxRate: '0',
     discount: '0',
     advance: '0',
+    description: '',
     notes: 'Payment is due within 10 days of the invoice date.',
+    includeBankDetails: false,
+    bankDetails: '',
   });
   const [preview, setPreview] = useState<SalesDocument | null>(null);
   const [editingId, setEditingId] = useState('');
@@ -853,7 +861,10 @@ function SalesDocuments({
         taxRate: String(editItem.taxRate ?? 0),
         discount: String(editItem.discount ?? 0),
         advance: String(editItem.advance ?? 0),
+        description: editItem.description ?? '',
         notes: editItem.notes ?? '',
+        includeBankDetails: editItem.includeBankDetails ?? false,
+        bankDetails: editItem.bankDetails ?? '',
       });
       setEditingId(editItem.id);
       setFormOpen(true);
@@ -902,22 +913,25 @@ function SalesDocuments({
     if (!draft.clientId || !Number.isFinite(amount) || amount <= 0) return;
     const existing = items.find((item) => item.id === editingId);
     const nextDocument: SalesDocument = {
-        id: existing?.id ?? crypto.randomUUID(),
-        kind,
-        number: existing?.number ?? nextNumber(kind, allItems),
-        clientId: draft.clientId,
-        projectId: draft.projectId,
-        issueDate: draft.issueDate,
-        dueDate: kind === 'Invoice' ? addDays(draft.issueDate, 10) : draft.dueDate,
-        amount,
-        currency: draft.currency,
-        exchangeRate: draft.currency === 'LKR' ? 1 : (rates[draft.currency] ?? 1),
-        status: draft.status,
-        taxRate: Number(draft.taxRate) || 0,
-        discount: Number(draft.discount) || 0,
-        advance: Number(draft.advance) || 0,
-        notes: draft.notes.trim(),
-      };
+      id: existing?.id ?? crypto.randomUUID(),
+      kind,
+      number: existing?.number ?? nextNumber(kind, allItems),
+      clientId: draft.clientId,
+      projectId: draft.projectId,
+      issueDate: draft.issueDate,
+      dueDate: kind === 'Invoice' ? addDays(draft.issueDate, 10) : draft.dueDate,
+      amount,
+      currency: draft.currency,
+      exchangeRate: draft.currency === 'LKR' ? 1 : (rates[draft.currency] ?? 1),
+      status: draft.status,
+      taxRate: Number(draft.taxRate) || 0,
+      discount: Number(draft.discount) || 0,
+      advance: Number(draft.advance) || 0,
+      description: draft.description.trim(),
+      notes: draft.notes.trim(),
+      includeBankDetails: draft.includeBankDetails,
+      bankDetails: draft.includeBankDetails ? draft.bankDetails.trim() : '',
+    };
     onChange(
       existing
         ? items.map((item) => (item.id === existing.id ? nextDocument : item))
@@ -934,7 +948,10 @@ function SalesDocuments({
       taxRate: '0',
       discount: '0',
       advance: '0',
+      description: '',
       notes: 'Payment is due within 10 days of the invoice date.',
+      includeBankDetails: false,
+      bankDetails: '',
     });
     setEditingId('');
     setFormOpen(false);
@@ -952,7 +969,10 @@ function SalesDocuments({
       taxRate: String(item.taxRate ?? 0),
       discount: String(item.discount ?? 0),
       advance: String(item.advance ?? 0),
+      description: item.description ?? '',
       notes: item.notes ?? '',
+      includeBankDetails: item.includeBankDetails ?? false,
+      bankDetails: item.bankDetails ?? '',
     });
     setEditingId(item.id);
     setFormOpen(true);
@@ -1097,6 +1117,15 @@ function SalesDocuments({
               onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
             />
           </label>
+          <label className="wide">
+            <span>{kind} description</span>
+            <textarea
+              rows={3}
+              value={draft.description}
+              onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+              placeholder="Describe the services, deliverables or items included"
+            />
+          </label>
           {kind === 'Invoice' && (
             <>
               <label>
@@ -1131,11 +1160,32 @@ function SalesDocuments({
               </label>
               <label className="wide">
                 <span>Notes</span>
-                <input
+                <textarea
+                  rows={2}
                   value={draft.notes}
                   onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
                 />
               </label>
+              <label className="wide invoice-bank-toggle">
+                <input
+                  type="checkbox"
+                  checked={draft.includeBankDetails}
+                  onChange={(e) => setDraft({ ...draft, includeBankDetails: e.target.checked })}
+                />
+                <span>Include bank details on this invoice</span>
+              </label>
+              {draft.includeBankDetails && (
+                <label className="wide">
+                  <span>Bank details</span>
+                  <textarea
+                    required
+                    rows={3}
+                    value={draft.bankDetails}
+                    onChange={(e) => setDraft({ ...draft, bankDetails: e.target.value })}
+                    placeholder={'Bank name\nAccount name\nAccount number / SWIFT'}
+                  />
+                </label>
+              )}
             </>
           )}
           <button className="button button-primary" type="submit">
@@ -1408,7 +1458,12 @@ export async function createInvoicePdf(
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(100, 116, 137);
   pdf.setFontSize(7);
-  pdf.text('Professional services', 22, 168);
+  pdf.text(
+    pdf.splitTextToSize(item.description || 'Professional services', 96).slice(0, 2),
+    22,
+    168,
+    { lineHeightFactor: 1.15 },
+  );
   pdf.setTextColor(39, 56, 78);
   pdf.setFontSize(8);
   pdf.text('1', 132, 161, { align: 'right' });
@@ -1460,12 +1515,18 @@ export async function createInvoicePdf(
   pdf.roundedRect(16, 224, 94, 32, 3, 3, 'F');
   pdf.setTextColor(21, 42, 68);
   pdf.setFontSize(8.5);
-  pdf.text('Payment reference', 22, 234);
+  pdf.text(item.includeBankDetails ? 'BANK DETAILS' : 'Payment reference', 22, 234);
   pdf.setTextColor(83, 101, 124);
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(7.5);
-  pdf.text(`${item.number}  |  hello@infonits.io`, 22, 243);
-  pdf.text(`Recorded value: ${money(lkr(total, item.exchangeRate))}`, 22, 250);
+  if (item.includeBankDetails && item.bankDetails) {
+    pdf.text(pdf.splitTextToSize(item.bankDetails, 82).slice(0, 3), 22, 242, {
+      lineHeightFactor: 1.25,
+    });
+  } else {
+    pdf.text(`${item.number}  |  hello@infonits.io`, 22, 243);
+    pdf.text(`Recorded value: ${money(lkr(total, item.exchangeRate))}`, 22, 250);
+  }
 
   pdf.setDrawColor(222, 229, 238);
   pdf.line(16, 276, 194, 276);
@@ -1539,12 +1600,21 @@ function InvoicePreview({
             <div>
               <span>Issued by</span>
               <strong>Infonits (Pvt) Ltd</strong>
-              <p>Jaffna, Sri Lanka<br />hello@infonits.io<br />www.infonits.io</p>
+              <p>
+                Jaffna, Sri Lanka
+                <br />
+                hello@infonits.io
+                <br />
+                www.infonits.io
+              </p>
             </div>
             <dl>
-              <dt>Invoice number</dt><dd>{item.number}</dd>
-              <dt>Issue date</dt><dd>{item.issueDate}</dd>
-              <dt>Due date</dt><dd>{item.dueDate}</dd>
+              <dt>Invoice number</dt>
+              <dd>{item.number}</dd>
+              <dt>Issue date</dt>
+              <dd>{item.issueDate}</dd>
+              <dt>Due date</dt>
+              <dd>{item.dueDate}</dd>
             </dl>
           </div>
           <div className="invoice-a4-billto">
@@ -1560,34 +1630,76 @@ function InvoicePreview({
           </div>
           <div className="invoice-a4-services">
             <h3>Services &amp; deliverables</h3>
-            <div className="invoice-a4-table-head"><span>Description</span><span>Qty</span><span>Rate</span><span>Amount</span></div>
+            <div className="invoice-a4-table-head">
+              <span>Description</span>
+              <span>Qty</span>
+              <span>Rate</span>
+              <span>Amount</span>
+            </div>
             <div className="invoice-a4-table-row">
-              <span><b>01</b><strong>{project}</strong><small>Professional services</small></span>
+              <span>
+                <b>01</b>
+                <strong>{project}</strong>
+                <small>{item.description || 'Professional services'}</small>
+              </span>
               <span>1</span>
-              <span>{item.currency} {subtotal.toLocaleString()}</span>
-              <strong>{item.currency} {subtotal.toLocaleString()}</strong>
+              <span>
+                {item.currency} {subtotal.toLocaleString()}
+              </span>
+              <strong>
+                {item.currency} {subtotal.toLocaleString()}
+              </strong>
             </div>
           </div>
           <div className="invoice-a4-recap">
             <div>
               <span>Payment note</span>
               <p>{item.notes || 'Payment is due within 10 days of the invoice date.'}</p>
-              <p>Use <strong>{item.number}</strong> as the payment reference.</p>
+              <p>
+                Use <strong>{item.number}</strong> as the payment reference.
+              </p>
             </div>
             <div className="invoice-a4-totals">
-              <span>Subtotal</span><b>{item.currency} {subtotal.toLocaleString()}</b>
-              <span>Discount</span><b>− {item.currency} {(item.discount ?? 0).toLocaleString()}</b>
-              <span>Tax ({item.taxRate ?? 0}%)</span><b>{item.currency} {tax.toLocaleString()}</b>
-              <span>Advance paid</span><b>− {item.currency} {(item.advance ?? 0).toLocaleString()}</b>
-              <strong>Balance due</strong><strong>{item.currency} {total.toLocaleString()}</strong>
+              <span>Subtotal</span>
+              <b>
+                {item.currency} {subtotal.toLocaleString()}
+              </b>
+              <span>Discount</span>
+              <b>
+                − {item.currency} {(item.discount ?? 0).toLocaleString()}
+              </b>
+              <span>Tax ({item.taxRate ?? 0}%)</span>
+              <b>
+                {item.currency} {tax.toLocaleString()}
+              </b>
+              <span>Advance paid</span>
+              <b>
+                − {item.currency} {(item.advance ?? 0).toLocaleString()}
+              </b>
+              <strong>Balance due</strong>
+              <strong>
+                {item.currency} {total.toLocaleString()}
+              </strong>
             </div>
           </div>
           <div className="invoice-a4-payment">
-            <div><span>Payment reference</span><strong>{item.number}</strong></div>
-            <div><span>Recorded LKR value</span><strong>{money(lkr(total, item.exchangeRate))}</strong></div>
+            <div>
+              <span>{item.includeBankDetails ? 'Bank details' : 'Payment reference'}</span>
+              {item.includeBankDetails && item.bankDetails ? (
+                <p>{item.bankDetails}</p>
+              ) : (
+                <strong>{item.number}</strong>
+              )}
+            </div>
+            <div>
+              <span>Recorded LKR value</span>
+              <strong>{money(lkr(total, item.exchangeRate))}</strong>
+            </div>
           </div>
           <div className="invoice-a4-footer">
-            <span>CREATED WITH CARE BY <strong>INFONITS</strong></span>
+            <span>
+              CREATED WITH CARE BY <strong>INFONITS</strong>
+            </span>
             <span>hello@infonits.io · www.infonits.io</span>
           </div>
         </div>
@@ -1680,8 +1792,10 @@ function PaymentsModule({
   );
   const ledgerRows = useMemo(
     () =>
-      [...items.map((item) => ({ ...item, manual: true })), ...automaticRows.map((item) => ({ ...item, manual: false }))]
-        .toSorted((left, right) => right.date.localeCompare(left.date)),
+      [
+        ...items.map((item) => ({ ...item, manual: true })),
+        ...automaticRows.map((item) => ({ ...item, manual: false })),
+      ].toSorted((left, right) => right.date.localeCompare(left.date)),
     [automaticRows, items],
   );
   const totals = useMemo(
@@ -1744,17 +1858,45 @@ function PaymentsModule({
       </section>
       <section className="finance-tracker-report" aria-label="Income and outcome report">
         <header>
-          <div><strong>Cash flow report</strong><small>Live from paid invoices, projects and expenses</small></div>
-          <b className={totals.income - totals.expense >= 0 ? 'positive' : 'negative'}>{money(totals.income - totals.expense)} net</b>
+          <div>
+            <strong>Cash flow report</strong>
+            <small>Live from paid invoices, projects and expenses</small>
+          </div>
+          <b className={totals.income - totals.expense >= 0 ? 'positive' : 'negative'}>
+            {money(totals.income - totals.expense)} net
+          </b>
         </header>
         <div className="finance-tracker-chart">
-          <div><span>Income</span><i><b style={{ width: `${incomeShare}%` }} /></i><strong>{incomeShare}%</strong></div>
-          <div><span>Outcome</span><i><b style={{ width: `${expenseShare}%` }} /></i><strong>{expenseShare}%</strong></div>
+          <div>
+            <span>Income</span>
+            <i>
+              <b style={{ width: `${incomeShare}%` }} />
+            </i>
+            <strong>{incomeShare}%</strong>
+          </div>
+          <div>
+            <span>Outcome</span>
+            <i>
+              <b style={{ width: `${expenseShare}%` }} />
+            </i>
+            <strong>{expenseShare}%</strong>
+          </div>
         </div>
         <div className="finance-tracker-sources">
-          <span><small>Paid invoices</small><strong>{automaticRows.filter((item) => item.category === 'Paid invoice').length}</strong></span>
-          <span><small>Automatic expenses</small><strong>{automaticRows.filter((item) => item.type === 'Expense').length}</strong></span>
-          <span><small>Additional records</small><strong>{items.length}</strong></span>
+          <span>
+            <small>Paid invoices</small>
+            <strong>
+              {automaticRows.filter((item) => item.category === 'Paid invoice').length}
+            </strong>
+          </span>
+          <span>
+            <small>Automatic expenses</small>
+            <strong>{automaticRows.filter((item) => item.type === 'Expense').length}</strong>
+          </span>
+          <span>
+            <small>Additional records</small>
+            <strong>{items.length}</strong>
+          </span>
         </div>
       </section>
       {formOpen && (
@@ -1859,7 +2001,10 @@ function PaymentsModule({
                     <td>
                       <span className={`office-pill ${item.type.toLowerCase()}`}>{item.type}</span>
                     </td>
-                    <td>{item.category}<small>{item.manual ? 'Additional record' : 'Automatic'}</small></td>
+                    <td>
+                      {item.category}
+                      <small>{item.manual ? 'Additional record' : 'Automatic'}</small>
+                    </td>
                     <td>{item.note}</td>
                     <td>
                       {item.manual ? (
@@ -1877,7 +2022,9 @@ function PaymentsModule({
                         >
                           {item.status}
                         </button>
-                      ) : <span className="office-status-button paid">Paid</span>}
+                      ) : (
+                        <span className="office-status-button paid">Paid</span>
+                      )}
                     </td>
                     <td className={item.type === 'Income' ? 'office-positive' : 'office-negative'}>
                       <strong>
@@ -2025,8 +2172,26 @@ function TeamModule({
                   {item.status}
                 </button>
                 <div className="office-person-actions">
-                  <button className="local-row-action neutral" aria-label={`View ${item.name}`} onClick={() => { setSelectedId(item.id); setEditingId(''); }}><Eye size={15} /></button>
-                  <button className="local-row-action neutral" aria-label={`Edit ${item.name}`} onClick={() => { setSelectedId(item.id); setEditingId(item.id); }}><Pencil size={15} /></button>
+                  <button
+                    className="local-row-action neutral"
+                    aria-label={`View ${item.name}`}
+                    onClick={() => {
+                      setSelectedId(item.id);
+                      setEditingId('');
+                    }}
+                  >
+                    <Eye size={15} />
+                  </button>
+                  <button
+                    className="local-row-action neutral"
+                    aria-label={`Edit ${item.name}`}
+                    onClick={() => {
+                      setSelectedId(item.id);
+                      setEditingId(item.id);
+                    }}
+                  >
+                    <Pencil size={15} />
+                  </button>
                 </div>
                 <button
                   className="local-delete"
@@ -2041,30 +2206,127 @@ function TeamModule({
         )}
       </section>
       {selected && (
-        <div className="local-modal-layer" role="presentation" onMouseDown={() => setSelectedId('')}>
-          <section className="local-modal office-person-modal" role="dialog" aria-modal="true" aria-labelledby="team-member-title" onMouseDown={(event) => event.stopPropagation()}>
+        <div
+          className="local-modal-layer"
+          role="presentation"
+          onMouseDown={() => setSelectedId('')}
+        >
+          <section
+            className="local-modal office-person-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="team-member-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <header>
-              <div><span className="local-modal-icon"><UserRound size={19} /></span><div><h2 id="team-member-title">{selected.name}</h2><p>Team member profile and contact details</p></div></div>
-              <button aria-label="Close team member" onClick={() => setSelectedId('')}><X size={19} /></button>
+              <div>
+                <span className="local-modal-icon">
+                  <UserRound size={19} />
+                </span>
+                <div>
+                  <h2 id="team-member-title">{selected.name}</h2>
+                  <p>Team member profile and contact details</p>
+                </div>
+              </div>
+              <button aria-label="Close team member" onClick={() => setSelectedId('')}>
+                <X size={19} />
+              </button>
             </header>
             {editingId === selected.id ? (
-              <form className="office-form team-member-editor" onSubmit={(event) => { event.preventDefault(); setEditingId(''); }}>
+              <form
+                className="office-form team-member-editor"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  setEditingId('');
+                }}
+              >
                 {(['name', 'role', 'email', 'phone'] as const).map((field) => (
-                  <label key={field}><span>{field[0].toUpperCase() + field.slice(1)}</span><input type={field === 'email' ? 'email' : 'text'} value={selected[field]} onChange={(event) => onChange(items.map((item) => item.id === selected.id ? { ...item, [field]: event.target.value } : item))} /></label>
+                  <label key={field}>
+                    <span>{field[0].toUpperCase() + field.slice(1)}</span>
+                    <input
+                      type={field === 'email' ? 'email' : 'text'}
+                      value={selected[field]}
+                      onChange={(event) =>
+                        onChange(
+                          items.map((item) =>
+                            item.id === selected.id
+                              ? { ...item, [field]: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                    />
+                  </label>
                 ))}
-                <label><span>Employment</span><select value={selected.employment} onChange={(event) => onChange(items.map((item) => item.id === selected.id ? { ...item, employment: event.target.value } : item))}><option>Full-time</option><option>Part-time</option><option>Freelance</option></select></label>
-                <label><span>Status</span><select value={selected.status} onChange={(event) => onChange(items.map((item) => item.id === selected.id ? { ...item, status: event.target.value as TeamMember['status'] } : item))}><option>Active</option><option>Inactive</option></select></label>
-                <button className="button button-primary" type="submit"><Check size={16} /> Save changes</button>
+                <label>
+                  <span>Employment</span>
+                  <select
+                    value={selected.employment}
+                    onChange={(event) =>
+                      onChange(
+                        items.map((item) =>
+                          item.id === selected.id
+                            ? { ...item, employment: event.target.value }
+                            : item,
+                        ),
+                      )
+                    }
+                  >
+                    <option>Full-time</option>
+                    <option>Part-time</option>
+                    <option>Freelance</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Status</span>
+                  <select
+                    value={selected.status}
+                    onChange={(event) =>
+                      onChange(
+                        items.map((item) =>
+                          item.id === selected.id
+                            ? { ...item, status: event.target.value as TeamMember['status'] }
+                            : item,
+                        ),
+                      )
+                    }
+                  >
+                    <option>Active</option>
+                    <option>Inactive</option>
+                  </select>
+                </label>
+                <button className="button button-primary" type="submit">
+                  <Check size={16} /> Save changes
+                </button>
               </form>
             ) : (
               <div className="office-person-details">
-                <span className="office-avatar large">{selected.name.slice(0, 2).toUpperCase()}</span>
-                <div><small>Role</small><strong>{selected.role}</strong></div>
-                <div><small>Employment</small><strong>{selected.employment}</strong></div>
-                <div><small>Email</small><strong>{selected.email || 'Not added'}</strong></div>
-                <div><small>Phone</small><strong>{selected.phone || 'Not added'}</strong></div>
-                <div><small>Status</small><strong>{selected.status}</strong></div>
-                <button className="button button-primary" onClick={() => setEditingId(selected.id)}><Pencil size={16} /> Edit member</button>
+                <span className="office-avatar large">
+                  {selected.name.slice(0, 2).toUpperCase()}
+                </span>
+                <div>
+                  <small>Role</small>
+                  <strong>{selected.role}</strong>
+                </div>
+                <div>
+                  <small>Employment</small>
+                  <strong>{selected.employment}</strong>
+                </div>
+                <div>
+                  <small>Email</small>
+                  <strong>{selected.email || 'Not added'}</strong>
+                </div>
+                <div>
+                  <small>Phone</small>
+                  <strong>{selected.phone || 'Not added'}</strong>
+                </div>
+                <div>
+                  <small>Status</small>
+                  <strong>{selected.status}</strong>
+                </div>
+                <button className="button button-primary" onClick={() => setEditingId(selected.id)}>
+                  <Pencil size={16} /> Edit member
+                </button>
               </div>
             )}
           </section>
@@ -2503,7 +2765,9 @@ function PostsModule({
           initialDate={eventDate}
           initialEvent={selectedEvent ?? undefined}
           dateEvents={postCalendarEvents.filter((event) => event.date === eventDate)}
-          readOnly={Boolean(selectedEvent && !events.some((event) => event.id === selectedEvent.id))}
+          readOnly={Boolean(
+            selectedEvent && !events.some((event) => event.id === selectedEvent.id),
+          )}
           postMode
           clients={clients}
           projects={projects}
@@ -2515,7 +2779,9 @@ function PostsModule({
           onSave={(event) => {
             onEventsChange(
               selectedEvent
-                ? events.map((item) => (item.id === selectedEvent.id ? { id: item.id, ...event } : item))
+                ? events.map((item) =>
+                    item.id === selectedEvent.id ? { id: item.id, ...event } : item,
+                  )
                 : [...events, { id: crypto.randomUUID(), ...event }],
             );
             setEventDate(null);
@@ -2569,8 +2835,18 @@ function RenewalsModule({
     e.preventDefault();
     if (!draft.website.trim()) return;
     const next = { id: editingId || crypto.randomUUID(), ...draft, website: draft.website.trim() };
-    onChange(editingId ? items.map((item) => (item.id === editingId ? next : item)) : [next, ...items]);
-    setDraft({ website: '', username: '', websiteUrl: '', domainLogin: '', serverLogin: '', domainDue: '', hostingDue: '' });
+    onChange(
+      editingId ? items.map((item) => (item.id === editingId ? next : item)) : [next, ...items],
+    );
+    setDraft({
+      website: '',
+      username: '',
+      websiteUrl: '',
+      domainLogin: '',
+      serverLogin: '',
+      domainDue: '',
+      hostingDue: '',
+    });
     setEditingId('');
     setFormOpen(false);
   }
@@ -2949,10 +3225,18 @@ function LettersModule({
                     </td>
                     <td>{item.preparedBy || '—'}</td>
                     <td className="office-row-actions">
-                      <button aria-label="Edit letter" title="Edit" onClick={() => editLetter(item)}>
+                      <button
+                        aria-label="Edit letter"
+                        title="Edit"
+                        onClick={() => editLetter(item)}
+                      >
                         <Pencil size={16} />
                       </button>
-                      <button aria-label="Download letter PDF" title="Download A4 PDF" onClick={() => void downloadLetter(item)}>
+                      <button
+                        aria-label="Download letter PDF"
+                        title="Download A4 PDF"
+                        onClick={() => void downloadLetter(item)}
+                      >
                         <FileDown size={16} />
                       </button>
                       <button aria-label="Print letter" onClick={() => printLetter(item)}>
@@ -3128,9 +3412,7 @@ function UsersModule({
                 pattern="[0-9]{6}"
                 maxLength={6}
                 value={newPin}
-                onChange={(event) =>
-                  setNewPin(event.target.value.replace(/\D/g, '').slice(0, 6))
-                }
+                onChange={(event) => setNewPin(event.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="••••••"
                 required
               />
@@ -3380,7 +3662,9 @@ function CalendarModule({
           onSave={(event) => {
             onChange(
               selectedEvent
-                ? items.map((item) => (item.id === selectedEvent.id ? { id: item.id, ...event } : item))
+                ? items.map((item) =>
+                    item.id === selectedEvent.id ? { id: item.id, ...event } : item,
+                  )
                 : [...items, { id: crypto.randomUUID(), ...event }],
             );
             setFormOpen(false);
