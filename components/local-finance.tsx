@@ -20,6 +20,7 @@ import {
   Globe2,
   Download,
   LayoutDashboard,
+  LogOut,
   Menu,
   MessagesSquare,
   Pencil,
@@ -42,6 +43,7 @@ import {
 import { LocalOfficeModule, type OfficeSection } from './local-office-modules';
 import { LocalCloudSync } from './local-cloud-sync';
 import { InfonitsAssistant, type AssistantAction } from './infonits-assistant';
+import { browserClient } from '@/lib/supabase/browser';
 
 type Section =
   | 'dashboard'
@@ -975,6 +977,15 @@ export function LocalFinance() {
     setSection('invoices');
   }
 
+  async function logOut() {
+    const { error } = await browserClient().auth.signOut({ scope: 'local' });
+    if (error) {
+      window.alert('Unable to log out right now. Please try again.');
+      return;
+    }
+    window.location.assign('/login');
+  }
+
   function deleteDashboardInvoice(id: string) {
     if (!window.confirm('Delete this invoice? This cannot be undone.')) return;
     let saved: Record<string, unknown>;
@@ -1194,22 +1205,21 @@ export function LocalFinance() {
               <FileText size={19} />
               <span>Documents</span>
             </button>
-            <button
-              className={section === 'users' ? 'active' : ''}
-              onClick={() => changeSection('users')}
-            >
-              <ShieldCheck size={19} />
-              <span>Users & roles</span>
-            </button>
-            <button
-              className={section === 'settings' ? 'active' : ''}
-              onClick={() => changeSection('settings')}
-            >
-              <Settings2 size={19} />
-              <span>Settings</span>
-            </button>
           </SidebarGroup>
         </nav>
+        <div className="local-sidebar-footer">
+          <button
+            className={section === 'settings' ? 'active' : ''}
+            onClick={() => changeSection('settings')}
+          >
+            <Settings2 size={19} />
+            <span>Settings</span>
+          </button>
+          <button className="logout" onClick={() => void logOut()}>
+            <LogOut size={19} />
+            <span>Log out</span>
+          </button>
+        </div>
       </aside>
 
       <div className="local-content">
@@ -1359,7 +1369,14 @@ export function LocalFinance() {
           )}
 
           {section === 'settings' && (
-            <WorkspaceSettings preferences={preferences} onChange={setPreferences} />
+            <WorkspaceSettings
+              preferences={preferences}
+              onChange={setPreferences}
+              clients={clients}
+              projects={rows}
+              expenses={expenses}
+              rates={fxRates}
+            />
           )}
 
           {section === 'projects' && (
@@ -1622,9 +1639,17 @@ function SidebarGroup({ label, children }: { label: string; children: React.Reac
 function WorkspaceSettings({
   preferences,
   onChange,
+  clients,
+  projects,
+  expenses,
+  rates,
 }: {
   preferences: WorkspacePreferences;
   onChange: React.Dispatch<React.SetStateAction<WorkspacePreferences>>;
+  clients: LocalClient[];
+  projects: LocalRow[];
+  expenses: LocalExpense[];
+  rates: Record<string, number>;
 }) {
   const update = <K extends keyof WorkspacePreferences>(key: K, value: WorkspacePreferences[K]) =>
     onChange((current) => ({ ...current, [key]: value }));
@@ -1703,7 +1728,7 @@ function WorkspaceSettings({
             <Bot size={19} />
             <div>
               <h2>AI personal assistant</h2>
-              <p>Control voice input and spoken answers.</p>
+              <p>Control microphone input for Claude requests.</p>
             </div>
           </header>
           <label className="settings-switch">
@@ -1714,16 +1739,7 @@ function WorkspaceSettings({
             />
             <span>Enable microphone mode</span>
           </label>
-          <label className="settings-switch">
-            <input
-              type="checkbox"
-              checked={preferences.autoSpeak}
-              disabled={!preferences.voiceEnabled}
-              onChange={(e) => update('autoSpeak', e.target.checked)}
-            />
-            <span>Read assistant replies aloud</span>
-          </label>
-          <div className="settings-two-column">
+          <div>
             <label>
               <span>Voice language</span>
               <select
@@ -1734,17 +1750,6 @@ function WorkspaceSettings({
                 <option value="en-GB">English (UK)</option>
                 <option value="en-IN">English (South Asia)</option>
                 <option value="ta-IN">Tamil</option>
-              </select>
-            </label>
-            <label>
-              <span>Speaking speed</span>
-              <select
-                value={preferences.speechRate}
-                onChange={(e) => update('speechRate', Number(e.target.value))}
-              >
-                <option value={0.85}>Calm</option>
-                <option value={1}>Normal</option>
-                <option value={1.15}>Fast</option>
               </select>
             </label>
           </div>
@@ -1810,6 +1815,15 @@ function WorkspaceSettings({
             Overdue items remain visible until they are resolved.
           </small>
         </article>
+      </section>
+      <section className="settings-users-embed" aria-label="Users and roles settings">
+        <LocalOfficeModule
+          section="users"
+          clients={clients}
+          projects={projects}
+          expenses={expenses}
+          rates={rates}
+        />
       </section>
     </>
   );
@@ -3139,7 +3153,7 @@ function ClientList({
                 </span>
                 <span>
                   <small>Total value</small>
-                  <strong>{money(value)}</strong>
+                  <strong title={money(value)}>{compactMoney(value)}</strong>
                 </span>
               </div>
               <div className="local-client-actions">

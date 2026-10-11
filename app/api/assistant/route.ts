@@ -1,5 +1,5 @@
 import { anthropic } from '@ai-sdk/anthropic';
-import { generateText, Output } from 'ai';
+import { generateText } from 'ai';
 import { z } from 'zod';
 import { authorize } from '@/lib/supabase/server';
 
@@ -151,10 +151,36 @@ const requestSchema = z.object({
     .strict(),
 });
 
-const compactResponseSchema = z.object({
+const responseSchema = z.object({
   reply: z.string().min(1).max(1400),
-  actionJson: z.string().max(12_000),
+  action: actionSchema,
 });
+
+function parseAssistantResponse(text: string) {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim();
+  const candidate = fenced ?? trimmed.slice(trimmed.indexOf('{'), trimmed.lastIndexOf('}') + 1);
+  try {
+    const decoded: unknown = JSON.parse(candidate);
+    const parsed = responseSchema.safeParse(decoded);
+    if (parsed.success) return parsed.data;
+    if (
+      decoded &&
+      typeof decoded === 'object' &&
+      'reply' in decoded &&
+      typeof decoded.reply === 'string' &&
+      decoded.reply.trim()
+    ) {
+      return { reply: decoded.reply.trim(), action: { type: 'none' } as const };
+    }
+  } catch {
+    // A useful text answer must never be discarded because an action payload is malformed.
+  }
+  return {
+    reply: trimmed || 'I could not complete that request. Please try again.',
+    action: { type: 'none' } as const,
+  };
+}
 
 export async function POST(request: Request) {
   try {
@@ -177,7 +203,7 @@ export async function POST(request: Request) {
       /\b(search|online|web|internet|latest|current|today|news|price|compare|research|find)\b/i.test(
         input.message,
       );
-    const { output, sources } = await generateText({
+    const { text, sources } = await generateText({
       model: anthropic('claude-sonnet-4-6'),
       tools: wantsWebSearch
         ? {
@@ -187,7 +213,6 @@ export async function POST(request: Request) {
             }),
           }
         : undefined,
-      output: Output.object({ schema: compactResponseSchema }),
       instructions:
         'You are Infonits GPT, an advanced operations assistant inside a small finance workspace. ' +
         'Use the supplied workspace context for business records and conversation history for follow-up requests. ' +
@@ -199,22 +224,16 @@ export async function POST(request: Request) {
         'Use YYYY-MM-DD dates and an existing client or project name when possible. ' +
         'For an invoice or quotation, write a useful service description and include bank details only when the user asks for them. ' +
         'For a letter, draft a complete professional body. Supported action fields are: create_client(name,company,email,phone,country); create_project(project,clientName,amount,currency,note); create_expense(description,category,amount,currency,date); create_invoice or create_quotation(clientName,projectName,amount,currency,description,notes,includeBankDetails,bankDetails); create_payment(paymentType,category,note,amount,currency,date); create_event(title,date,eventType); create_renewal(website,domainDue,hostingDue); create_letter(clientName,subject,body,preparedBy,date). Always include every listed field, using an empty string or false when a detail was not requested. ' +
-        'Return actionJson as a JSON-encoded action object. It must contain one action, {"type":"none"}, or a batch object with title and actions. ' +
-        'For questions that do not require a record change, set actionJson to {"type":"none"}.',
+        'Return only one valid JSON object with exactly two top-level fields: "reply" (a useful plain-text answer) and "action". ' +
+        'The action must be one supported action, {"type":"none"}, or a batch object with title and actions. Do not use markdown code fences. ' +
+        'For questions that do not require a record change, set action to {"type":"none"}.',
       prompt: JSON.stringify(input),
     });
-
-    let action: z.infer<typeof actionSchema> = { type: 'none' };
-    try {
-      const parsed = actionSchema.safeParse(JSON.parse(output.actionJson));
-      if (parsed.success) action = parsed.data;
-    } catch {
-      action = { type: 'none' };
-    }
+    const output = parseAssistantResponse(text);
 
     return Response.json({
       reply: output.reply,
-      action,
+      action: output.action,
       sources: sources
         .filter((source) => source.sourceType === 'url')
         .map((source) => ({ title: source.title || source.url, url: source.url }))
@@ -228,7 +247,9 @@ export async function POST(request: Request) {
       error instanceof z.ZodError
         ? 'Please rephrase that request with the needed details.'
         : error instanceof Error
-          ? error.message
+          ? /No object generated|match schema|compiled grammar/i.test(error.message)
+            ? 'Infonits GPT could not complete that request. Please try again.'
+            : error.message
           : 'Infonits GPT is unavailable.';
     return Response.json(
       { error: message === 'UNAUTHORIZED' ? 'Please sign in again.' : message },

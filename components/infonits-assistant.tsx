@@ -11,7 +11,6 @@ import {
   Mic,
   Search,
   Sparkles,
-  Volume2,
 } from 'lucide-react';
 
 type SpeechRecognitionResultEventLike = {
@@ -181,21 +180,9 @@ export function InfonitsAssistant({
   useEffect(
     () => () => {
       recognitionRef.current?.stop();
-      window.speechSynthesis?.cancel();
     },
     [],
   );
-
-  function speak(text: string) {
-    if (!voice.enabled || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(
-      text.replace(/\*\*/g, '').replace(/[📁💰📊👥🧾⏳⚠️✅•]/g, ' '),
-    );
-    utterance.lang = voice.language;
-    utterance.rate = voice.rate;
-    window.speechSynthesis.speak(utterance);
-  }
 
   function toggleListening() {
     if (listening) {
@@ -216,13 +203,14 @@ export function InfonitsAssistant({
     recognition.interimResults = true;
     recognition.lang = voice.language;
     recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
+      const results = Array.from(event.results);
+      const transcript = results
         .map((result) => result[0]?.transcript ?? '')
         .join(' ')
         .trim();
       if (!transcript) return;
       setInput(transcript);
-      const finalResult = Array.from(event.results).every((result) => result.isFinal);
+      const finalResult = results.length > 0 && results.every((result) => result.isFinal);
       if (finalResult) void send(transcript);
     };
     recognition.onerror = (event) => {
@@ -283,7 +271,6 @@ export function InfonitsAssistant({
           sources: data.sources,
         },
       ]);
-      if (voice.autoSpeak) speak(data.reply);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Infonits GPT is unavailable.');
     } finally {
@@ -330,16 +317,6 @@ export function InfonitsAssistant({
               )}
               <div>
                 <FormattedMessage text={message.text} />
-                {message.role === 'assistant' && voice.enabled && (
-                  <button
-                    type="button"
-                    className="assistant-speak-button"
-                    aria-label="Read this reply aloud"
-                    onClick={() => speak(message.text)}
-                  >
-                    <Volume2 size={14} /> Listen
-                  </button>
-                )}
                 {message.sources && message.sources.length > 0 && (
                   <div className="assistant-sources" aria-label="Web sources">
                     <strong>Sources</strong>

@@ -330,7 +330,7 @@
   margin-top: 4px;
   overflow: hidden;
   color: #1e344f;
-  font-size: 12px;
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -763,7 +763,7 @@
 .client-workspace-summary strong {
   margin-top: 5px;
   color: #213b58;
-  font-size: 12px;
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 .client-workspace-tabs {
@@ -860,7 +860,7 @@
   border: 1px solid #d9e3ed;
   border-radius: 9px;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   box-sizing: border-box;
 }
 .invoice-payment-form .wide,
@@ -1642,7 +1642,7 @@
   align-items: center;
   gap: 9px;
   color: #405a76;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 .cloud-access-benefits svg {
@@ -1727,7 +1727,7 @@
   font-weight: 800;
 }
 .local-brand span {
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-brand button {
   display: none;
@@ -1911,7 +1911,7 @@
   background: #fff;
   color: #25364c;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   outline: none;
 }
 .office-form textarea {
@@ -2184,7 +2184,7 @@
   margin-top: 5px;
   overflow-wrap: anywhere;
   color: #66788f;
-  font-size: 12px;
+  font-size: 13px;
 }
 .office-account-actions {
   display: flex;
@@ -2275,7 +2275,7 @@
 }
 .office-person h3 {
   color: #293a50;
-  font-size: 12px;
+  font-size: 13px;
 }
 .office-person p {
   margin-top: 3px;
@@ -2372,7 +2372,7 @@
 .office-calendar h3 {
   margin-top: 5px;
   color: #263950;
-  font-size: 12px;
+  font-size: 13px;
 }
 .office-calendar p {
   margin-top: 3px;
@@ -2535,7 +2535,7 @@
 }
 .local-project-number {
   color: #8b98aa;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
 }
 .local-project-record input,
@@ -2592,12 +2592,12 @@
 .local-project-value input {
   width: 100%;
   padding: 5px 7px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 .local-project-value strong {
   color: #25364d;
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-project-value > label {
   display: flex;
@@ -2653,7 +2653,7 @@
 .local-project-profit strong {
   margin-top: 5px;
   color: #087b58;
-  font-size: 12px;
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 .local-project-status select {
@@ -2823,7 +2823,7 @@
 .local-action-list small,
 .local-activity-list small,
 .local-activity-list b {
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-action-list strong,
 .local-activity-list strong,
@@ -2847,7 +2847,7 @@
 .office-pill,
 .office-report-card span,
 .office-calendar p {
-  font-size: 12px;
+  font-size: 13px;
 }
 .office-table th,
 .office-table td small,
@@ -2864,7 +2864,7 @@
   font-size: 15px;
 }
 .office-empty p {
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .local-sidebar-note strong,
@@ -3023,7 +3023,7 @@
 }
 .local-titlebar p {
   color: #6d7b8f;
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-eyebrow {
   color: #3979bc;
@@ -3517,7 +3517,7 @@
   width: 100%;
   min-width: 1330px;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-sheet th,
 .local-sheet td {
@@ -3565,7 +3565,7 @@
   background: transparent;
   color: #111827;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 .local-sheet input:focus,
@@ -3732,7 +3732,7 @@
 }
 .local-client-stats strong {
   color: #243a54;
-  font-size: 12px;
+  font-size: 13px;
   text-align: right;
 }
 .local-client-stats span {
@@ -4107,11 +4107,11 @@ svg {
   flex-shrink: 0;
 }
 small {
-  font-size: 12px;
+  font-size: 13px;
 }
 .muted {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 .positive {
   color: var(--green) !important;
@@ -4128,7 +4128,7 @@ small {
   border-radius: 7px;
   min-height: 38px;
   padding: 9px 14px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -4162,7 +4162,7 @@ small {
 .button-sm {
   min-height: 32px;
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .button-icon {
   width: 35px;
@@ -4269,10 +4269,10 @@ small {
   border-radius: 6px;
   color: var(--blue);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 13px;
 }
 .workspace-switch strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   display: block;
 }
@@ -4296,7 +4296,7 @@ small {
   gap: 11px;
   padding: 11px 13px;
   color: #768196;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
   border-radius: 7px;
   margin-bottom: 5px;
@@ -4379,7 +4379,7 @@ small {
   border-radius: 50%;
   width: 33px;
   height: 33px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   display: grid;
   place-items: center;
@@ -4394,7 +4394,7 @@ small {
   overflow: hidden;
 }
 .sidebar-profile strong {
-  font-size: 12px;
+  font-size: 13px;
   display: block;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -4445,7 +4445,7 @@ small {
   display: flex;
   align-items: center;
   gap: 13px;
-  font-size: 12px;
+  font-size: 13px;
   color: #6d7d93;
 }
 .breadcrumb > span {
@@ -4484,7 +4484,7 @@ small {
 }
 .page-heading p {
   color: #6d7d93;
-  font-size: 12px;
+  font-size: 13px;
   margin-top: 6px;
   line-height: 1.7;
 }
@@ -4500,7 +4500,7 @@ small {
 }
 .period-controls > select {
   padding: 9px 7px;
-  font-size: 12px;
+  font-size: 13px;
   max-width: 85px;
   background: transparent;
   border-color: transparent;
@@ -4518,7 +4518,7 @@ small {
 .period-input input:not([type='checkbox']) {
   border: 0;
   padding: 8px 7px;
-  font-size: 12px;
+  font-size: 13px;
   max-width: 145px;
   background: transparent;
   height: 36px;
@@ -4575,7 +4575,7 @@ small {
   justify-content: space-between;
   align-items: center;
   gap: 15px;
-  font-size: 12px;
+  font-size: 13px;
   color: #6d83a9;
 }
 .connection-banner > div {
@@ -4688,7 +4688,7 @@ small {
   margin: 8px 0;
 }
 .welcome-copy p {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.9;
   color: #7f93ac;
 }
@@ -4699,7 +4699,7 @@ small {
   margin-top: 19px;
 }
 .welcome-actions > .button {
-  font-size: 12px;
+  font-size: 13px;
   min-height: 34px;
 }
 .welcome-actions > a {
@@ -4746,7 +4746,7 @@ small {
   color: #409a7c;
 }
 .welcome-step strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: #526d8f;
 }
@@ -4862,7 +4862,7 @@ small {
   margin: 0 21px;
   padding: 10px 0;
   border-top: 1px solid #f0f3f7;
-  font-size: 12px;
+  font-size: 13px;
 }
 .cash-line > div {
   display: flex;
@@ -4871,7 +4871,7 @@ small {
   color: #6d7d93;
 }
 .cash-line > strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
 }
 .cash-icon {
@@ -4936,7 +4936,7 @@ small {
   box-shadow: 0 3px 6px #17253903;
 }
 .empty-state h3 {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: #75859c;
 }
@@ -5065,7 +5065,7 @@ small {
   min-width: 0;
 }
 .activity-item strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
 }
 .activity-item small {
@@ -5075,7 +5075,7 @@ small {
   margin-top: 4px;
 }
 .activity-item > strong {
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
 }
 .activity-avatar {
@@ -5093,7 +5093,7 @@ small {
   flex-shrink: 0;
   background: #edf3ff;
   color: #6988b9;
-  font-size: 12px;
+  font-size: 13px;
   display: grid;
   place-items: center;
   border-radius: 8px;
@@ -5110,7 +5110,7 @@ small {
   gap: 16px;
   align-items: center;
   border-top: 1px solid var(--border);
-  font-size: 12px;
+  font-size: 13px;
 }
 .attention-list > a > span:first-child {
   margin-right: auto;
@@ -5129,7 +5129,7 @@ small {
   gap: 20px;
 }
 .table-tabs > .active {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   padding: 11px 0 15px;
   border-bottom: 2px solid var(--blue);
@@ -5175,7 +5175,7 @@ small {
   border: 0;
   background: transparent;
   padding: 8px 0;
-  font-size: 12px;
+  font-size: 13px;
   width: 100%;
   outline: none;
   min-width: 0;
@@ -5222,7 +5222,7 @@ small {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 13px;
   padding: 6px;
 }
 .table-scroll {
@@ -5233,7 +5233,7 @@ table {
   border-collapse: collapse;
   width: 100%;
   text-align: left;
-  font-size: 12px;
+  font-size: 13px;
 }
 th {
   font-weight: 500;
@@ -5284,7 +5284,7 @@ tfoot td {
   white-space: nowrap;
 }
 .money-cell {
-  font-size: 12px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   display: block;
@@ -5308,12 +5308,12 @@ tfoot td {
   border-radius: 7px;
   display: grid;
   place-items: center;
-  font-size: 12px;
+  font-size: 13px;
   color: #6f8fb9;
   flex-shrink: 0;
 }
 .project-name-cell a {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: #4b6484;
 }
@@ -5363,7 +5363,7 @@ tr:hover .cell-edit,
   min-height: 315px;
 }
 .form-note {
-  font-size: 12px;
+  font-size: 13px;
   color: #6d7d93;
   display: flex;
   align-items: flex-start;
@@ -5379,7 +5379,7 @@ tr:hover .cell-edit,
   min-width: 220px;
 }
 .inline-edit input:not([type='checkbox']) {
-  font-size: 12px;
+  font-size: 13px;
   padding: 5px 7px;
   width: 150px;
 }
@@ -5428,7 +5428,7 @@ tr:hover .cell-edit,
   min-width: 0;
 }
 .entry-description > strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: #506885;
 }
@@ -5499,7 +5499,7 @@ tr:hover .cell-edit,
   color: #6d7d93;
 }
 .client-card > p {
-  font-size: 12px;
+  font-size: 13px;
   color: #6d7d93;
   margin-top: 5px;
 }
@@ -5545,7 +5545,7 @@ tr:hover .cell-edit,
   align-items: center;
 }
 .client-detail-contact p {
-  font-size: 12px;
+  font-size: 13px;
   color: #6d7d93;
   margin-top: 5px;
 }
@@ -5558,7 +5558,7 @@ tr:hover .cell-edit,
   align-self: flex-start;
 }
 .segmented button {
-  font-size: 12px;
+  font-size: 13px;
   color: #6d7d93;
   padding: 8px 13px;
   border-radius: 5px;
@@ -5581,7 +5581,7 @@ tr:hover .cell-edit,
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
   color: #6d7d93;
 }
 .detail-intro {
@@ -5615,7 +5615,7 @@ tr:hover .cell-edit,
   padding: 13px 0;
   border-top: 1px solid #f0f3f8;
   gap: 15px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .detail-breakdown dt {
   color: #6d7d93;
@@ -5632,11 +5632,11 @@ tr:hover .cell-edit,
   padding: 20px;
 }
 .notes-panel h3 {
-  font-size: 12px;
+  font-size: 13px;
   margin-bottom: 10px;
 }
 .notes-panel p {
-  font-size: 12px;
+  font-size: 13px;
   color: #6d7d93;
   white-space: pre-wrap;
 }
@@ -5666,7 +5666,7 @@ tr:hover .cell-edit,
   font-size: 16px;
 }
 .settings-card p {
-  font-size: 12px;
+  font-size: 13px;
   color: #6d7d93;
   line-height: 1.9;
 }
@@ -5676,12 +5676,12 @@ tr:hover .cell-edit,
   flex-direction: column;
   gap: 10px;
   color: #7287a4;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.9;
   list-style: decimal;
 }
 .setup-list code {
-  font-size: 12px;
+  font-size: 13px;
   color: #4674b9;
 }
 .setting-note {
@@ -5697,7 +5697,7 @@ tr:hover .cell-edit,
   display: flex;
   align-items: center;
   gap: 9px;
-  font-size: 12px;
+  font-size: 13px;
   color: #7f93ad;
 }
 .security-lines svg {
@@ -5717,7 +5717,7 @@ tr:hover .cell-edit,
   color: #6d7d93;
 }
 .account-detail strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
 }
 .audit-list {
@@ -5739,7 +5739,7 @@ tr:hover .cell-edit,
   flex: 1;
 }
 .audit-list strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: #6383ad;
   display: block;
@@ -5751,7 +5751,7 @@ tr:hover .cell-edit,
   margin-top: 5px;
 }
 .audit-json {
-  font-size: 12px;
+  font-size: 13px;
   margin: 0;
   padding: 20px;
   white-space: pre-wrap;
@@ -5801,7 +5801,7 @@ tr:hover .cell-edit,
   font-weight: 500;
 }
 .dialog-heading p {
-  font-size: 12px;
+  font-size: 13px;
   color: #6d7d93;
   line-height: 1.8;
   margin-top: 6px;
@@ -5822,7 +5822,7 @@ tr:hover .cell-edit,
   min-width: 0;
 }
 .field > span {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: #6d809b;
 }
@@ -5835,7 +5835,7 @@ tr:hover .cell-edit,
 .field input:not([type='checkbox']),
 .field textarea,
 .field select {
-  font-size: 12px;
+  font-size: 13px;
   border-color: #dfe6f0;
   padding: 9px 11px;
   width: 100%;
@@ -5859,7 +5859,7 @@ tr:hover .cell-edit,
   display: flex;
   align-items: center;
   gap: 9px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.9;
   color: #7c90ad;
   grid-column: 1/-1;
@@ -5892,7 +5892,7 @@ tr:hover .cell-edit,
   background: #f4f8ff;
   color: #7896bc;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.9;
 }
 .notice > svg {
@@ -5915,7 +5915,7 @@ tr:hover .cell-edit,
   background: #fff6f7;
   color: #b65b67;
   padding: 11px 13px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.9;
   border-radius: 6px;
   margin: 0 25px 20px;
@@ -5942,7 +5942,7 @@ tr:hover .cell-edit,
   box-shadow: 0 5px 25px #182a4a25;
   border-radius: 9px;
   padding: 14px 19px;
-  font-size: 12px;
+  font-size: 13px;
   max-width: calc(100vw - 30px);
 }
 .toast > svg {
@@ -5986,7 +5986,7 @@ tr:hover .cell-edit,
 }
 .file-drop input {
   max-width: 100%;
-  font-size: 12px;
+  font-size: 13px;
   color: #6d7d93;
 }
 .file-drop input::file-selector-button {
@@ -5995,7 +5995,7 @@ tr:hover .cell-edit,
   border-radius: 5px;
   padding: 6px 10px;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 13px;
   color: #6992cc;
   margin-right: 10px;
 }
@@ -6080,7 +6080,7 @@ tr:hover .cell-edit,
   gap: 14px;
   align-items: center;
   margin-top: 35px;
-  font-size: 12px;
+  font-size: 13px;
   color: #6d7d93;
   border: 1px solid #ffffff14;
   padding: 17px 16px;
@@ -6097,7 +6097,7 @@ tr:hover .cell-edit,
   font-weight: 400;
 }
 .auth-footer {
-  font-size: 12px;
+  font-size: 13px;
   color: #527a9d;
 }
 .auth-main {
@@ -6128,7 +6128,7 @@ tr:hover .cell-edit,
   margin-bottom: 9px;
 }
 .auth-box > p {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.9;
   color: #6d7d93;
   margin-bottom: 28px;
@@ -6140,7 +6140,7 @@ tr:hover .cell-edit,
   margin-top: 23px;
 }
 .auth-box .field > span {
-  font-size: 12px;
+  font-size: 13px;
 }
 .auth-box .field input {
   height: 43px;
@@ -6150,7 +6150,7 @@ tr:hover .cell-edit,
   height: 43px;
   justify-content: space-between;
   padding: 10px 17px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .auth-box .invite-note {
   display: flex;
@@ -6164,7 +6164,7 @@ tr:hover .cell-edit,
   margin-top: 3px;
 }
 .auth-site {
-  font-size: 12px;
+  font-size: 13px;
   color: #6d7d93;
   display: flex;
   align-items: center;
@@ -6185,11 +6185,11 @@ tr:hover .cell-edit,
   gap: 12px;
 }
 .qr-setup p {
-  font-size: 12px;
+  font-size: 13px;
   color: #6d7d93;
 }
 .qr-setup code {
-  font-size: 12px;
+  font-size: 13px;
   overflow-wrap: anywhere;
   max-width: 100%;
   padding: 8px;
@@ -6220,7 +6220,7 @@ tr:hover .cell-edit,
     padding: 21px;
   }
   .summary-label {
-    font-size: 12px;
+    font-size: 13px;
   }
   .summary-value {
     font-size: 29px;
@@ -6248,10 +6248,10 @@ tr:hover .cell-edit,
     font-size: 27px;
   }
   .welcome-copy p {
-    font-size: 12px;
+    font-size: 13px;
   }
   .welcome-step strong {
-    font-size: 12px;
+    font-size: 13px;
   }
   .welcome-step small {
     font-size: 11px;
@@ -6508,7 +6508,7 @@ tr:hover .cell-edit,
     font-size: 25px;
   }
   .page-heading p {
-    font-size: 12px;
+    font-size: 13px;
   }
   .heading-actions {
     margin-left: 0;
@@ -6678,7 +6678,7 @@ tr:hover .cell-edit,
     margin-bottom: 5px;
   }
   .mobile-project dd {
-    font-size: 12px;
+    font-size: 13px;
     margin: 0;
     color: #5a759a;
   }
@@ -6696,7 +6696,7 @@ tr:hover .cell-edit,
     padding: 9px 13px 0;
   }
   .table-tabs > .active {
-    font-size: 12px;
+    font-size: 13px;
   }
   .table-tools > .button {
     font-size: 11px;
@@ -6767,13 +6767,13 @@ tr:hover .cell-edit,
     height: 29px;
   }
   .entry-description > strong {
-    font-size: 12px;
+    font-size: 13px;
   }
   .entry-description small {
     font-size: 10px;
   }
   .entry-value > strong {
-    font-size: 12px;
+    font-size: 13px;
   }
   .entry-value > small {
     font-size: 9px;
@@ -6795,7 +6795,7 @@ tr:hover .cell-edit,
     padding: 0 18px 15px;
   }
   .detail-breakdown dl > div {
-    font-size: 12px;
+    font-size: 13px;
   }
   .notice {
     font-size: 11px;
@@ -6839,7 +6839,7 @@ tr:hover .cell-edit,
   .toast {
     left: 50%;
     bottom: 16px;
-    font-size: 12px;
+    font-size: 13px;
     padding: 13px;
     width: max-content;
   }
@@ -7042,7 +7042,7 @@ tr:hover .cell-edit,
     font-size: 25px;
   }
   .local-titlebar p {
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.55;
   }
   .local-eyebrow {
@@ -7084,7 +7084,7 @@ tr:hover .cell-edit,
     padding: 9px 0;
   }
   .local-activity-list strong {
-    font-size: 12px;
+    font-size: 13px;
   }
   .local-activity-list small,
   .local-activity-list b {
@@ -7430,7 +7430,7 @@ tr:hover .cell-edit,
   border-radius: 99px;
   background: #edf4ff;
   color: #1769d9;
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-action-list {
   display: grid;
@@ -7477,7 +7477,7 @@ tr:hover .cell-edit,
 }
 .local-action-list strong {
   color: #27384f;
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-action-list small {
   margin-top: 3px;
@@ -7498,7 +7498,7 @@ tr:hover .cell-edit,
   border-radius: 10px;
   background: #effaf5;
   color: #167a59;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 .local-quick-modal {
@@ -7553,7 +7553,7 @@ tr:hover .cell-edit,
   width: min(720px, 100%);
 }
 .local-project-detail > header p {
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-detail-stats {
   display: grid;
@@ -7636,7 +7636,7 @@ tr:hover .cell-edit,
 .local-detail-list dd {
   min-width: 0;
   color: #2a3a50;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   overflow-wrap: anywhere;
 }
@@ -7671,7 +7671,7 @@ tr:hover .cell-edit,
 .local-detail-note p {
   margin-top: 5px;
   color: #33445a;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.55;
 }
 .local-project-detail > footer {
@@ -7728,7 +7728,7 @@ tr:hover .cell-edit,
   outline: 0;
   color: #25364c;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-sync-message,
 .local-sync-error {
@@ -7997,7 +7997,7 @@ tr:hover .cell-edit,
     padding: 18px 12px;
   }
   .local-topbar > span {
-    font-size: 12px;
+    font-size: 13px;
   }
   .local-cloud-button {
     padding: 0 10px;
@@ -8154,7 +8154,7 @@ tr:hover .cell-edit,
 }
 .local-profile-menu strong {
   color: #213852;
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-profile-menu small {
   margin-top: 3px;
@@ -8241,7 +8241,7 @@ tr:hover .cell-edit,
   background: #fbfcfe;
   color: #263950;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   box-sizing: border-box;
 }
 .workspace-settings-card textarea {
@@ -8481,7 +8481,7 @@ tr:hover .cell-edit,
   padding: 20px;
 }
 .audit-detail h3 {
-  font-size: 12px;
+  font-size: 13px;
   margin: 10px 0;
 }
 .audit-detail p {
@@ -8543,7 +8543,7 @@ body {
   padding-bottom: 16px;
 }
 .sidebar-profile strong {
-  font-size: 12px;
+  font-size: 13px;
 }
 .sidebar-profile small {
   font-size: 10px;
@@ -8579,7 +8579,7 @@ body {
 }
 .connection-banner {
   padding: 9px 12px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .sheet-summary {
   display: grid;
@@ -8600,7 +8600,7 @@ body {
 .sheet-total span {
   display: block;
   margin-bottom: 5px;
-  font-size: 12px;
+  font-size: 13px;
   color: #6e7785;
 }
 .sheet-total strong {
@@ -8643,7 +8643,7 @@ body {
 .table-filters > select,
 .column-picker,
 .column-picker summary {
-  font-size: 12px;
+  font-size: 13px;
 }
 .table-filters > select,
 .column-picker summary {
@@ -8662,7 +8662,7 @@ table {
 }
 th,
 th > button {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #566173;
 }
@@ -8705,7 +8705,7 @@ tbody > tr:hover {
 }
 tfoot td {
   height: 46px;
-  font-size: 12px;
+  font-size: 13px;
   background: #edf4ff;
   color: #2f5e9f;
 }
@@ -8770,7 +8770,7 @@ tfoot td {
     font-size: 23px;
   }
   .page-heading p {
-    font-size: 12px;
+    font-size: 13px;
   }
   .sheet-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -8794,7 +8794,7 @@ tfoot td {
   .table-filters > select {
     flex: 1 1 130px;
     max-width: none;
-    font-size: 12px;
+    font-size: 13px;
   }
   .column-picker {
     margin-left: 0;
@@ -8891,7 +8891,7 @@ tfoot td {
 }
 .local-sheet,
 .local-sheet thead th {
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-client-details h2,
 .local-expense-list article strong {
@@ -9032,7 +9032,7 @@ tfoot td {
 .local-action-list small,
 .local-activity-list small,
 .local-activity-list b {
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-action-list strong,
 .local-activity-list strong,
@@ -9056,7 +9056,7 @@ tfoot td {
 .office-pill,
 .office-report-card span,
 .office-calendar p {
-  font-size: 12px;
+  font-size: 13px;
 }
 .office-table th,
 .office-table td small,
@@ -9073,7 +9073,7 @@ tfoot td {
   font-size: 15px;
 }
 .office-empty p {
-  font-size: 12px;
+  font-size: 13px;
 }
 
 @media (max-width: 580px) {
@@ -9597,7 +9597,7 @@ tfoot td {
   display: block;
   margin-bottom: 7px;
   color: #314760;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 .auth-input-wrap {
@@ -9826,7 +9826,7 @@ tfoot td {
   line-height: 1.35;
 }
 .local-project-preview-list b {
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-project-preview-list em {
   font-size: 10px;
@@ -9938,7 +9938,7 @@ tfoot td {
 .local-project-value > strong,
 .local-project-money {
   color: #263950;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   line-height: 1.25;
   white-space: nowrap;
@@ -10475,7 +10475,7 @@ tfoot td {
   line-height: 1.35;
 }
 .local-project-preview-list b {
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-project-preview-list em {
   font-size: 10px;
@@ -10567,7 +10567,7 @@ tfoot td {
 }
 .local-bar-row > span {
   color: #52647a;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 .local-bar-track {
@@ -10584,7 +10584,7 @@ tfoot td {
 }
 .local-bar-row .local-bar-value {
   color: #33465e;
-  font-size: 12px;
+  font-size: 13px;
   text-align: right;
 }
 
@@ -10592,7 +10592,7 @@ tfoot td {
   min-width: 108px;
   min-height: 34px;
   padding: 6px 28px 6px 12px;
-  font-size: 12px;
+  font-size: 13px;
   text-align: left;
   text-align-last: left;
 }
@@ -10615,7 +10615,7 @@ tfoot td {
   padding: 12px 14px;
 }
 .office-post-metrics .office-metric span {
-  font-size: 12px;
+  font-size: 13px;
 }
 .office-post-metrics .office-metric strong {
   margin-top: 5px;
@@ -10654,7 +10654,7 @@ tfoot td {
 .office-post-calendar > header small {
   margin-top: 2px;
   color: #78879a;
-  font-size: 12px;
+  font-size: 13px;
 }
 .office-post-calendar .office-month {
   min-height: 38px;
@@ -10876,7 +10876,7 @@ tfoot td {
 }
 .office-post-summary small {
   color: #6e7e92;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 .office-post-summary strong {
@@ -11632,7 +11632,7 @@ tfoot td {
 .local-ai-insight strong {
   display: block;
   color: #203753;
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-ai-insight p {
   margin-top: 2px;
@@ -11775,7 +11775,7 @@ tfoot td {
   background: #f0f5fb;
 }
 .invoice-a4-billto strong {
-  font-size: 12px;
+  font-size: 13px;
 }
 .invoice-a4-services {
   margin-top: 23px;
@@ -12218,7 +12218,7 @@ tfoot td {
 .local-client-profile-facts strong,
 .office-person-details strong {
   color: #213851;
-  font-size: 12px;
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 .local-client-profile-projects {
@@ -12441,7 +12441,7 @@ tfoot td {
 
   .local-main > .local-titlebar p {
     margin-top: 5px;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.45;
   }
 
@@ -12529,7 +12529,7 @@ tfoot td {
     align-self: start;
     padding: 1px 0 0;
     border: 0;
-    font-size: 12px;
+    font-size: 13px;
     text-align: right;
   }
 
@@ -12956,7 +12956,7 @@ tfoot td {
 .recurring-invoice-panel p {
   margin: 3px 0 0;
   color: #73839b;
-  font-size: 12px;
+  font-size: 13px;
 }
 .recurring-invoice-panel > header > span {
   padding: 6px 10px;
@@ -13043,7 +13043,7 @@ tfoot td {
 }
 .recurring-invoice-list article > b {
   color: #183758;
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
 }
 .report-card-intro {
@@ -13076,7 +13076,7 @@ tfoot td {
 }
 .assistant-action-list > strong {
   color: #183758;
-  font-size: 12px;
+  font-size: 13px;
 }
 .assistant-action-list > span {
   display: flex;
@@ -13154,7 +13154,7 @@ tfoot td {
   font-size: 9.5px;
 }
 .local-invoice-summary strong {
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-client-country-display {
   font-size: 11px;
@@ -13169,17 +13169,17 @@ tfoot td {
 .local-project-preview-head,
 .office-table th,
 .local-project-ledger-head {
-  font-size: 10.5px;
+  font-size: 11.5px;
 }
 .local-project-preview-list strong,
 .local-activity-list strong,
 .office-table td {
-  font-size: 12px;
+  font-size: 13px;
 }
 .local-project-preview-list small,
 .local-activity-list small,
 .office-table td > small {
-  font-size: 10.5px;
+  font-size: 11.5px;
 }
 .office-form label > span,
 .local-entry-form label > span,
@@ -13210,10 +13210,10 @@ tfoot td {
   font-size: 11px !important;
 }
 .assistant-capabilities b {
-  font-size: 12px;
+  font-size: 13px;
 }
 .assistant-capabilities small {
-  font-size: 10.5px;
+  font-size: 11.5px;
 }
 .assistant-prompts button {
   min-height: 34px;
@@ -13226,7 +13226,7 @@ tfoot td {
 }
 .assistant-footnote,
 .assistant-error {
-  font-size: 10.5px;
+  font-size: 11.5px;
 }
 .assistant-composer > .assistant-mic-button {
   position: relative;
@@ -13304,7 +13304,7 @@ tfoot td {
     font-size: 10px;
   }
   .assistant-header p {
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.45;
   }
   .assistant-messages article > div {
@@ -13324,7 +13324,7 @@ tfoot td {
   }
   .assistant-prompts button {
     min-height: 38px;
-    font-size: 12px;
+    font-size: 13px;
   }
   .assistant-footnote {
     font-size: 10px;
@@ -13345,7 +13345,7 @@ tfoot td {
     font-size: 9px;
   }
   .local-invoice-summary strong {
-    font-size: 12px;
+    font-size: 13px;
   }
   .local-client-country-display {
     padding: 6px 9px;
@@ -13374,5 +13374,95 @@ tfoot td {
   .assistant-composer > .assistant-mic-button.listening::after,
   .assistant-voice-wave i {
     animation: none;
+  }
+}
+
+/* Final navigation, assistant and profile polish. */
+.local-sidebar-footer {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 4px;
+  padding: 10px 2px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.local-sidebar-footer button {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 9px;
+  color: #b7c5d8;
+  text-align: left;
+  font-weight: 600;
+}
+.local-sidebar-footer button:hover,
+.local-sidebar-footer button.active {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+.local-sidebar-footer button.active {
+  background: linear-gradient(135deg, #1672e8, #3a8cf5);
+}
+.local-sidebar-footer button.logout:hover {
+  background: rgba(226, 74, 87, 0.12);
+  color: #ffb8bf;
+}
+.assistant-prompts {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+.assistant-prompts button {
+  flex: 0 1 auto;
+}
+.office-person-details {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+.office-person-details > .office-avatar.large {
+  grid-column: 1 / -1;
+}
+.office-person-details > div {
+  min-width: 0;
+}
+.office-person-details > div strong {
+  line-height: 1.45;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+.office-person-details > .button {
+  grid-column: 1 / -1;
+}
+.settings-users-embed {
+  margin-top: 18px;
+}
+.settings-users-embed > .local-titlebar {
+  min-height: auto;
+  margin-bottom: 12px;
+}
+.settings-users-embed .office-account-card,
+.settings-users-embed .office-panel {
+  box-shadow: 0 8px 24px rgba(23, 45, 77, 0.05);
+}
+@media (max-width: 720px) {
+  .assistant-prompts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .assistant-prompts button {
+    width: 100%;
+    white-space: normal;
+  }
+  .office-person-details {
+    grid-template-columns: 1fr;
+  }
+  .office-person-details > .office-avatar.large,
+  .office-person-details > .button {
+    grid-column: auto;
+  }
+  .local-sidebar-footer {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
   }
 }
