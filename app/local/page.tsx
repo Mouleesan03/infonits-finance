@@ -1,14 +1,15 @@
+import { redirect } from 'next/navigation';
 import { LocalCloudWorkspace } from '@/components/local-cloud-workspace';
 import { configured, serverClient } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 export default async function LocalPage() {
-  let email = '';
-  if (configured()) {
-    const db = await serverClient();
-    const {
-      data: { user },
-    } = await db.auth.getUser();
-    email = user?.email ?? '';
-  }
-  return <LocalCloudWorkspace initialEmail={email} />;
+  if (!configured()) redirect('/login');
+  const db = await serverClient();
+  const {
+    data: { user },
+  } = await db.auth.getUser();
+  if (!user?.email) redirect('/login');
+  return <LocalCloudWorkspace />;
 }
