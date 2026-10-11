@@ -13116,3 +13116,263 @@ tfoot td {
     grid-row: 3;
   }
 }
+
+/* Readable workspace type scale and voice capture feedback. */
+.local-card-heading small,
+.local-dashboard-page .local-card-heading small {
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.local-attention-preview strong {
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+.local-attention-preview small {
+  margin-top: 2px;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+.local-invoice-filters button,
+.local-card-link,
+.local-invoice-pagination {
+  font-size: 11px;
+}
+.local-invoice-preview-main strong {
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+.local-invoice-preview-main small {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.local-invoice-preview-row > b,
+.local-invoice-preview-row .invoice-state {
+  font-size: 11px;
+}
+.local-invoice-summary small {
+  font-size: 9.5px;
+}
+.local-invoice-summary strong {
+  font-size: 12px;
+}
+.local-client-country-display {
+  font-size: 11px;
+  line-height: 1.2;
+}
+.local-client-stats small {
+  font-size: 11px;
+}
+.local-client-stats strong {
+  font-size: 12.5px;
+}
+.local-project-preview-head,
+.office-table th,
+.local-project-ledger-head {
+  font-size: 10.5px;
+}
+.local-project-preview-list strong,
+.local-activity-list strong,
+.office-table td {
+  font-size: 12px;
+}
+.local-project-preview-list small,
+.local-activity-list small,
+.office-table td > small {
+  font-size: 10.5px;
+}
+.office-form label > span,
+.local-entry-form label > span,
+.local-client-form label > span {
+  font-size: 11px;
+}
+.office-form input,
+.office-form select,
+.office-form textarea,
+.local-entry-form input,
+.local-entry-form select,
+.local-entry-form textarea,
+.local-client-form input,
+.local-client-form select {
+  font-size: 13px;
+}
+.office-metric span,
+.invoice-kpis span,
+.office-post-summary span {
+  font-size: 11px;
+}
+.assistant-messages article > div {
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.assistant-messages article button,
+.assistant-speak-button {
+  font-size: 11px !important;
+}
+.assistant-capabilities b {
+  font-size: 12px;
+}
+.assistant-capabilities small {
+  font-size: 10.5px;
+}
+.assistant-prompts button {
+  min-height: 34px;
+  padding: 8px 12px;
+  font-size: 11px;
+}
+.assistant-composer textarea {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.assistant-footnote,
+.assistant-error {
+  font-size: 10.5px;
+}
+.assistant-composer > .assistant-mic-button {
+  position: relative;
+  overflow: visible;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+.assistant-composer > .assistant-mic-button.listening {
+  border-color: #246fbd;
+  background: linear-gradient(145deg, #2d83df, #145ba8);
+  color: #fff;
+  transform: scale(1.04);
+  animation: none;
+}
+.assistant-composer > .assistant-mic-button.listening::before,
+.assistant-composer > .assistant-mic-button.listening::after {
+  position: absolute;
+  inset: -5px;
+  z-index: -1;
+  border: 2px solid rgba(36, 111, 189, 0.3);
+  border-radius: 15px;
+  content: '';
+  animation: assistant-voice-ring 1.8s ease-out infinite;
+}
+.assistant-composer > .assistant-mic-button.listening::after {
+  animation-delay: 0.9s;
+}
+.assistant-voice-wave {
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.assistant-voice-wave i {
+  width: 2px;
+  height: 7px;
+  border-radius: 99px;
+  background: currentColor;
+  animation: assistant-voice-bar 0.85s ease-in-out infinite alternate;
+}
+.assistant-voice-wave i:nth-child(2) {
+  animation-delay: -0.45s;
+}
+.assistant-voice-wave i:nth-child(3) {
+  animation-delay: -0.2s;
+}
+.assistant-voice-wave i:nth-child(4) {
+  animation-delay: -0.65s;
+}
+@keyframes assistant-voice-ring {
+  from {
+    opacity: 0.7;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+@keyframes assistant-voice-bar {
+  from {
+    height: 6px;
+  }
+  to {
+    height: 18px;
+  }
+}
+
+@media (max-width: 720px) {
+  .assistant-header small {
+    font-size: 10px;
+  }
+  .assistant-header p {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .assistant-messages article > div {
+    max-width: calc(100% - 40px);
+    font-size: 14px;
+  }
+  .assistant-capabilities > span {
+    min-height: 48px;
+    padding: 10px 12px;
+  }
+  .assistant-capabilities b {
+    font-size: 13px;
+  }
+  .assistant-capabilities small {
+    font-size: 11px;
+    white-space: normal;
+  }
+  .assistant-prompts button {
+    min-height: 38px;
+    font-size: 12px;
+  }
+  .assistant-footnote {
+    font-size: 10px;
+    line-height: 1.45;
+  }
+  .local-attention-preview strong,
+  .local-invoice-preview-main strong {
+    font-size: 13px;
+  }
+  .local-attention-preview small,
+  .local-invoice-preview-main small {
+    font-size: 11.5px;
+  }
+  .local-invoice-filters button {
+    font-size: 11px;
+  }
+  .local-invoice-summary small {
+    font-size: 9px;
+  }
+  .local-invoice-summary strong {
+    font-size: 12px;
+  }
+  .local-client-country-display {
+    padding: 6px 9px;
+    font-size: 11.5px;
+  }
+  .local-client-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .local-client-stats > span {
+    min-height: 58px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .local-client-stats small {
+    font-size: 11px;
+  }
+  .local-client-stats strong {
+    font-size: 13px;
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-composer > .assistant-mic-button.listening::before,
+  .assistant-composer > .assistant-mic-button.listening::after,
+  .assistant-voice-wave i {
+    animation: none;
+  }
+}

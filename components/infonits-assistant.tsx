@@ -10,7 +10,6 @@ import {
   LoaderCircle,
   Mic,
   Search,
-  Square,
   Sparkles,
   Volume2,
 } from 'lucide-react';
@@ -18,12 +17,13 @@ import {
 type SpeechRecognitionResultEventLike = {
   results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }>;
 };
+type SpeechRecognitionErrorEventLike = { error?: string };
 type SpeechRecognitionLike = {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
   onresult: ((event: SpeechRecognitionResultEventLike) => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
   onend: (() => void) | null;
   start: () => void;
   stop: () => void;
@@ -213,20 +213,28 @@ export function InfonitsAssistant({
     }
     const recognition = new Recognition();
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.lang = voice.language;
     recognition.onresult = (event) => {
       const transcript = Array.from(event.results)
         .map((result) => result[0]?.transcript ?? '')
         .join(' ')
         .trim();
-      if (transcript) {
-        setInput(transcript);
-        void send(transcript);
-      }
+      if (!transcript) return;
+      setInput(transcript);
+      const finalResult = Array.from(event.results).every((result) => result.isFinal);
+      if (finalResult) void send(transcript);
     };
-    recognition.onerror = () => {
-      setError('I could not hear that clearly. Tap the microphone and try again.');
+    recognition.onerror = (event) => {
+      const message =
+        event.error === 'not-allowed' || event.error === 'service-not-allowed'
+          ? 'Microphone access is blocked. Allow microphone access in your browser settings and try again.'
+          : event.error === 'no-speech'
+            ? 'No speech was detected. Move closer to the microphone and tap it when you are ready.'
+            : event.error === 'audio-capture'
+              ? 'No microphone was found. Check your device microphone and try again.'
+              : 'Voice input stopped before it could finish. Your typed message is still available.';
+      setError(message);
       setListening(false);
     };
     recognition.onend = () => setListening(false);
@@ -448,7 +456,16 @@ export function InfonitsAssistant({
               aria-label={listening ? 'Stop listening' : 'Speak to Infonits GPT'}
               onClick={toggleListening}
             >
-              {listening ? <Square size={15} /> : <Mic size={18} />}
+              {listening ? (
+                <span className="assistant-voice-wave" aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                  <i />
+                </span>
+              ) : (
+                <Mic size={18} />
+              )}
             </button>
           )}
           <button type="submit" disabled={busy || !input.trim()} aria-label="Send message">

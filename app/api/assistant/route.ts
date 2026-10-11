@@ -151,9 +151,9 @@ const requestSchema = z.object({
     .strict(),
 });
 
-const responseSchema = z.object({
+const compactResponseSchema = z.object({
   reply: z.string().min(1).max(1400),
-  action: actionSchema,
+  actionJson: z.string().max(12_000),
 });
 
 export async function POST(request: Request) {
@@ -187,7 +187,7 @@ export async function POST(request: Request) {
             }),
           }
         : undefined,
-      output: Output.object({ schema: responseSchema }),
+      output: Output.object({ schema: compactResponseSchema }),
       instructions:
         'You are Infonits GPT, an advanced operations assistant inside a small finance workspace. ' +
         'Use the supplied workspace context for business records and conversation history for follow-up requests. ' +
@@ -198,13 +198,23 @@ export async function POST(request: Request) {
         'If required details such as amount, client, or date are missing, ask one focused question and return action type none. ' +
         'Use YYYY-MM-DD dates and an existing client or project name when possible. ' +
         'For an invoice or quotation, write a useful service description and include bank details only when the user asks for them. ' +
-        'For a letter, draft a complete professional body. Always supply every field required by the selected action schema, using an empty string or false when an optional business detail was not requested. ' +
-        'For questions that do not require a record change, return action type none.',
+        'For a letter, draft a complete professional body. Supported action fields are: create_client(name,company,email,phone,country); create_project(project,clientName,amount,currency,note); create_expense(description,category,amount,currency,date); create_invoice or create_quotation(clientName,projectName,amount,currency,description,notes,includeBankDetails,bankDetails); create_payment(paymentType,category,note,amount,currency,date); create_event(title,date,eventType); create_renewal(website,domainDue,hostingDue); create_letter(clientName,subject,body,preparedBy,date). Always include every listed field, using an empty string or false when a detail was not requested. ' +
+        'Return actionJson as a JSON-encoded action object. It must contain one action, {"type":"none"}, or a batch object with title and actions. ' +
+        'For questions that do not require a record change, set actionJson to {"type":"none"}.',
       prompt: JSON.stringify(input),
     });
 
+    let action: z.infer<typeof actionSchema> = { type: 'none' };
+    try {
+      const parsed = actionSchema.safeParse(JSON.parse(output.actionJson));
+      if (parsed.success) action = parsed.data;
+    } catch {
+      action = { type: 'none' };
+    }
+
     return Response.json({
-      ...output,
+      reply: output.reply,
+      action,
       sources: sources
         .filter((source) => source.sourceType === 'url')
         .map((source) => ({ title: source.title || source.url, url: source.url }))

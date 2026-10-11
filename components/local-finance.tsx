@@ -20,7 +20,6 @@ import {
   Globe2,
   Download,
   LayoutDashboard,
-  LockKeyhole,
   Menu,
   MessagesSquare,
   Pencil,
@@ -1211,13 +1210,6 @@ export function LocalFinance() {
             </button>
           </SidebarGroup>
         </nav>
-        <div className="local-sidebar-note">
-          <LockKeyhole size={17} />
-          <div>
-            <strong>Automatic backup</strong>
-            <small>Every change saves securely to Supabase.</small>
-          </div>
-        </div>
       </aside>
 
       <div className="local-content">
