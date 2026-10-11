@@ -1657,13 +1657,9 @@ function WorkspaceSettings({
     <>
       <PageHeading
         eyebrow="WORKSPACE"
-        title="Profile & settings"
-        subtitle="Set invoice defaults and how your personal assistant listens and speaks."
-      >
-        <span className="settings-saved">
-          <Check size={15} /> Saved automatically
-        </span>
-      </PageHeading>
+        title="Settings"
+        subtitle="Manage business details, invoice defaults, reminders and workspace access."
+      />
       <section className="workspace-settings-grid">
         <article className="workspace-settings-card">
           <header>
@@ -1697,15 +1693,17 @@ function WorkspaceSettings({
             />
             <span>Show bank details by default</span>
           </label>
-          <label>
-            <span>Bank details</span>
-            <textarea
-              rows={4}
-              value={preferences.bankDetails}
-              onChange={(e) => update('bankDetails', e.target.value)}
-              placeholder={'Bank name\nAccount name\nAccount number / SWIFT'}
-            />
-          </label>
+          {preferences.invoiceBankDefault && (
+            <label>
+              <span>Bank details</span>
+              <textarea
+                rows={4}
+                value={preferences.bankDetails}
+                onChange={(e) => update('bankDetails', e.target.value)}
+                placeholder={'Bank name\nAccount name\nAccount number / SWIFT'}
+              />
+            </label>
+          )}
           <label className="settings-switch">
             <input
               type="checkbox"
@@ -1714,14 +1712,16 @@ function WorkspaceSettings({
             />
             <span>Show payment terms by default</span>
           </label>
-          <label>
-            <span>Payment terms</span>
-            <textarea
-              rows={3}
-              value={preferences.paymentTerms}
-              onChange={(e) => update('paymentTerms', e.target.value)}
-            />
-          </label>
+          {preferences.showPaymentTerms && (
+            <label>
+              <span>Payment terms</span>
+              <textarea
+                rows={3}
+                value={preferences.paymentTerms}
+                onChange={(e) => update('paymentTerms', e.target.value)}
+              />
+            </label>
+          )}
         </article>
         <article className="workspace-settings-card">
           <header>
@@ -1753,9 +1753,6 @@ function WorkspaceSettings({
               </select>
             </label>
           </div>
-          <small className="settings-help">
-            Microphone access is requested only when you tap the mic in Infonits GPT.
-          </small>
         </article>
         <article className="workspace-settings-card">
           <header>
@@ -1773,47 +1770,48 @@ function WorkspaceSettings({
             />
             <span>Enable workspace reminders</span>
           </label>
-          <div className="settings-two-column">
+          {preferences.notificationsEnabled && (
+            <div className="settings-two-column">
+              <label>
+                <span>Invoice notice</span>
+                <select
+                  value={preferences.invoiceReminderDays}
+                  disabled={!preferences.notificationsEnabled}
+                  onChange={(event) => update('invoiceReminderDays', Number(event.target.value))}
+                >
+                  <option value={3}>3 days before</option>
+                  <option value={7}>7 days before</option>
+                  <option value={14}>14 days before</option>
+                </select>
+              </label>
+              <label>
+                <span>Renewal notice</span>
+                <select
+                  value={preferences.renewalReminderDays}
+                  disabled={!preferences.notificationsEnabled}
+                  onChange={(event) => update('renewalReminderDays', Number(event.target.value))}
+                >
+                  <option value={14}>14 days before</option>
+                  <option value={30}>30 days before</option>
+                  <option value={60}>60 days before</option>
+                </select>
+              </label>
+            </div>
+          )}
+          {preferences.notificationsEnabled && (
             <label>
-              <span>Invoice notice</span>
+              <span>Calendar notice</span>
               <select
-                value={preferences.invoiceReminderDays}
+                value={preferences.eventReminderDays}
                 disabled={!preferences.notificationsEnabled}
-                onChange={(event) => update('invoiceReminderDays', Number(event.target.value))}
+                onChange={(event) => update('eventReminderDays', Number(event.target.value))}
               >
+                <option value={1}>1 day before</option>
                 <option value={3}>3 days before</option>
                 <option value={7}>7 days before</option>
-                <option value={14}>14 days before</option>
               </select>
             </label>
-            <label>
-              <span>Renewal notice</span>
-              <select
-                value={preferences.renewalReminderDays}
-                disabled={!preferences.notificationsEnabled}
-                onChange={(event) => update('renewalReminderDays', Number(event.target.value))}
-              >
-                <option value={14}>14 days before</option>
-                <option value={30}>30 days before</option>
-                <option value={60}>60 days before</option>
-              </select>
-            </label>
-          </div>
-          <label>
-            <span>Calendar notice</span>
-            <select
-              value={preferences.eventReminderDays}
-              disabled={!preferences.notificationsEnabled}
-              onChange={(event) => update('eventReminderDays', Number(event.target.value))}
-            >
-              <option value={1}>1 day before</option>
-              <option value={3}>3 days before</option>
-              <option value={7}>7 days before</option>
-            </select>
-          </label>
-          <small className="settings-help">
-            Overdue items remain visible until they are resolved.
-          </small>
+          )}
         </article>
       </section>
       <section className="settings-users-embed" aria-label="Users and roles settings">
@@ -1838,7 +1836,7 @@ function PageHeading({
   eyebrow: string;
   title: string;
   subtitle: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }) {
   return (
     <section className="local-titlebar">
@@ -3558,7 +3556,7 @@ function ExpenseList({
     <section className="local-expense-list">
       <div className="local-expense-total">
         <span>Total operating expenses</span>
-        <strong>−{money(total)}</strong>
+        <strong title={money(total)}>−{compactMoney(total)}</strong>
       </div>
       {expenses.map((expense) => (
         <article className={editingId === expense.id ? 'is-editing' : ''} key={expense.id}>
@@ -3575,7 +3573,9 @@ function ExpenseList({
             <span>
               {expense.currency} {expense.amount.toLocaleString()}
             </span>
-            <strong>−{money(localValue(expense.amount, expense.exchangeRate))}</strong>
+            <strong title={money(localValue(expense.amount, expense.exchangeRate))}>
+              −{compactMoney(localValue(expense.amount, expense.exchangeRate))}
+            </strong>
           </div>
           <button
             className="local-row-action neutral"

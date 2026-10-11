@@ -242,6 +242,8 @@ const money = (value: number) =>
     currency: 'LKR',
     maximumFractionDigits: 0,
   }).format(value);
+const compactMoney = (value: number) =>
+  `LKR ${new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)}`;
 const lkr = (amount: number, rate: number) => amount * rate;
 const clientLabel = (client: ClientRef) => client.company.trim() || client.name;
 const documentTotal = (item: SalesDocument) =>
@@ -2510,18 +2512,18 @@ function PaymentsModule({
               <tbody>
                 {ledgerRows.map((item) => (
                   <tr key={item.id}>
-                    <td>{item.date}</td>
-                    <td>
+                    <td data-label="Date">{item.date}</td>
+                    <td data-label="Type">
                       <span className={`office-pill ${item.type.toLowerCase()}`}>{item.type}</span>
                     </td>
-                    <td>
+                    <td data-label="Category">
                       {item.category}
                       <small>
                         {item.receiptNumber ?? (item.manual ? 'Additional record' : 'Automatic')}
                       </small>
                     </td>
-                    <td>{item.note}</td>
-                    <td>
+                    <td data-label="Note">{item.note}</td>
+                    <td data-label="Status">
                       {item.manual ? (
                         <button
                           className={`office-status-button ${item.status.toLowerCase()}`}
@@ -2541,7 +2543,10 @@ function PaymentsModule({
                         <span className="office-status-button paid">Paid</span>
                       )}
                     </td>
-                    <td className={item.type === 'Income' ? 'office-positive' : 'office-negative'}>
+                    <td
+                      data-label="Amount"
+                      className={item.type === 'Income' ? 'office-positive' : 'office-negative'}
+                    >
                       <strong>
                         {item.type === 'Income' ? '+' : '−'}
                         {money(lkr(item.amount, item.exchangeRate))}
@@ -2550,7 +2555,7 @@ function PaymentsModule({
                         {item.currency} {item.amount.toLocaleString()}
                       </small>
                     </td>
-                    <td>
+                    <td data-label="Actions" className="office-row-actions">
                       {item.manual && (
                         <button
                           className="local-delete"
@@ -3478,10 +3483,10 @@ function RenewalsModule({
               <tbody>
                 {items.map((item) => (
                   <tr key={item.id}>
-                    <td>
+                    <td data-label="Website">
                       <strong>{item.website}</strong>
                     </td>
-                    <td>
+                    <td data-label="Access IDs">
                       <strong>{item.username || '—'}</strong>
                       {(item.domainLogin || item.serverLogin) && (
                         <small>
@@ -3491,9 +3496,9 @@ function RenewalsModule({
                         </small>
                       )}
                     </td>
-                    <td>{item.domainDue || '—'}</td>
-                    <td>{item.hostingDue || '—'}</td>
-                    <td>
+                    <td data-label="Domain">{item.domainDue || '—'}</td>
+                    <td data-label="Hosting">{item.hostingDue || '—'}</td>
+                    <td data-label="Website link">
                       {item.websiteUrl ? (
                         <a
                           className="office-link"
@@ -3507,7 +3512,7 @@ function RenewalsModule({
                         '—'
                       )}
                     </td>
-                    <td className="office-row-actions">
+                    <td className="office-row-actions" data-label="Actions">
                       <button
                         aria-label={`Edit ${item.website}`}
                         title="Edit renewal"
@@ -3546,6 +3551,7 @@ function LettersModule({
   onChange: (v: ServiceLetter[]) => void;
 }) {
   const [editingId, setEditingId] = useState('');
+  const [preview, setPreview] = useState<ServiceLetter | null>(null);
   const [draft, setDraft] = useState({
     date: today(),
     client: '',
@@ -3733,13 +3739,20 @@ function LettersModule({
               <tbody>
                 {items.map((item) => (
                   <tr key={item.id}>
-                    <td>{item.date}</td>
-                    <td>{item.client}</td>
-                    <td>
+                    <td data-label="Date">{item.date}</td>
+                    <td data-label="Client">{item.client}</td>
+                    <td data-label="Subject">
                       <strong>{item.subject}</strong>
                     </td>
-                    <td>{item.preparedBy || '—'}</td>
-                    <td className="office-row-actions">
+                    <td data-label="Prepared by">{item.preparedBy || '—'}</td>
+                    <td className="office-row-actions" data-label="Actions">
+                      <button
+                        aria-label="View letter"
+                        title="View"
+                        onClick={() => setPreview(item)}
+                      >
+                        <Eye size={16} />
+                      </button>
                       <button
                         aria-label="Edit letter"
                         title="Edit"
@@ -3772,6 +3785,56 @@ function LettersModule({
           </div>
         )}
       </section>
+      {preview && (
+        <div className="local-modal-layer" role="presentation" onMouseDown={() => setPreview(null)}>
+          <section
+            className="local-modal letter-preview-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="letter-preview-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <span className="local-modal-icon">
+                  <FileText size={19} />
+                </span>
+                <div>
+                  <h2 id="letter-preview-title">{preview.subject}</h2>
+                  <p>
+                    {preview.client} · {preview.date}
+                  </p>
+                </div>
+              </div>
+              <button aria-label="Close letter preview" onClick={() => setPreview(null)}>
+                <X size={19} />
+              </button>
+            </header>
+            <article className="letter-preview-paper">
+              <span>INFONITS</span>
+              <small>{preview.date}</small>
+              <p>Prepared for</p>
+              <h3>{preview.client}</h3>
+              <h4>{preview.subject}</h4>
+              <div>{preview.body || 'No letter content provided.'}</div>
+              <footer>
+                Prepared by <strong>{preview.preparedBy || 'Infonits (Pvt) Ltd'}</strong>
+              </footer>
+            </article>
+            <footer className="letter-preview-actions">
+              <button className="button button-outline" onClick={() => printLetter(preview)}>
+                <Printer size={16} /> Print
+              </button>
+              <button
+                className="button button-primary"
+                onClick={() => void downloadLetter(preview)}
+              >
+                <FileDown size={16} /> Download PDF
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
     </>
   );
 }
@@ -4406,7 +4469,9 @@ function Metric({
   return (
     <article className={`office-metric ${tone}`}>
       <span>{label}</span>
-      <strong>{raw ? value.toLocaleString() : money(value)}</strong>
+      <strong title={raw ? value.toLocaleString() : money(value)}>
+        {raw ? value.toLocaleString() : compactMoney(value)}
+      </strong>
     </article>
   );
 }

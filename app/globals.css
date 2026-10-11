@@ -13482,3 +13482,638 @@ tfoot td {
 .local-outstanding-total > strong {
   white-space: nowrap;
 }
+
+/* Mobile workspace refinement: compact, app-like records across every module. */
+.letter-form {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: end;
+}
+.letter-form > label:nth-of-type(1),
+.letter-form > label:nth-of-type(2) {
+  grid-column: span 3;
+}
+.letter-form > label:nth-of-type(3) {
+  grid-column: span 6;
+}
+.letter-form > label:nth-of-type(4) {
+  grid-column: span 8;
+}
+.letter-form > label:nth-of-type(5) {
+  grid-column: span 4;
+}
+.letter-form > .button {
+  grid-column: 10 / -1;
+}
+.letter-preview-modal {
+  width: min(720px, calc(100vw - 36px));
+  max-height: calc(100dvh - 36px);
+}
+.letter-preview-paper {
+  display: grid;
+  gap: 10px;
+  margin: 18px;
+  padding: 38px;
+  border: 1px solid #dde6ef;
+  border-top: 5px solid #2378d5;
+  background: #fff;
+  color: #263b54;
+  box-shadow: 0 12px 34px rgba(25, 48, 80, 0.08);
+}
+.letter-preview-paper > span {
+  color: #1769c2;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.letter-preview-paper > small {
+  color: #7b8da2;
+}
+.letter-preview-paper > p {
+  margin: 14px 0 -6px;
+  color: #8291a4;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.letter-preview-paper h3 {
+  color: #172d49;
+  font-size: 20px;
+}
+.letter-preview-paper h4 {
+  margin-top: 8px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #eff5fb;
+  color: #183656;
+  font-size: 17px;
+}
+.letter-preview-paper > div {
+  min-height: 160px;
+  padding-block: 14px;
+  color: #40546d;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.letter-preview-paper footer {
+  padding-top: 14px;
+  border-top: 1px solid #e1e8f0;
+  color: #71839a;
+}
+.letter-preview-paper footer strong {
+  display: block;
+  color: #223b57;
+}
+.letter-preview-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding: 0 18px 18px;
+}
+.finance-tracker-sources small {
+  font-size: 12px;
+}
+.workspace-settings-grid {
+  align-items: start;
+}
+.workspace-settings-card:nth-child(2) {
+  grid-row: auto;
+}
+.settings-users-embed > .local-titlebar {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .local-main > .local-titlebar,
+  .office-titlebar {
+    min-height: 0;
+    gap: 14px;
+    padding: 18px;
+    border-radius: 16px;
+  }
+  .local-titlebar h1,
+  .office-titlebar h1 {
+    font-size: 24px;
+  }
+  .local-titlebar p,
+  .office-titlebar p {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .local-titlebar .local-actions {
+    gap: 8px;
+  }
+  .local-titlebar .button {
+    min-height: 46px;
+    padding: 10px 12px;
+  }
+
+  /* Dashboard activity uses dense rows with clear alignment. */
+  .local-activity-card {
+    padding: 14px;
+  }
+  .local-activity-card .local-card-heading {
+    padding-bottom: 10px;
+  }
+  .local-activity-list {
+    gap: 2px;
+  }
+  .local-activity-list > button {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    min-height: 54px;
+    gap: 10px;
+    padding: 8px 0;
+  }
+  .local-activity-list > button > span {
+    width: 36px;
+    height: 36px;
+  }
+  .local-activity-list strong {
+    font-size: 12.5px;
+  }
+  .local-activity-list small {
+    font-size: 11px;
+  }
+  .local-activity-list b {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  /* Clients keep identity, actions and totals inside one short card. */
+  .local-client-grid {
+    gap: 10px;
+  }
+  .local-client-card {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+  .local-client-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+  }
+  .local-client-details h2 {
+    font-size: 14px;
+  }
+  .local-client-details .local-client-meta {
+    margin-top: 4px;
+  }
+  .local-client-country-display {
+    padding: 4px 7px;
+    font-size: 10.5px;
+  }
+  .local-client-actions {
+    gap: 3px;
+  }
+  .local-client-actions .local-row-action,
+  .local-client-actions .local-delete {
+    width: 31px;
+    height: 31px;
+    border-radius: 8px;
+  }
+  .local-client-stats {
+    grid-column: 1 / -1;
+    gap: 7px;
+    padding-top: 9px;
+  }
+  .local-client-stats > span {
+    min-height: 42px;
+    padding: 7px 9px !important;
+    align-items: center;
+    flex-direction: row;
+    gap: 8px;
+  }
+  .local-client-stats small {
+    font-size: 10px;
+  }
+  .local-client-stats strong {
+    font-size: 12px;
+    text-align: right;
+  }
+  .local-client-form {
+    gap: 11px;
+    padding: 14px;
+    border-radius: 14px;
+  }
+  .local-client-form label {
+    gap: 5px;
+  }
+  .local-client-form label > span {
+    font-size: 11.5px;
+  }
+  .local-client-form input,
+  .local-client-form select {
+    height: 46px;
+    min-height: 46px;
+    padding: 0 12px;
+    font-size: 16px !important;
+    border-radius: 10px;
+  }
+  .local-client-form .button {
+    min-height: 46px;
+  }
+
+  /* Expense totals and records become one compact ledger card. */
+  .local-expense-list {
+    border-radius: 14px;
+  }
+  .local-expense-total {
+    padding: 14px 16px;
+  }
+  .local-expense-total span {
+    font-size: 11px;
+  }
+  .local-expense-total strong {
+    font-size: 16px;
+    white-space: nowrap;
+  }
+  .local-expense-list > article {
+    grid-template-columns: 38px minmax(0, 1fr) auto auto;
+    gap: 8px;
+    padding: 14px;
+    align-items: center;
+  }
+  .local-expense-icon {
+    width: 36px;
+    height: 36px;
+  }
+  .local-expense-list > article > div:nth-of-type(1) strong {
+    font-size: 13px;
+  }
+  .local-expense-list > article > div:nth-of-type(1) small {
+    font-size: 11px;
+  }
+  .local-expense-amount {
+    grid-column: 2 / -1;
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    padding-top: 7px;
+    border-top: 1px solid #edf1f5;
+  }
+  .local-expense-amount span {
+    font-size: 11px;
+  }
+  .local-expense-amount strong {
+    font-size: 13px;
+  }
+  .local-expense-list > article > .local-row-action,
+  .local-expense-list > article > .local-delete {
+    width: 34px;
+    height: 34px;
+  }
+
+  /* Invoice and quotation overview stays inside the viewport. */
+  .invoice-kpis {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+  .invoice-kpis article,
+  .invoice-kpis article:last-child {
+    min-width: 0;
+    min-height: 92px;
+    padding: 13px;
+  }
+  .invoice-kpis article strong {
+    font-size: 16px;
+  }
+  .invoice-status-card {
+    padding: 14px;
+  }
+  .invoice-status-bars {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+  }
+  .invoice-status-bars button {
+    min-width: 0;
+    min-height: 54px;
+  }
+  .sales-document-panel .office-toolbar {
+    gap: 10px;
+    padding: 11px;
+  }
+  .invoice-filter-chips {
+    gap: 6px;
+  }
+  .invoice-filter-chips button {
+    min-height: 34px;
+    padding: 7px 10px;
+    font-size: 11.5px;
+  }
+  .sales-document-panel .office-table tbody {
+    gap: 10px;
+  }
+  .sales-document-panel .office-table tr {
+    padding: 11px 12px;
+    border-radius: 13px;
+  }
+  .sales-document-panel .office-table td {
+    padding: 7px 5px;
+  }
+  .sales-document-panel .office-table td[data-label='Number'] {
+    padding-bottom: 7px;
+  }
+  .sales-document-panel .office-table td[data-label='Client'] {
+    grid-column: 1 / -1;
+    min-height: 36px;
+  }
+  .sales-document-panel .office-table td.office-row-actions {
+    min-height: 42px;
+    padding-top: 7px;
+  }
+  .sales-document-panel .office-table td.office-row-actions button {
+    width: 37px;
+    height: 36px;
+  }
+  .sales-document-panel .office-status {
+    min-height: 36px;
+    font-size: 16px !important;
+  }
+
+  /* Responsive document preview replaces the oversized fixed A4 canvas. */
+  .invoice-preview-modal {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+  .invoice-preview-modal > header {
+    min-height: 62px;
+    padding: 11px 14px;
+  }
+  .invoice-preview-modal > div:has(.invoice-a4) {
+    overflow-x: hidden;
+  }
+  .invoice-preview-modal .invoice-paper.invoice-a4 {
+    width: calc(100% - 16px);
+    min-width: 0;
+    min-height: auto;
+    aspect-ratio: auto;
+    margin: 8px;
+    padding: 0 14px 18px;
+  }
+  .invoice-a4-header {
+    margin: 0 -14px 17px;
+    padding: 16px 14px 14px;
+  }
+  .invoice-a4-header > div:first-child img {
+    width: 118px;
+  }
+  .invoice-a4-header > div:last-child > strong {
+    font-size: 16px;
+  }
+  .invoice-a4-meta {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .invoice-a4-billto {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 15px;
+    padding: 13px;
+  }
+  .invoice-a4-services {
+    margin-top: 16px;
+  }
+  .invoice-a4-table-head,
+  .invoice-a4-table-row {
+    grid-template-columns: minmax(0, 1fr) 28px 58px 64px;
+    gap: 5px;
+  }
+  .invoice-a4-table-head {
+    padding: 8px;
+    font-size: 6.5px;
+  }
+  .invoice-a4-table-row {
+    padding: 9px 8px;
+  }
+  .invoice-a4-table-row > span:first-child {
+    grid-template-columns: 20px minmax(0, 1fr);
+  }
+  .invoice-a4-recap {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-top: 17px;
+  }
+  .invoice-a4-payment {
+    grid-template-columns: 1fr;
+    margin-top: 17px;
+  }
+  .invoice-a4-footer {
+    gap: 10px;
+  }
+
+  /* Finance tracker metrics and ledger cards. */
+  .office-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .office-metric {
+    min-height: 84px;
+    padding: 13px;
+  }
+  .office-metric span {
+    font-size: 11px;
+  }
+  .office-metric strong {
+    font-size: 17px;
+    white-space: nowrap;
+  }
+  .finance-tracker-report {
+    gap: 13px;
+    padding: 14px;
+  }
+  .finance-tracker-report > header {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .finance-tracker-report > header > b {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .finance-tracker-chart > div {
+    grid-template-columns: 56px minmax(0, 1fr) 32px;
+    gap: 7px;
+    font-size: 11px;
+  }
+  .finance-tracker-sources {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .finance-tracker-sources span {
+    display: grid;
+    gap: 5px;
+    padding: 9px;
+  }
+  .finance-tracker-sources small {
+    font-size: 11.5px;
+    line-height: 1.25;
+  }
+  .finance-tracker-sources strong {
+    font-size: 13px;
+  }
+  .office-panel > .office-table-wrap > .office-table tbody tr {
+    gap: 6px 10px;
+    padding: 12px;
+  }
+  .office-panel > .office-table-wrap > .office-table td[data-label] {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    grid-column: 1 / -1;
+    min-height: 32px;
+  }
+  .office-panel > .office-table-wrap > .office-table td[data-label]::before {
+    content: attr(data-label);
+    color: #8795a7;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+  .office-panel > .office-table-wrap > .office-table td.office-row-actions {
+    display: flex;
+    padding-top: 8px;
+  }
+  .office-panel > .office-table-wrap > .office-table td.office-row-actions::before {
+    margin-right: auto;
+  }
+
+  /* Team members use one dense identity row. */
+  .office-card-grid {
+    gap: 10px;
+    padding: 10px;
+  }
+  .office-person {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    gap: 9px;
+    padding: 12px;
+    border-radius: 13px;
+  }
+  .office-person .office-avatar {
+    width: 38px;
+    height: 38px;
+  }
+  .office-person h3 {
+    font-size: 13px;
+  }
+  .office-person p,
+  .office-person small {
+    font-size: 11px;
+  }
+  .office-person .office-status-button {
+    grid-column: 2;
+    min-height: 32px;
+    padding: 6px 10px;
+  }
+  .office-person-actions {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .office-person > .local-delete {
+    grid-column: 3;
+    width: 34px;
+    height: 34px;
+  }
+
+  /* Service letters, renewals and their forms use labelled compact rows. */
+  .letter-form {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 14px;
+  }
+  .letter-form > label:nth-of-type(n),
+  .letter-form > .button {
+    grid-column: 1;
+  }
+  .letter-form textarea {
+    min-height: 130px;
+  }
+  .letter-preview-modal {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+  .letter-preview-paper {
+    margin: 10px;
+    padding: 22px 18px;
+  }
+  .letter-preview-paper > div {
+    min-height: 120px;
+  }
+  .letter-preview-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 0 10px 10px;
+  }
+
+  /* Settings show only active choices and avoid duplicated page chrome. */
+  .workspace-settings-grid {
+    gap: 10px;
+  }
+  .workspace-settings-card {
+    gap: 11px;
+    padding: 14px;
+    border-radius: 13px;
+  }
+  .workspace-settings-card > header {
+    padding-bottom: 10px;
+  }
+  .workspace-settings-card h2 {
+    font-size: 14px;
+  }
+  .workspace-settings-card p {
+    font-size: 11px;
+  }
+  .settings-users-embed {
+    margin-top: 12px;
+  }
+  .settings-users-embed > .local-titlebar {
+    display: none;
+  }
+  .settings-users-embed .office-account-card {
+    padding: 14px;
+  }
+  .settings-users-embed .office-account-actions {
+    width: 100%;
+  }
+}
+
+/* Access management stays actionable inside Settings without a second hero banner. */
+.settings-users-embed > .local-titlebar {
+  min-height: 0;
+  padding: 16px 18px;
+  border: 1px solid #dfe7f0;
+  background: #fff;
+  color: #203750;
+  box-shadow: 0 8px 24px rgba(23, 45, 77, 0.05);
+}
+.settings-users-embed > .local-titlebar h1 {
+  color: #203750;
+  font-size: 18px;
+}
+.settings-users-embed > .local-titlebar p {
+  color: #71839a;
+  font-size: 12px;
+}
+.settings-users-embed > .local-titlebar .local-eyebrow {
+  color: #2a73c3;
+}
+.settings-users-embed .office-logout-button,
+.settings-users-embed .office-security-note {
+  display: none;
+}
+@media (max-width: 720px) {
+  .settings-users-embed > .local-titlebar {
+    display: flex;
+    padding: 14px;
+  }
+  .settings-users-embed > .local-titlebar .local-actions {
+    width: auto;
+  }
+  .settings-users-embed > .local-titlebar .button {
+    white-space: nowrap;
+  }
+}

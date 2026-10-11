@@ -1,17 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import {
-  ArrowUp,
-  Bot,
-  CheckCircle2,
-  FilePlus2,
-  Globe2,
-  LoaderCircle,
-  Mic,
-  Search,
-  Sparkles,
-} from 'lucide-react';
+import { ArrowUp, Bot, CheckCircle2, Globe2, LoaderCircle, Mic, Sparkles } from 'lucide-react';
 
 type SpeechRecognitionResultEventLike = {
   results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }>;
@@ -374,38 +364,6 @@ export function InfonitsAssistant({
             </article>
           )}
           {error && <p className="assistant-error">{error}</p>}
-        </div>
-        <div className="assistant-capabilities" aria-label="Assistant capabilities">
-          <span>
-            <Sparkles size={15} />
-            <b>Workspace</b>
-            <small>Analyse finance and records</small>
-          </span>
-          <span>
-            <FilePlus2 size={15} />
-            <b>Create</b>
-            <small>Invoices, quotes and letters</small>
-          </span>
-          <span>
-            <Search size={15} />
-            <b>Web search</b>
-            <small>Current answers with sources</small>
-          </span>
-        </div>
-        <div className="assistant-prompts">
-          {[
-            'Summarise my finance',
-            'Create an invoice',
-            'Create a quotation',
-            'Draft a service letter',
-            'Prepare this month’s invoices',
-            'Search the web',
-            'What needs attention?',
-          ].map((prompt) => (
-            <button type="button" key={prompt} onClick={() => void send(prompt)}>
-              {prompt}
-            </button>
-          ))}
         </div>
         <form
           className="assistant-composer"
