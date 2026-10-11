@@ -13466,3 +13466,19 @@ tfoot td {
     padding-bottom: max(8px, env(safe-area-inset-bottom));
   }
 }
+
+/* Keep long navigation usable while footer actions remain anchored. */
+.local-nav {
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(151, 173, 201, 0.35) transparent;
+}
+.local-sidebar-footer {
+  position: relative;
+  z-index: 3;
+  background: #09182e;
+}
+.local-outstanding-amount strong {
+  white-space: nowrap;
+}
