@@ -14528,6 +14528,7 @@ tfoot td {
   }
   .sales-document-panel .office-table tr.sales-document-row td {
     display: flex;
+    width: auto;
     min-height: 0;
     padding: 9px 5px;
     border: 0;
@@ -14601,11 +14602,11 @@ tfoot td {
     position: absolute;
     top: 18px;
     right: 39px;
-    width: 96px;
+    width: 108px;
     padding: 0;
   }
   .sales-document-panel .office-table tr.sales-document-row .office-status {
-    width: 96px;
+    width: 108px;
     min-height: 30px;
     padding: 4px 22px 4px 9px;
     border: 0;

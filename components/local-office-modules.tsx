@@ -1387,11 +1387,6 @@ function SalesDocuments({
               <ChevronRight className="invoice-kpi-chevron" size={18} />
               <button
                 className="invoice-kpi-hit"
-                aria-label="Show all billed invoices"
-                onClick={() => setStatusFilter('All')}
-              />
-              <button
-                className="invoice-kpi-hit"
                 aria-label="Show all invoices"
                 onClick={() => setStatusFilter('All')}
               />
@@ -1406,6 +1401,11 @@ function SalesDocuments({
                 <small>All recorded invoices</small>
               </div>
               <ChevronRight className="invoice-kpi-chevron" size={18} />
+              <button
+                className="invoice-kpi-hit"
+                aria-label="Show all billed invoices"
+                onClick={() => setStatusFilter('All')}
+              />
             </article>
             <article className="green">
               <span className="invoice-kpi-icon">
