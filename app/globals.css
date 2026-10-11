@@ -13479,6 +13479,6 @@ tfoot td {
   z-index: 3;
   background: #09182e;
 }
-.local-outstanding-amount strong {
+.local-outstanding-total > strong {
   white-space: nowrap;
 }
