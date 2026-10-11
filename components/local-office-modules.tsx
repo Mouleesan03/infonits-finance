@@ -60,6 +60,15 @@ type ProjectRef = {
   workPaid: number;
   status: string;
 };
+type OperatingExpense = {
+  id: string;
+  description: string;
+  category: string;
+  amount: number;
+  currency: string;
+  exchangeRate: number;
+  date: string;
+};
 type DocumentKind = 'Invoice' | 'Quotation';
 type SalesDocument = {
   id: string;
@@ -198,6 +207,8 @@ const money = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value);
 const lkr = (amount: number, rate: number) => amount * rate;
+const clientLabel = (client: ClientRef) =>
+  client.company.trim() ? `${client.company} · ${client.name}` : client.name;
 const documentTotal = (item: SalesDocument) =>
   Math.max(
     0,
@@ -230,12 +241,14 @@ export function LocalOfficeModule({
   section,
   clients,
   projects,
+  expenses,
   rates,
   openFormSignal = 0,
 }: {
   section: OfficeSection;
   clients: ClientRef[];
   projects: ProjectRef[];
+  expenses: OperatingExpense[];
   rates: Record<string, number>;
   openFormSignal?: number;
 }) {
@@ -316,6 +329,9 @@ export function LocalOfficeModule({
     return (
       <PaymentsModule
         items={store.payments}
+        documents={store.documents}
+        projects={projects}
+        operatingExpenses={expenses}
         rates={rates}
         formOpen={formOpen}
         setFormOpen={setFormOpen}
@@ -646,7 +662,7 @@ function CalendarEventModal({
                   <option value="">Select client</option>
                   {clients.map((client) => (
                     <option key={client.id} value={client.id}>
-                      {client.name}
+                      {clientLabel(client)}
                     </option>
                   ))}
                 </select>
@@ -802,7 +818,7 @@ function SalesDocuments({
   const [preview, setPreview] = useState<SalesDocument | null>(null);
   const [editingId, setEditingId] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const names = new Map(clients.map((client) => [client.id, client.name]));
+  const names = new Map(clients.map((client) => [client.id, clientLabel(client)]));
   const clientDetails = new Map(clients.map((client) => [client.id, client]));
   const projectNames = new Map(projects.map((project) => [project.id, project.project]));
 
@@ -1016,7 +1032,7 @@ function SalesDocuments({
               <option value="">Choose client</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {clientLabel(c)}
                 </option>
               ))}
             </select>
@@ -1594,12 +1610,18 @@ function InvoicePreview({
 
 function PaymentsModule({
   items,
+  documents,
+  projects,
+  operatingExpenses,
   rates,
   formOpen,
   setFormOpen,
   onChange,
 }: {
   items: Payment[];
+  documents: SalesDocument[];
+  projects: ProjectRef[];
+  operatingExpenses: OperatingExpense[];
   rates: Record<string, number>;
   formOpen: boolean;
   setFormOpen: (v: boolean) => void;
@@ -1614,9 +1636,57 @@ function PaymentsModule({
     date: today(),
     status: 'Paid' as Payment['status'],
   });
+  const automaticRows = useMemo<Payment[]>(
+    () => [
+      ...documents
+        .filter((item) => item.kind === 'Invoice' && item.status === 'Paid')
+        .map((item) => ({
+          id: `invoice-${item.id}`,
+          type: 'Income' as const,
+          category: 'Paid invoice',
+          note: item.number,
+          amount: item.amount,
+          currency: item.currency,
+          exchangeRate: item.exchangeRate,
+          date: item.issueDate,
+          status: 'Paid' as const,
+        })),
+      ...operatingExpenses.map((item) => ({
+        id: `expense-${item.id}`,
+        type: 'Expense' as const,
+        category: item.category,
+        note: item.description,
+        amount: item.amount,
+        currency: item.currency,
+        exchangeRate: item.exchangeRate,
+        date: item.date,
+        status: 'Paid' as const,
+      })),
+      ...projects
+        .filter((project) => project.workDue + project.workPaid > 0)
+        .map((project) => ({
+          id: `work-${project.id}`,
+          type: 'Expense' as const,
+          category: 'Project work',
+          note: project.project,
+          amount: project.workDue + project.workPaid,
+          currency: 'LKR',
+          exchangeRate: 1,
+          date: today(),
+          status: 'Paid' as const,
+        })),
+    ],
+    [documents, operatingExpenses, projects],
+  );
+  const ledgerRows = useMemo(
+    () =>
+      [...items.map((item) => ({ ...item, manual: true })), ...automaticRows.map((item) => ({ ...item, manual: false }))]
+        .toSorted((left, right) => right.date.localeCompare(left.date)),
+    [automaticRows, items],
+  );
   const totals = useMemo(
     () =>
-      items.reduce(
+      ledgerRows.reduce(
         (sum, item) => {
           const value = lkr(item.amount, item.exchangeRate);
           if (item.status === 'Pending') return { ...sum, pending: sum.pending + value };
@@ -1627,8 +1697,11 @@ function PaymentsModule({
         },
         { income: 0, expense: 0, assets: 0, loan: 0, pending: 0 },
       ),
-    [items],
+    [ledgerRows],
   );
+  const cashTotal = totals.income + totals.expense;
+  const incomeShare = cashTotal ? Math.round((totals.income / cashTotal) * 100) : 0;
+  const expenseShare = cashTotal ? 100 - incomeShare : 0;
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const amount = Number(draft.amount);
@@ -1658,16 +1731,31 @@ function PaymentsModule({
     <>
       <ModuleHeader
         eyebrow="FINANCE"
-        title="Payments"
-        subtitle="See income, expenses, savings, gold and loans in one ledger."
-        action="Add record"
+        title="Finance tracker"
+        subtitle="Paid invoices, operating expenses and additional cash records in one connected ledger."
+        action="Add income or expense"
         onAction={() => setFormOpen(!formOpen)}
       />
       <section className="office-metrics">
-        <Metric label="Income" value={totals.income} tone="green" />
-        <Metric label="Expenses" value={totals.expense} tone="red" />
+        <Metric label="Total income" value={totals.income} tone="green" />
+        <Metric label="Total outcome" value={totals.expense} tone="red" />
         <Metric label="Savings & gold" value={totals.assets} tone="blue" />
         <Metric label="Pending" value={totals.pending} tone="amber" />
+      </section>
+      <section className="finance-tracker-report" aria-label="Income and outcome report">
+        <header>
+          <div><strong>Cash flow report</strong><small>Live from paid invoices, projects and expenses</small></div>
+          <b className={totals.income - totals.expense >= 0 ? 'positive' : 'negative'}>{money(totals.income - totals.expense)} net</b>
+        </header>
+        <div className="finance-tracker-chart">
+          <div><span>Income</span><i><b style={{ width: `${incomeShare}%` }} /></i><strong>{incomeShare}%</strong></div>
+          <div><span>Outcome</span><i><b style={{ width: `${expenseShare}%` }} /></i><strong>{expenseShare}%</strong></div>
+        </div>
+        <div className="finance-tracker-sources">
+          <span><small>Paid invoices</small><strong>{automaticRows.filter((item) => item.category === 'Paid invoice').length}</strong></span>
+          <span><small>Automatic expenses</small><strong>{automaticRows.filter((item) => item.type === 'Expense').length}</strong></span>
+          <span><small>Additional records</small><strong>{items.length}</strong></span>
+        </div>
       </section>
       {formOpen && (
         <form className="office-form" onSubmit={submit}>
@@ -1744,7 +1832,7 @@ function PaymentsModule({
         </form>
       )}
       <section className="office-panel">
-        {!items.length ? (
+        {!ledgerRows.length ? (
           <Empty
             icon={<CircleDollarSign size={25} />}
             title="No payment records"
@@ -1765,29 +1853,31 @@ function PaymentsModule({
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
+                {ledgerRows.map((item) => (
                   <tr key={item.id}>
                     <td>{item.date}</td>
                     <td>
                       <span className={`office-pill ${item.type.toLowerCase()}`}>{item.type}</span>
                     </td>
-                    <td>{item.category}</td>
+                    <td>{item.category}<small>{item.manual ? 'Additional record' : 'Automatic'}</small></td>
                     <td>{item.note}</td>
                     <td>
-                      <button
-                        className={`office-status-button ${item.status.toLowerCase()}`}
-                        onClick={() =>
-                          onChange(
-                            items.map((x) =>
-                              x.id === item.id
-                                ? { ...x, status: x.status === 'Paid' ? 'Pending' : 'Paid' }
-                                : x,
-                            ),
-                          )
-                        }
-                      >
-                        {item.status}
-                      </button>
+                      {item.manual ? (
+                        <button
+                          className={`office-status-button ${item.status.toLowerCase()}`}
+                          onClick={() =>
+                            onChange(
+                              items.map((x) =>
+                                x.id === item.id
+                                  ? { ...x, status: x.status === 'Paid' ? 'Pending' : 'Paid' }
+                                  : x,
+                              ),
+                            )
+                          }
+                        >
+                          {item.status}
+                        </button>
+                      ) : <span className="office-status-button paid">Paid</span>}
                     </td>
                     <td className={item.type === 'Income' ? 'office-positive' : 'office-negative'}>
                       <strong>
@@ -1799,13 +1889,15 @@ function PaymentsModule({
                       </small>
                     </td>
                     <td>
-                      <button
-                        className="local-delete"
-                        aria-label="Delete record"
-                        onClick={() => onChange(items.filter((x) => x.id !== item.id))}
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {item.manual && (
+                        <button
+                          className="local-delete"
+                          aria-label="Delete record"
+                          onClick={() => onChange(items.filter((x) => x.id !== item.id))}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -1833,6 +1925,8 @@ function TeamModule({
   setFormOpen: (v: boolean) => void;
   onChange: (v: TeamMember[]) => void;
 }) {
+  const [selectedId, setSelectedId] = useState('');
+  const [editingId, setEditingId] = useState('');
   const [draft, setDraft] = useState({
     name: '',
     role: '',
@@ -1843,6 +1937,7 @@ function TeamModule({
   const visible = items.filter((x) =>
     `${x.name} ${x.role}`.toLowerCase().includes(search.toLowerCase()),
   );
+  const selected = items.find((item) => item.id === selectedId);
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!draft.name.trim() || !draft.role.trim()) return;
@@ -1929,6 +2024,10 @@ function TeamModule({
                 >
                   {item.status}
                 </button>
+                <div className="office-person-actions">
+                  <button className="local-row-action neutral" aria-label={`View ${item.name}`} onClick={() => { setSelectedId(item.id); setEditingId(''); }}><Eye size={15} /></button>
+                  <button className="local-row-action neutral" aria-label={`Edit ${item.name}`} onClick={() => { setSelectedId(item.id); setEditingId(item.id); }}><Pencil size={15} /></button>
+                </div>
                 <button
                   className="local-delete"
                   aria-label={`Delete ${item.name}`}
@@ -1941,6 +2040,36 @@ function TeamModule({
           </div>
         )}
       </section>
+      {selected && (
+        <div className="local-modal-layer" role="presentation" onMouseDown={() => setSelectedId('')}>
+          <section className="local-modal office-person-modal" role="dialog" aria-modal="true" aria-labelledby="team-member-title" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <div><span className="local-modal-icon"><UserRound size={19} /></span><div><h2 id="team-member-title">{selected.name}</h2><p>Team member profile and contact details</p></div></div>
+              <button aria-label="Close team member" onClick={() => setSelectedId('')}><X size={19} /></button>
+            </header>
+            {editingId === selected.id ? (
+              <form className="office-form team-member-editor" onSubmit={(event) => { event.preventDefault(); setEditingId(''); }}>
+                {(['name', 'role', 'email', 'phone'] as const).map((field) => (
+                  <label key={field}><span>{field[0].toUpperCase() + field.slice(1)}</span><input type={field === 'email' ? 'email' : 'text'} value={selected[field]} onChange={(event) => onChange(items.map((item) => item.id === selected.id ? { ...item, [field]: event.target.value } : item))} /></label>
+                ))}
+                <label><span>Employment</span><select value={selected.employment} onChange={(event) => onChange(items.map((item) => item.id === selected.id ? { ...item, employment: event.target.value } : item))}><option>Full-time</option><option>Part-time</option><option>Freelance</option></select></label>
+                <label><span>Status</span><select value={selected.status} onChange={(event) => onChange(items.map((item) => item.id === selected.id ? { ...item, status: event.target.value as TeamMember['status'] } : item))}><option>Active</option><option>Inactive</option></select></label>
+                <button className="button button-primary" type="submit"><Check size={16} /> Save changes</button>
+              </form>
+            ) : (
+              <div className="office-person-details">
+                <span className="office-avatar large">{selected.name.slice(0, 2).toUpperCase()}</span>
+                <div><small>Role</small><strong>{selected.role}</strong></div>
+                <div><small>Employment</small><strong>{selected.employment}</strong></div>
+                <div><small>Email</small><strong>{selected.email || 'Not added'}</strong></div>
+                <div><small>Phone</small><strong>{selected.phone || 'Not added'}</strong></div>
+                <div><small>Status</small><strong>{selected.status}</strong></div>
+                <button className="button button-primary" onClick={() => setEditingId(selected.id)}><Pencil size={16} /> Edit member</button>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
     </>
   );
 }
@@ -1979,7 +2108,7 @@ function PostsModule({
   const [calendarMonth, setCalendarMonth] = useState(thisMonth());
   const [eventDate, setEventDate] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const names = new Map(clients.map((client) => [client.id, client.name]));
+  const names = new Map(clients.map((client) => [client.id, clientLabel(client)]));
   const projectNames = new Map(projects.map((project) => [project.id, project.project]));
   const members = new Map(team.map((member) => [member.id, member.name]));
   const monthPlans = items.filter((item) => item.month === calendarMonth);
@@ -2109,7 +2238,7 @@ function PostsModule({
               <option value="">Choose client</option>
               {clients.map((client) => (
                 <option key={client.id} value={client.id}>
-                  {client.name}
+                  {clientLabel(client)}
                 </option>
               ))}
             </select>
