@@ -14117,3 +14117,554 @@ tfoot td {
     white-space: nowrap;
   }
 }
+
+/* Agent lead inbox and the reference mobile document-card system. */
+.agent-lead-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.agent-lead-metrics article {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 82px;
+  padding: 16px;
+  border: 1px solid #dfe7f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 7px 22px rgba(31, 56, 88, 0.05);
+}
+.agent-lead-metrics article > span {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 12px;
+  background: #eaf3ff;
+  color: #1970d7;
+}
+.agent-lead-metrics article.new > span {
+  background: #fff2dc;
+  color: #dc7c00;
+}
+.agent-lead-metrics article.qualified > span {
+  background: #e2f8ed;
+  color: #13875b;
+}
+.agent-lead-metrics small,
+.agent-lead-metrics strong {
+  display: block;
+}
+.agent-lead-metrics small {
+  color: #75859a;
+  font-size: 11px;
+}
+.agent-lead-metrics strong {
+  margin-top: 3px;
+  color: #1e334e;
+  font-size: 21px;
+}
+.agent-leads-toolbar .office-search {
+  min-width: min(360px, 100%);
+}
+.agent-lead-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px;
+}
+.agent-lead-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 11px;
+  padding: 15px;
+  border: 1px solid #dfe7f0;
+  border-radius: 14px;
+  background: #fff;
+}
+.agent-lead-avatar {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 12px;
+  background: #eaf3ff;
+  color: #176bd1;
+}
+.agent-lead-identity {
+  min-width: 0;
+}
+.agent-lead-identity strong,
+.agent-lead-identity small {
+  display: block;
+}
+.agent-lead-identity strong {
+  overflow: hidden;
+  color: #1c304b;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-lead-identity small {
+  margin-top: 4px;
+  color: #8290a4;
+  font-size: 10.5px;
+}
+.agent-lead-status {
+  min-height: 34px;
+  padding: 6px 26px 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: #e8f2ff;
+  color: #176bcf;
+  font-size: 11px;
+  font-weight: 700;
+}
+.agent-lead-status.contacted {
+  background: #fff1dc;
+  color: #a86700;
+}
+.agent-lead-status.qualified {
+  background: #ddf7eb;
+  color: #117c53;
+}
+.agent-lead-status.closed {
+  background: #eef1f5;
+  color: #66758a;
+}
+.agent-lead-card > p {
+  grid-column: 2 / -1;
+  margin: 0;
+  color: #4f6077;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.agent-lead-contact {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.agent-lead-contact a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 6px 9px;
+  border-radius: 9px;
+  background: #f3f7fb;
+  color: #336184;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.agent-leads-setup,
+.agent-leads-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 42px 20px;
+  color: #6f8095;
+  text-align: center;
+}
+.agent-leads-setup strong,
+.agent-leads-empty strong {
+  color: #243a56;
+}
+.agent-leads-setup p,
+.agent-leads-empty p {
+  margin: 0;
+  font-size: 12px;
+}
+.agent-leads-setup code {
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: #eef4fb;
+  color: #1d5f9e;
+  font-size: 11px;
+}
+
+.invoice-kpis article {
+  position: relative;
+}
+.invoice-kpi-icon,
+.invoice-kpi-copy,
+.invoice-kpi-chevron {
+  position: relative;
+  z-index: 1;
+}
+.invoice-kpi-icon {
+  display: none;
+}
+.invoice-kpi-copy > span,
+.invoice-kpi-copy > strong,
+.invoice-kpi-copy > small {
+  display: block;
+}
+.invoice-kpi-chevron {
+  display: none;
+}
+.invoice-kpi-hit {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  border-radius: inherit;
+  background: transparent;
+}
+.invoice-filter-button,
+.office-document-number-icon,
+.office-document-number-copy > small,
+.office-document-more,
+.office-document-date-icon {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .agent-lead-metrics {
+    gap: 8px;
+  }
+  .agent-lead-metrics article {
+    display: grid;
+    justify-items: start;
+    gap: 7px;
+    min-height: 102px;
+    padding: 12px;
+  }
+  .agent-lead-metrics article > span {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+  .agent-lead-metrics strong {
+    font-size: 18px;
+  }
+  .agent-leads-panel {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .agent-leads-toolbar {
+    margin-bottom: 10px;
+    padding: 11px;
+    border: 1px solid #dfe7f0;
+    border-radius: 14px;
+    background: #fff;
+  }
+  .agent-lead-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 0;
+  }
+  .agent-lead-card {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    gap: 9px;
+    padding: 13px;
+    box-shadow: 0 6px 20px rgba(31, 56, 88, 0.05);
+  }
+  .agent-lead-card > p,
+  .agent-lead-contact {
+    grid-column: 1 / -1;
+  }
+  .agent-lead-contact a {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  /* Match the approved mobile invoice reference: pastel metric tiles and dense cards. */
+  .invoice-kpis {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0 0 12px;
+    padding: 0;
+    overflow: visible;
+  }
+  .invoice-kpis article,
+  .invoice-kpis article:last-child {
+    grid-column: span 3;
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) 15px;
+    align-items: center;
+    gap: 9px;
+    min-height: 94px;
+    padding: 12px;
+    border: 1px solid transparent;
+    color: #183250;
+    box-shadow: none;
+  }
+  .invoice-kpis article.green,
+  .invoice-kpis article.red,
+  .invoice-kpis article.purple {
+    grid-column: span 2;
+    grid-template-columns: 34px minmax(0, 1fr) 12px;
+    gap: 7px;
+    min-height: 86px;
+    padding: 10px;
+  }
+  .invoice-kpis article.blue {
+    background: #eef6ff;
+    border-color: #d7e9ff;
+  }
+  .invoice-kpis article.amber {
+    background: #fff5e5;
+    border-color: #ffe8bd;
+  }
+  .invoice-kpis article.green {
+    background: #eaf9f2;
+    border-color: #d1f1e2;
+  }
+  .invoice-kpis article.red {
+    background: #eef6ff;
+    border-color: #deecfb;
+  }
+  .invoice-kpis article.purple {
+    background: #fff0f1;
+    border-color: #ffdde0;
+  }
+  .invoice-kpi-icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border-radius: 12px;
+    background: #dbeeff;
+    color: #0871de;
+  }
+  .invoice-kpis article.green .invoice-kpi-icon,
+  .invoice-kpis article.red .invoice-kpi-icon,
+  .invoice-kpis article.purple .invoice-kpi-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+  }
+  .invoice-kpis article.amber .invoice-kpi-icon {
+    background: #ffe6ba;
+    color: #dc7800;
+  }
+  .invoice-kpis article.green .invoice-kpi-icon {
+    background: #d0f3e2;
+    color: #139562;
+  }
+  .invoice-kpis article.red .invoice-kpi-icon {
+    background: #dcecff;
+    color: #1776df;
+  }
+  .invoice-kpis article.purple .invoice-kpi-icon {
+    background: #ffdadd;
+    color: #e4424b;
+  }
+  .invoice-kpis .invoice-kpi-copy > span {
+    color: #48617c;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .invoice-kpis .invoice-kpi-copy > strong {
+    margin-top: 3px;
+    color: #142c4c;
+    font-size: 16px;
+    white-space: nowrap;
+  }
+  .invoice-kpis .invoice-kpi-copy > small {
+    margin-top: 3px;
+    color: #71849b;
+    font-size: 9px;
+  }
+  .invoice-kpis article.red .invoice-kpi-copy > strong {
+    color: #176bd1;
+  }
+  .invoice-kpis article.purple .invoice-kpi-copy > strong {
+    color: #d63b43;
+  }
+  .invoice-kpi-chevron {
+    display: block;
+    color: currentColor;
+  }
+  .invoice-status-card {
+    display: none;
+  }
+  .sales-document-panel .office-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 42px;
+    gap: 9px;
+  }
+  .sales-document-panel .office-toolbar .office-search {
+    min-width: 0;
+  }
+  .invoice-filter-button {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border: 1px solid #dbe4ef;
+    border-radius: 11px;
+    background: #fff;
+    color: #55708f;
+  }
+  .sales-document-panel .invoice-filter-chips,
+  .sales-document-panel .office-toolbar > span {
+    grid-column: 1 / -1;
+  }
+  .sales-document-panel .invoice-filter-chips:not(.is-open) {
+    display: none;
+  }
+  .sales-document-panel .office-toolbar > span {
+    color: #697b92;
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+  .sales-document-panel .office-table tr.sales-document-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap: 0 8px;
+    padding: 13px;
+    border-color: #dae4ef;
+    box-shadow: 0 7px 22px rgba(31, 56, 88, 0.055);
+  }
+  .sales-document-panel .office-table tr.sales-document-row td {
+    display: flex;
+    min-height: 0;
+    padding: 9px 5px;
+    border: 0;
+  }
+  .sales-document-panel .office-table tr.sales-document-row td::before {
+    display: none;
+  }
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Number'] {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) 18px;
+    align-items: center;
+    gap: 9px;
+    min-height: 48px;
+    padding: 0 0 10px;
+  }
+  .office-document-number-icon {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 11px;
+    background: #e9f3ff;
+    color: #0871dd;
+  }
+  .office-document-number-copy {
+    min-width: 0;
+  }
+  .office-document-number-copy > strong,
+  .office-document-number-copy > small {
+    display: block;
+  }
+  .office-document-number-copy > strong {
+    color: #112a4c !important;
+    font-size: 15px !important;
+  }
+  .office-document-number-copy > small {
+    margin-top: 2px;
+    color: #63758c;
+    font-size: 11px;
+  }
+  .office-document-more {
+    display: block;
+    color: #8191a5;
+  }
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Client'] {
+    display: none;
+  }
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Date'],
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Due'] {
+    display: grid;
+    grid-template-columns: 17px minmax(0, 1fr);
+    align-items: start;
+    gap: 6px;
+    color: #445b75;
+    font-size: 10.5px;
+  }
+  .office-document-date-icon {
+    display: block;
+    margin-top: 1px;
+    color: #7188a4;
+  }
+  .sales-document-panel td[data-label='Date'] > span > small,
+  .sales-document-panel td[data-label='Due'] > span > small {
+    display: block;
+    margin-top: 1px;
+    color: #8594a7;
+    font-size: 8.5px;
+  }
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Status'] {
+    position: absolute;
+    top: 18px;
+    right: 39px;
+    width: 96px;
+    padding: 0;
+  }
+  .sales-document-panel .office-table tr.sales-document-row .office-status {
+    width: 96px;
+    min-height: 30px;
+    padding: 4px 22px 4px 9px;
+    border: 0;
+    border-radius: 999px;
+    font-size: 10.5px !important;
+  }
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Total'] {
+    display: grid;
+    justify-items: end;
+    align-content: center;
+    min-width: 62px;
+    padding-inline: 2px 0;
+    text-align: right;
+  }
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Total'] strong {
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Total'] small {
+    margin-top: 2px;
+    font-size: 9px;
+    white-space: nowrap;
+  }
+  .sales-document-panel .office-table tr.sales-document-row td.office-row-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 7px;
+    min-height: 42px;
+    padding: 10px 0 0;
+    border-top: 1px solid #edf1f5;
+  }
+  .sales-document-panel .office-table tr.sales-document-row td.office-row-actions button {
+    flex: 1 1 0;
+    width: auto;
+    height: 38px;
+    border-radius: 9px;
+    background: #edf5ff;
+    color: #0f70d9;
+  }
+  .sales-document-panel .office-table tr.sales-document-row td.office-row-actions .local-delete {
+    background: #fff0f1;
+    color: #e2444c;
+  }
+
+  /* All remaining mobile records use the same border, shadow and action rhythm. */
+  .local-client-card,
+  .local-expense-list > article,
+  .office-person,
+  .office-panel > .office-table-wrap > .office-table tbody tr,
+  .office-renewal-list > article,
+  .letter-preview-paper {
+    border-color: #dae4ef;
+    box-shadow: 0 7px 22px rgba(31, 56, 88, 0.055);
+  }
+  .office-panel > .office-table-wrap > .office-table td.office-row-actions button,
+  .office-person-actions button,
+  .office-renewal-list article button {
+    border-radius: 9px;
+    background: #edf5ff;
+    color: #0f70d9;
+  }
+}

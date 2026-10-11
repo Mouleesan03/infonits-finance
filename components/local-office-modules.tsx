@@ -2,10 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
+  AlertCircle,
   AlertTriangle,
   CalendarDays,
   Check,
+  CheckCircle2,
+  ChevronRight,
   CircleDollarSign,
+  Clock3,
+  Coins,
   Download,
   Eye,
   FileDown,
@@ -15,6 +20,7 @@ import {
   KeyRound,
   LogOut,
   Mail,
+  MoreVertical,
   Pencil,
   Plus,
   Printer,
@@ -22,6 +28,7 @@ import {
   Search,
   Send,
   ShieldCheck,
+  SlidersHorizontal,
   Trash2,
   UserRound,
   UsersRound,
@@ -932,6 +939,7 @@ function SalesDocuments({
   const [preview, setPreview] = useState<SalesDocument | null>(null);
   const [editingId, setEditingId] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [paymentTarget, setPaymentTarget] = useState<SalesDocument | null>(null);
   const [paymentDraft, setPaymentDraft] = useState({ amount: '', date: today(), note: '' });
   const [recurringOpen, setRecurringOpen] = useState(false);
@@ -1368,29 +1376,84 @@ function SalesDocuments({
         <>
           <section className="invoice-kpis" aria-label="Invoice totals">
             <article className="blue">
-              <span>Total invoices</span>
-              <strong>{normalizedItems.length}</strong>
-              <small>{projects.length} projects</small>
+              <span className="invoice-kpi-icon">
+                <FileText size={20} />
+              </span>
+              <div className="invoice-kpi-copy">
+                <span>Total invoices</span>
+                <strong>{normalizedItems.length}</strong>
+                <small>{projects.length} projects</small>
+              </div>
+              <ChevronRight className="invoice-kpi-chevron" size={18} />
+              <button
+                className="invoice-kpi-hit"
+                aria-label="Show all billed invoices"
+                onClick={() => setStatusFilter('All')}
+              />
+              <button
+                className="invoice-kpi-hit"
+                aria-label="Show all invoices"
+                onClick={() => setStatusFilter('All')}
+              />
             </article>
             <article className="amber">
-              <span>Total billed</span>
-              <strong>{money(invoiceSummary.billed)}</strong>
-              <small>All recorded invoices</small>
+              <span className="invoice-kpi-icon">
+                <Coins size={20} />
+              </span>
+              <div className="invoice-kpi-copy">
+                <span>Total billed</span>
+                <strong>{money(invoiceSummary.billed)}</strong>
+                <small>All recorded invoices</small>
+              </div>
+              <ChevronRight className="invoice-kpi-chevron" size={18} />
             </article>
             <article className="green">
-              <span>Paid</span>
-              <strong>{money(invoiceSummary.paid)}</strong>
-              <small>{statusCounts.Paid ?? 0} invoices</small>
+              <span className="invoice-kpi-icon">
+                <CheckCircle2 size={20} />
+              </span>
+              <div className="invoice-kpi-copy">
+                <span>Paid</span>
+                <strong>{money(invoiceSummary.paid)}</strong>
+                <small>{statusCounts.Paid ?? 0} invoices</small>
+              </div>
+              <ChevronRight className="invoice-kpi-chevron" size={18} />
+              <button
+                className="invoice-kpi-hit"
+                aria-label="Show paid invoices"
+                onClick={() => setStatusFilter('Paid')}
+              />
             </article>
             <article className="red">
-              <span>Pending</span>
-              <strong>{money(invoiceSummary.pending)}</strong>
-              <small>{(statusCounts.Pending ?? 0) + (statusCounts.Sent ?? 0)} invoices</small>
+              <span className="invoice-kpi-icon">
+                <Clock3 size={20} />
+              </span>
+              <div className="invoice-kpi-copy">
+                <span>Pending</span>
+                <strong>{money(invoiceSummary.pending)}</strong>
+                <small>{(statusCounts.Pending ?? 0) + (statusCounts.Sent ?? 0)} invoices</small>
+              </div>
+              <ChevronRight className="invoice-kpi-chevron" size={18} />
+              <button
+                className="invoice-kpi-hit"
+                aria-label="Show pending invoices"
+                onClick={() => setStatusFilter('Pending')}
+              />
             </article>
             <article className="purple">
-              <span>Overdue</span>
-              <strong>{money(invoiceSummary.overdue)}</strong>
-              <small>{statusCounts.Overdue ?? 0} invoices</small>
+              <span className="invoice-kpi-icon">
+                <AlertCircle size={20} />
+              </span>
+              <div className="invoice-kpi-copy">
+                <span>Overdue</span>
+                <strong>{money(invoiceSummary.overdue)}</strong>
+                <small>{statusCounts.Overdue ?? 0} invoices</small>
+              </div>
+              <ChevronRight className="invoice-kpi-chevron" size={18} />
+              <button
+                className="invoice-kpi-hit"
+                aria-label="Show overdue invoices"
+                onClick={() => setStatusFilter('Overdue')}
+              />
             </article>
           </section>
           <section className="invoice-status-card">
@@ -1578,7 +1641,16 @@ function SalesDocuments({
             onChange={setSearch}
             placeholder={`Search ${kind.toLowerCase()}s`}
           />
-          <div className="invoice-filter-chips">
+          <button
+            className="invoice-filter-button"
+            aria-label={`${filtersOpen ? 'Hide' : 'Show'} ${kind.toLowerCase()} filters`}
+            aria-expanded={filtersOpen}
+            title="Filters"
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            <SlidersHorizontal size={17} />
+          </button>
+          <div className={`invoice-filter-chips ${filtersOpen ? 'is-open' : ''}`}>
             {(kind === 'Invoice'
               ? ['All', 'Paid', 'Partial', 'Sent', 'Pending', 'Overdue']
               : ['All', 'Draft', 'Sent', 'Accepted', 'Declined']
@@ -1592,7 +1664,10 @@ function SalesDocuments({
               </button>
             ))}
           </div>
-          <span>{visible.length} shown</span>
+          <span>
+            {visible.length} {kind.toLowerCase()}
+            {visible.length === 1 ? '' : 's'}
+          </span>
         </div>
         {!visible.length ? (
           <Empty
@@ -1616,13 +1691,32 @@ function SalesDocuments({
               </thead>
               <tbody>
                 {visible.map((item) => (
-                  <tr key={item.id}>
+                  <tr className="sales-document-row" key={item.id}>
                     <td data-label="Number">
-                      <strong>{item.number}</strong>
+                      <span className="office-document-number-icon">
+                        <FileText size={19} />
+                      </span>
+                      <span className="office-document-number-copy">
+                        <strong>{item.number}</strong>
+                        <small>{names.get(item.clientId) ?? 'Unknown client'}</small>
+                      </span>
+                      <MoreVertical className="office-document-more" size={18} />
                     </td>
                     <td data-label="Client">{names.get(item.clientId) ?? 'Unknown client'}</td>
-                    <td data-label="Date">{item.issueDate}</td>
-                    <td data-label="Due">{item.dueDate}</td>
+                    <td data-label="Date">
+                      <CalendarDays className="office-document-date-icon" size={15} />
+                      <span>
+                        {item.issueDate}
+                        <small>Issue date</small>
+                      </span>
+                    </td>
+                    <td data-label="Due">
+                      <CalendarDays className="office-document-date-icon" size={15} />
+                      <span>
+                        {item.dueDate}
+                        <small>Due date</small>
+                      </span>
+                    </td>
                     <td data-label="Status">
                       <select
                         className={`office-status ${item.status.toLowerCase()}`}

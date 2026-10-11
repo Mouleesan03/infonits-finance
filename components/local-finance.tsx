@@ -20,6 +20,7 @@ import {
   Globe2,
   Download,
   LayoutDashboard,
+  RadioTower,
   LogOut,
   Menu,
   MessagesSquare,
@@ -42,6 +43,7 @@ import {
 } from 'lucide-react';
 import { LocalOfficeModule, type OfficeSection } from './local-office-modules';
 import { LocalCloudSync } from './local-cloud-sync';
+import { AgentLeads } from './agent-leads';
 import { InfonitsAssistant, type AssistantAction } from './infonits-assistant';
 import { browserClient } from '@/lib/supabase/browser';
 
@@ -51,6 +53,7 @@ type Section =
   | 'assistant'
   | 'projects'
   | 'clients'
+  | 'leads'
   | 'expenses'
   | 'settings'
   | OfficeSection;
@@ -166,6 +169,7 @@ const countries = [
   'Australia',
   'Canada',
   'France',
+  'Switzerland',
   'India',
   'Singapore',
   'United Arab Emirates',
@@ -178,6 +182,7 @@ const countryFlags: Record<string, string> = {
   Australia: '🇦🇺',
   Canada: '🇨🇦',
   France: '🇫🇷',
+  Switzerland: '🇨🇭',
   India: '🇮🇳',
   Singapore: '🇸🇬',
   'United Arab Emirates': '🇦🇪',
@@ -1120,6 +1125,13 @@ export function LocalFinance() {
           </SidebarGroup>
           <SidebarGroup label="Sales">
             <button
+              className={section === 'leads' ? 'active' : ''}
+              onClick={() => changeSection('leads')}
+            >
+              <RadioTower size={19} />
+              <span>Agent leads</span>
+            </button>
+            <button
               className={section === 'clients' ? 'active' : ''}
               onClick={() => changeSection('clients')}
             >
@@ -1507,6 +1519,8 @@ export function LocalFinance() {
             </>
           )}
 
+          {section === 'leads' && <AgentLeads />}
+
           {section === 'expenses' && (
             <>
               <PageHeading
@@ -1554,6 +1568,7 @@ export function LocalFinance() {
             'assistant',
             'projects',
             'clients',
+            'leads',
             'expenses',
             'settings',
           ].includes(section) && (
