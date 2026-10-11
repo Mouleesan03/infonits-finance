@@ -14399,8 +14399,8 @@ tfoot td {
   .invoice-kpis article.red,
   .invoice-kpis article.purple {
     grid-column: span 2;
-    grid-template-columns: 34px minmax(0, 1fr) 12px;
-    gap: 7px;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 5px;
     min-height: 86px;
     padding: 10px;
   }
@@ -14436,8 +14436,8 @@ tfoot td {
   .invoice-kpis article.green .invoice-kpi-icon,
   .invoice-kpis article.red .invoice-kpi-icon,
   .invoice-kpis article.purple .invoice-kpi-icon {
-    width: 34px;
-    height: 34px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
   }
   .invoice-kpis article.amber .invoice-kpi-icon {
@@ -14480,9 +14480,22 @@ tfoot td {
   .invoice-kpis article.purple .invoice-kpi-copy > strong {
     color: #d63b43;
   }
+  .invoice-kpis article.green .invoice-kpi-copy > strong,
+  .invoice-kpis article.red .invoice-kpi-copy > strong,
+  .invoice-kpis article.purple .invoice-kpi-copy > strong {
+    padding-right: 5px;
+    font-size: 12.5px;
+  }
   .invoice-kpi-chevron {
     display: block;
     color: currentColor;
+  }
+  .invoice-kpis article.green .invoice-kpi-chevron,
+  .invoice-kpis article.red .invoice-kpi-chevron,
+  .invoice-kpis article.purple .invoice-kpi-chevron {
+    position: absolute;
+    right: 4px;
+    width: 11px;
   }
   .invoice-status-card {
     display: none;
