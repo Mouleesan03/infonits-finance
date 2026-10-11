@@ -176,11 +176,6 @@ export async function POST(request: Request) {
             web_search: anthropic.tools.webSearch_20260318({
               maxUses: 3,
               responseInclusion: 'full',
-              userLocation: {
-                type: 'approximate',
-                country: 'LK',
-                timezone: 'Asia/Colombo',
-              },
             }),
           }
         : undefined,
