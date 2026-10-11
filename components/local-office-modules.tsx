@@ -100,6 +100,9 @@ type Payment = {
   exchangeRate: number;
   date: string;
   status: 'Paid' | 'Pending';
+  invoiceId?: string;
+  projectId?: string;
+  receiptNumber?: string;
 };
 type TeamMember = {
   id: string;
@@ -182,6 +185,13 @@ const currentDocumentStatus = (item: SalesDocument) => {
   if (item.kind !== 'Invoice' || item.status === 'Paid') return item.status;
   return invoiceDueDate(item) < today() ? 'Overdue' : item.status;
 };
+const paidForInvoice = (invoiceId: string, payments: Payment[]) =>
+  payments
+    .filter(
+      (payment) =>
+        payment.invoiceId === invoiceId && payment.type === 'Income' && payment.status === 'Paid',
+    )
+    .reduce((sum, payment) => sum + payment.amount, 0);
 const currencies = ['LKR', 'USD', 'GBP', 'EUR', 'AUD', 'CAD', 'INR', 'AED', 'SGD', 'JPY'];
 const emptyStore: Store = {
   documents: [],
@@ -320,6 +330,7 @@ export function LocalOfficeModule({
         projects={projects}
         rates={rates}
         invoiceDefaults={invoiceDefaults}
+        payments={store.payments}
         search={search}
         setSearch={setSearch}
         formOpen={formOpen}
@@ -327,6 +338,7 @@ export function LocalOfficeModule({
         onChange={(items) =>
           update('documents', [...store.documents.filter((item) => item.kind !== kind), ...items])
         }
+        onPaymentsChange={(items) => update('payments', items)}
       />
     );
   }
@@ -341,6 +353,7 @@ export function LocalOfficeModule({
         formOpen={formOpen}
         setFormOpen={setFormOpen}
         onChange={(items) => update('payments', items)}
+        onDocumentsChange={(items) => update('documents', items)}
       />
     );
   if (section === 'team')
@@ -792,11 +805,13 @@ function SalesDocuments({
   projects,
   rates,
   invoiceDefaults,
+  payments,
   search,
   setSearch,
   formOpen,
   setFormOpen,
   onChange,
+  onPaymentsChange,
 }: {
   kind: DocumentKind;
   items: SalesDocument[];
@@ -805,11 +820,13 @@ function SalesDocuments({
   projects: ProjectRef[];
   rates: Record<string, number>;
   invoiceDefaults?: { includeBankDetails: boolean; bankDetails: string; notes: string };
+  payments: Payment[];
   search: string;
   setSearch: (value: string) => void;
   formOpen: boolean;
   setFormOpen: (value: boolean) => void;
   onChange: (items: SalesDocument[]) => void;
+  onPaymentsChange: (items: Payment[]) => void;
 }) {
   const [draft, setDraft] = useState({
     clientId: '',
@@ -833,6 +850,8 @@ function SalesDocuments({
   const [preview, setPreview] = useState<SalesDocument | null>(null);
   const [editingId, setEditingId] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [paymentTarget, setPaymentTarget] = useState<SalesDocument | null>(null);
+  const [paymentDraft, setPaymentDraft] = useState({ amount: '', date: today(), note: '' });
   const names = new Map(clients.map((client) => [client.id, clientLabel(client)]));
   const clientDetails = new Map(clients.map((client) => [client.id, client]));
   const projectNames = new Map(projects.map((project) => [project.id, project.project]));
@@ -880,11 +899,20 @@ function SalesDocuments({
     localStorage.removeItem('infonits-invoice-edit-id');
     localStorage.removeItem('infonits-invoice-view-id');
   }, [items, setFormOpen]);
-  const normalizedItems = items.map((item) => ({
-    ...item,
-    dueDate: item.kind === 'Invoice' ? invoiceDueDate(item) : item.dueDate,
-    status: currentDocumentStatus(item),
-  }));
+  const normalizedItems = items.map((item) => {
+    const paid = paidForInvoice(item.id, payments);
+    const total = documentTotal(item);
+    return {
+      ...item,
+      dueDate: item.kind === 'Invoice' ? invoiceDueDate(item) : item.dueDate,
+      status:
+        item.kind === 'Invoice' && paid > 0
+          ? paid >= total
+            ? 'Paid'
+            : 'Partial'
+          : currentDocumentStatus(item),
+    };
+  });
   const visible = normalizedItems.filter(
     (item) =>
       (statusFilter === 'All' || item.status === statusFilter) &&
@@ -894,12 +922,17 @@ function SalesDocuments({
   );
   const invoiceSummary = normalizedItems.reduce(
     (summary, item) => {
-      const value = lkr(documentTotal(item), item.exchangeRate);
+      const total = documentTotal(item);
+      const value = lkr(total, item.exchangeRate);
+      const received = lkr(Math.min(total, paidForInvoice(item.id, payments)), item.exchangeRate);
       return {
         billed: summary.billed + value,
-        paid: summary.paid + (item.status === 'Paid' ? value : 0),
+        paid: summary.paid + (received || (item.status === 'Paid' ? value : 0)),
         pending:
-          summary.pending + (item.status === 'Pending' || item.status === 'Sent' ? value : 0),
+          summary.pending +
+          (item.status === 'Pending' || item.status === 'Sent' || item.status === 'Partial'
+            ? Math.max(0, value - received)
+            : 0),
         overdue: summary.overdue + (item.status === 'Overdue' ? value : 0),
       };
     },
@@ -987,6 +1020,46 @@ function SalesDocuments({
     setEditingId(item.id);
     setFormOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function recordInvoicePayment(event: React.FormEvent) {
+    event.preventDefault();
+    if (!paymentTarget) return;
+    const amount = Number(paymentDraft.amount);
+    const total = documentTotal(paymentTarget);
+    const alreadyPaid = paidForInvoice(paymentTarget.id, payments);
+    const remaining = Math.max(0, total - alreadyPaid);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > remaining) return;
+    const receiptNumber = `REC-${new Date().getFullYear()}-${String(
+      payments.filter((item) => item.receiptNumber).length + 1,
+    ).padStart(3, '0')}`;
+    const nextPayments: Payment[] = [
+      {
+        id: crypto.randomUUID(),
+        type: 'Income',
+        category: 'Invoice payment',
+        note: paymentDraft.note.trim() || `${paymentTarget.number} payment`,
+        amount,
+        currency: paymentTarget.currency,
+        exchangeRate: paymentTarget.exchangeRate,
+        date: paymentDraft.date,
+        status: 'Paid',
+        invoiceId: paymentTarget.id,
+        projectId: paymentTarget.projectId,
+        receiptNumber,
+      },
+      ...payments,
+    ];
+    onPaymentsChange(nextPayments);
+    const nextPaid = alreadyPaid + amount;
+    onChange(
+      items.map((item) =>
+        item.id === paymentTarget.id
+          ? { ...item, status: nextPaid >= total ? 'Paid' : 'Partial' }
+          : item,
+      ),
+    );
+    setPaymentTarget(null);
+    setPaymentDraft({ amount: '', date: today(), note: '' });
   }
   return (
     <>
@@ -1213,7 +1286,7 @@ function SalesDocuments({
           />
           <div className="invoice-filter-chips">
             {(kind === 'Invoice'
-              ? ['All', 'Paid', 'Sent', 'Pending', 'Overdue']
+              ? ['All', 'Paid', 'Partial', 'Sent', 'Pending', 'Overdue']
               : ['All', 'Draft', 'Sent', 'Accepted', 'Declined']
             ).map((status) => (
               <button
@@ -1269,7 +1342,7 @@ function SalesDocuments({
                         }
                       >
                         {(kind === 'Invoice'
-                          ? ['Pending', 'Sent', 'Paid', 'Overdue']
+                          ? ['Pending', 'Sent', 'Partial', 'Paid', 'Overdue']
                           : ['Draft', 'Sent', 'Accepted', 'Declined']
                         ).map((s) => (
                           <option key={s}>{s}</option>
@@ -1297,6 +1370,26 @@ function SalesDocuments({
                       >
                         <Eye size={15} />
                       </button>
+                      {kind === 'Invoice' && (
+                        <button
+                          aria-label={`Record payment for ${item.number}`}
+                          title="Record payment"
+                          onClick={() => {
+                            const remaining = Math.max(
+                              0,
+                              documentTotal(item) - paidForInvoice(item.id, payments),
+                            );
+                            setPaymentTarget(item);
+                            setPaymentDraft({
+                              amount: String(remaining || ''),
+                              date: today(),
+                              note: '',
+                            });
+                          }}
+                        >
+                          <CircleDollarSign size={15} />
+                        </button>
+                      )}
                       {kind === 'Invoice' && (
                         <button
                           aria-label={`Download ${item.number} PDF`}
@@ -1334,6 +1427,100 @@ function SalesDocuments({
           project={projectNames.get(preview.projectId) ?? 'Professional services'}
           onClose={() => setPreview(null)}
         />
+      )}
+      {paymentTarget && (
+        <div
+          className="local-modal-layer"
+          role="presentation"
+          onMouseDown={() => setPaymentTarget(null)}
+        >
+          <section
+            className="local-modal invoice-payment-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="invoice-payment-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <span className="local-modal-icon">
+                  <CircleDollarSign size={19} />
+                </span>
+                <div>
+                  <h2 id="invoice-payment-title">Record payment</h2>
+                  <p>
+                    {paymentTarget.number} · {names.get(paymentTarget.clientId) ?? 'Unknown client'}
+                  </p>
+                </div>
+              </div>
+              <button aria-label="Close payment form" onClick={() => setPaymentTarget(null)}>
+                <X size={19} />
+              </button>
+            </header>
+            <form className="invoice-payment-form" onSubmit={recordInvoicePayment}>
+              <div className="invoice-payment-balance">
+                <span>Remaining balance</span>
+                <strong>
+                  {paymentTarget.currency}{' '}
+                  {Math.max(
+                    0,
+                    documentTotal(paymentTarget) - paidForInvoice(paymentTarget.id, payments),
+                  ).toLocaleString()}
+                </strong>
+              </div>
+              <label>
+                <span>Amount received *</span>
+                <input
+                  autoFocus
+                  required
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  max={Math.max(
+                    0,
+                    documentTotal(paymentTarget) - paidForInvoice(paymentTarget.id, payments),
+                  )}
+                  value={paymentDraft.amount}
+                  onChange={(event) =>
+                    setPaymentDraft({ ...paymentDraft, amount: event.target.value })
+                  }
+                />
+              </label>
+              <label>
+                <span>Payment date</span>
+                <input
+                  type="date"
+                  value={paymentDraft.date}
+                  onChange={(event) =>
+                    setPaymentDraft({ ...paymentDraft, date: event.target.value })
+                  }
+                />
+              </label>
+              <label className="wide">
+                <span>Reference / note</span>
+                <input
+                  value={paymentDraft.note}
+                  onChange={(event) =>
+                    setPaymentDraft({ ...paymentDraft, note: event.target.value })
+                  }
+                  placeholder="Bank transfer reference"
+                />
+              </label>
+              <footer>
+                <button
+                  type="button"
+                  className="button button-outline"
+                  onClick={() => setPaymentTarget(null)}
+                >
+                  Cancel
+                </button>
+                <button className="button button-primary" type="submit">
+                  <Check size={16} /> Save payment
+                </button>
+              </footer>
+            </form>
+          </section>
+        </div>
       )}
     </>
   );
@@ -1739,6 +1926,7 @@ function PaymentsModule({
   formOpen,
   setFormOpen,
   onChange,
+  onDocumentsChange,
 }: {
   items: Payment[];
   documents: SalesDocument[];
@@ -1748,6 +1936,7 @@ function PaymentsModule({
   formOpen: boolean;
   setFormOpen: (v: boolean) => void;
   onChange: (v: Payment[]) => void;
+  onDocumentsChange: (v: SalesDocument[]) => void;
 }) {
   const [draft, setDraft] = useState({
     type: 'Income' as Payment['type'],
@@ -1761,7 +1950,12 @@ function PaymentsModule({
   const automaticRows = useMemo<Payment[]>(
     () => [
       ...documents
-        .filter((item) => item.kind === 'Invoice' && item.status === 'Paid')
+        .filter(
+          (item) =>
+            item.kind === 'Invoice' &&
+            item.status === 'Paid' &&
+            !items.some((payment) => payment.invoiceId === item.id),
+        )
         .map((item) => ({
           id: `invoice-${item.id}`,
           type: 'Income' as const,
@@ -1798,7 +1992,7 @@ function PaymentsModule({
           status: 'Paid' as const,
         })),
     ],
-    [documents, operatingExpenses, projects],
+    [documents, items, operatingExpenses, projects],
   );
   const ledgerRows = useMemo(
     () =>
@@ -1826,11 +2020,28 @@ function PaymentsModule({
   const cashTotal = totals.income + totals.expense;
   const incomeShare = cashTotal ? Math.round((totals.income / cashTotal) * 100) : 0;
   const expenseShare = cashTotal ? 100 - incomeShare : 0;
+  function changePayments(nextPayments: Payment[]) {
+    onChange(nextPayments);
+    onDocumentsChange(
+      documents.map((document) => {
+        const wasLinked = items.some((payment) => payment.invoiceId === document.id);
+        const isLinked = nextPayments.some((payment) => payment.invoiceId === document.id);
+        if (!wasLinked && !isLinked) return document;
+        const paid = paidForInvoice(document.id, nextPayments);
+        const total = documentTotal(document);
+        const due = invoiceDueDate(document) < today();
+        return {
+          ...document,
+          status: paid >= total ? 'Paid' : paid > 0 ? 'Partial' : due ? 'Overdue' : 'Pending',
+        };
+      }),
+    );
+  }
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const amount = Number(draft.amount);
     if (!draft.note.trim() || amount <= 0) return;
-    onChange([
+    changePayments([
       {
         id: crypto.randomUUID(),
         ...draft,
@@ -2013,7 +2224,9 @@ function PaymentsModule({
                     </td>
                     <td>
                       {item.category}
-                      <small>{item.manual ? 'Additional record' : 'Automatic'}</small>
+                      <small>
+                        {item.receiptNumber ?? (item.manual ? 'Additional record' : 'Automatic')}
+                      </small>
                     </td>
                     <td>{item.note}</td>
                     <td>
@@ -2021,7 +2234,7 @@ function PaymentsModule({
                         <button
                           className={`office-status-button ${item.status.toLowerCase()}`}
                           onClick={() =>
-                            onChange(
+                            changePayments(
                               items.map((x) =>
                                 x.id === item.id
                                   ? { ...x, status: x.status === 'Paid' ? 'Pending' : 'Paid' }
@@ -2050,7 +2263,7 @@ function PaymentsModule({
                         <button
                           className="local-delete"
                           aria-label="Delete record"
-                          onClick={() => onChange(items.filter((x) => x.id !== item.id))}
+                          onClick={() => changePayments(items.filter((x) => x.id !== item.id))}
                         >
                           <Trash2 size={15} />
                         </button>

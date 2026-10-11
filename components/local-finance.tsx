@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowDownRight,
   ArrowUpRight,
+  AlertTriangle,
   Bell,
   Bot,
   BriefcaseBusiness,
@@ -44,7 +45,14 @@ import { LocalCloudSync } from './local-cloud-sync';
 import { InfonitsAssistant, type AssistantAction } from './infonits-assistant';
 
 type Section =
-  'dashboard' | 'assistant' | 'projects' | 'clients' | 'expenses' | 'settings' | OfficeSection;
+  | 'dashboard'
+  | 'attention'
+  | 'assistant'
+  | 'projects'
+  | 'clients'
+  | 'expenses'
+  | 'settings'
+  | OfficeSection;
 export type WorkspacePreferences = {
   businessName: string;
   invoiceBankDefault: boolean;
@@ -115,6 +123,9 @@ type OfficeOverview = {
     amount: number;
     currency: string;
     exchangeRate: number;
+    invoiceId?: string;
+    projectId?: string;
+    receiptNumber?: string;
   }>;
   renewals: Array<{
     id: string;
@@ -365,15 +376,25 @@ export function LocalFinance() {
   const paidInvoiceTotals = useMemo(() => {
     const values = new Map<string, number>();
     officeOverview.documents
-      .filter((item) => item.kind === 'Invoice' && item.status === 'Paid' && item.projectId)
+      .filter((item) => item.kind === 'Invoice' && item.projectId)
       .forEach((item) => {
-        values.set(
-          item.projectId,
-          (values.get(item.projectId) ?? 0) + localValue(item.amount, item.exchangeRate),
+        const linked = officeOverview.payments.filter(
+          (payment) =>
+            payment.invoiceId === item.id && payment.type === 'Income' && payment.status === 'Paid',
         );
+        const received = linked.length
+          ? linked.reduce(
+              (sum, payment) => sum + localValue(payment.amount, payment.exchangeRate),
+              0,
+            )
+          : item.status === 'Paid'
+            ? localValue(item.amount, item.exchangeRate)
+            : 0;
+        if (!received) return;
+        values.set(item.projectId, (values.get(item.projectId) ?? 0) + received);
       });
     return values;
-  }, [officeOverview.documents]);
+  }, [officeOverview.documents, officeOverview.payments]);
 
   const effectiveRows = useMemo(
     () =>
@@ -412,7 +433,9 @@ export function LocalFinance() {
       0,
     );
     const additionalIncome = officeOverview.payments
-      .filter((payment) => payment.status === 'Paid' && payment.type === 'Income')
+      .filter(
+        (payment) => payment.status === 'Paid' && payment.type === 'Income' && !payment.invoiceId,
+      )
       .reduce((sum, payment) => sum + localValue(payment.amount, payment.exchangeRate), 0);
     const additionalExpenses = officeOverview.payments
       .filter((payment) => payment.status === 'Paid' && payment.type === 'Expense')
@@ -949,6 +972,14 @@ export function LocalFinance() {
               <i className="local-ai-nav-dot" />
             </button>
             <button
+              className={section === 'attention' ? 'active' : ''}
+              onClick={() => changeSection('attention')}
+            >
+              <AlertTriangle size={19} />
+              <span>Attention center</span>
+              <b>{notifications.length}</b>
+            </button>
+            <button
               className={section === 'calendar' ? 'active' : ''}
               onClick={() => changeSection('calendar')}
             >
@@ -1205,6 +1236,10 @@ export function LocalFinance() {
             />
           )}
 
+          {section === 'attention' && (
+            <AttentionCenter office={officeOverview} clients={clients} onSection={changeSection} />
+          )}
+
           {section === 'settings' && (
             <WorkspaceSettings preferences={preferences} onChange={setPreferences} />
           )}
@@ -1320,6 +1355,7 @@ export function LocalFinance() {
               <ClientList
                 clients={clients}
                 rows={effectiveRows}
+                office={officeOverview}
                 onAdd={() => setClientFormOpen(true)}
                 onUpdate={(id, patch) =>
                   setClients((current) =>
@@ -1377,9 +1413,15 @@ export function LocalFinance() {
             </>
           )}
 
-          {!['dashboard', 'assistant', 'projects', 'clients', 'expenses', 'settings'].includes(
-            section,
-          ) && (
+          {![
+            'dashboard',
+            'attention',
+            'assistant',
+            'projects',
+            'clients',
+            'expenses',
+            'settings',
+          ].includes(section) && (
             <LocalOfficeModule
               section={section as OfficeSection}
               clients={clients}
@@ -1776,6 +1818,178 @@ function ProjectDetail({
   );
 }
 
+function AttentionCenter({
+  office,
+  clients,
+  onSection,
+}: {
+  office: OfficeOverview;
+  clients: LocalClient[];
+  onSection: (section: Section) => void;
+}) {
+  const [filter, setFilter] = useState<'All' | 'Urgent' | 'Upcoming'>('All');
+  const now = new Date(`${today()}T00:00:00`).getTime();
+  const day = 86_400_000;
+  const clientNames = new Map(clients.map((client) => [client.id, clientLabel(client)]));
+  const invoicePaid = (invoiceId: string) =>
+    office.payments
+      .filter(
+        (payment) =>
+          payment.invoiceId === invoiceId && payment.type === 'Income' && payment.status === 'Paid',
+      )
+      .reduce((sum, payment) => sum + localValue(payment.amount, payment.exchangeRate), 0);
+  const items = [
+    ...office.documents
+      .filter((item) => item.kind === 'Invoice' && item.status !== 'Paid')
+      .map((item) => {
+        const due = item.dueDate ? new Date(`${item.dueDate}T00:00:00`).getTime() : now;
+        const balance = Math.max(
+          0,
+          localValue(item.amount, item.exchangeRate) - invoicePaid(item.id),
+        );
+        const urgent = due < now;
+        return {
+          id: `invoice-${item.id}`,
+          title: urgent ? `${item.number} is overdue` : `${item.number} needs payment`,
+          detail: `${clientNames.get(item.clientId ?? '') ?? 'Unknown client'} · ${compactMoney(balance)} balance`,
+          date: due,
+          dateLabel: urgent
+            ? `${Math.ceil((now - due) / day)} days overdue`
+            : `Due ${shortDate(item.dueDate)}`,
+          priority: urgent ? ('Urgent' as const) : ('Upcoming' as const),
+          section: 'invoices' as Section,
+        };
+      }),
+    ...office.payments
+      .filter((payment) => payment.status === 'Pending')
+      .map((payment) => ({
+        id: `payment-${payment.id}`,
+        title: payment.note || 'Pending finance record',
+        detail: `${payment.category} · ${payment.currency} ${payment.amount.toLocaleString()}`,
+        date: payment.date ? new Date(`${payment.date}T00:00:00`).getTime() : now,
+        dateLabel: `Scheduled ${shortDate(payment.date)}`,
+        priority: 'Upcoming' as const,
+        section: 'payments' as Section,
+      })),
+    ...office.renewals.flatMap((renewal) =>
+      [
+        { label: 'Domain', date: renewal.domainDue },
+        { label: 'Hosting', date: renewal.hostingDue },
+      ]
+        .filter(({ date }) => date && new Date(`${date}T00:00:00`).getTime() - now <= 30 * day)
+        .map(({ label, date }) => {
+          const due = new Date(`${date}T00:00:00`).getTime();
+          const urgent = due < now;
+          return {
+            id: `renewal-${renewal.id}-${label}`,
+            title: `${renewal.website} ${label.toLowerCase()} renewal`,
+            detail: urgent ? 'Renewal is overdue' : 'Renew within 30 days',
+            date: due,
+            dateLabel: urgent
+              ? `${Math.ceil((now - due) / day)} days overdue`
+              : `Due ${shortDate(date)}`,
+            priority: urgent ? ('Urgent' as const) : ('Upcoming' as const),
+            section: 'renewals' as Section,
+          };
+        }),
+    ),
+    ...office.events
+      .filter((event) => {
+        const time = new Date(`${event.date}T00:00:00`).getTime();
+        return time >= now && time - now <= 7 * day;
+      })
+      .map((event) => ({
+        id: `event-${event.id}`,
+        title: event.title,
+        detail: `${event.type} this week`,
+        date: new Date(`${event.date}T00:00:00`).getTime(),
+        dateLabel: shortDate(event.date),
+        priority: 'Upcoming' as const,
+        section: 'calendar' as Section,
+      })),
+  ].toSorted((left, right) => left.date - right.date);
+  const visible = items.filter((item) => filter === 'All' || item.priority === filter);
+  const urgentCount = items.filter((item) => item.priority === 'Urgent').length;
+  return (
+    <>
+      <PageHeading
+        eyebrow="PRIORITIES"
+        title="Attention center"
+        subtitle="Everything overdue, pending or coming up across your workspace."
+      >
+        <button className="button button-outline" onClick={() => onSection('assistant')}>
+          <Sparkles size={16} /> Ask Infonits GPT
+        </button>
+      </PageHeading>
+      <section className="attention-summary">
+        <article className="urgent">
+          <AlertTriangle size={19} />
+          <span>
+            <small>Urgent</small>
+            <strong>{urgentCount}</strong>
+          </span>
+        </article>
+        <article>
+          <Clock3 size={19} />
+          <span>
+            <small>Upcoming</small>
+            <strong>{items.length - urgentCount}</strong>
+          </span>
+        </article>
+        <article>
+          <ShieldCheck size={19} />
+          <span>
+            <small>Total attention</small>
+            <strong>{items.length}</strong>
+          </span>
+        </article>
+      </section>
+      <section className="attention-center-card">
+        <header>
+          <div>
+            <strong>Priority queue</strong>
+            <small>Ordered by due date</small>
+          </div>
+          <div>
+            {(['All', 'Urgent', 'Upcoming'] as const).map((item) => (
+              <button
+                key={item}
+                className={filter === item ? 'active' : ''}
+                onClick={() => setFilter(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </header>
+        {visible.length ? (
+          <div className="attention-center-list">
+            {visible.map((item) => (
+              <button key={item.id} onClick={() => onSection(item.section)}>
+                <i className={item.priority.toLowerCase()} />
+                <div>
+                  <strong>{item.title}</strong>
+                  <small>{item.detail}</small>
+                </div>
+                <span>
+                  {item.dateLabel}
+                  <ArrowUpRight size={14} />
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="attention-center-empty">
+            <ShieldCheck size={25} />
+            <strong>Nothing needs attention</strong>
+            <p>Your filtered queue is clear.</p>
+          </div>
+        )}
+      </section>
+    </>
+  );
+}
+
 function Dashboard({
   totals,
   rows,
@@ -1861,8 +2075,16 @@ function Dashboard({
   const outstandingInvoices = office.documents.filter(
     (item) => item.kind === 'Invoice' && item.status !== 'Paid',
   );
+  const invoiceReceived = (invoiceId: string) =>
+    office.payments
+      .filter(
+        (payment) =>
+          payment.invoiceId === invoiceId && payment.type === 'Income' && payment.status === 'Paid',
+      )
+      .reduce((sum, payment) => sum + localValue(payment.amount, payment.exchangeRate), 0);
   const outstandingTotal = outstandingInvoices.reduce(
-    (sum, item) => sum + localValue(item.amount, item.exchangeRate),
+    (sum, item) =>
+      sum + Math.max(0, localValue(item.amount, item.exchangeRate) - invoiceReceived(item.id)),
     0,
   );
   const outstandingClientCount = new Set(
@@ -1968,8 +2190,8 @@ function Dashboard({
               {outstandingInvoices.length} invoice{outstandingInvoices.length === 1 ? '' : 's'}
               {outstandingClientCount ? ` from ${outstandingClientCount} clients` : ''}
             </span>
-            <button className="button button-outline" onClick={() => onSection('invoices')}>
-              View outstanding <ArrowUpRight size={15} />
+            <button className="button button-outline" onClick={() => onSection('attention')}>
+              Open attention center <ArrowUpRight size={15} />
             </button>
           </div>
           {actions.length ? (
@@ -2004,7 +2226,7 @@ function Dashboard({
             </button>
           </div>
           <div className="local-invoice-filters">
-            {['All', 'Paid', 'Sent', 'Pending', 'Overdue'].map((status) => (
+            {['All', 'Paid', 'Partial', 'Sent', 'Pending', 'Overdue'].map((status) => (
               <button
                 key={status}
                 className={invoiceFilter === status ? 'active' : ''}
@@ -2644,20 +2866,43 @@ function ClientForm({
 function ClientList({
   clients,
   rows,
+  office,
   onAdd,
   onUpdate,
   onRemove,
 }: {
   clients: LocalClient[];
   rows: LocalRow[];
+  office: OfficeOverview;
   onAdd: () => void;
   onUpdate: (id: string, patch: Partial<LocalClient>) => void;
   onRemove: (id: string) => void;
 }) {
   const [editingId, setEditingId] = useState('');
   const [selectedId, setSelectedId] = useState('');
+  const [workspaceTab, setWorkspaceTab] = useState<'overview' | 'billing' | 'activity'>('overview');
   const selected = clients.find((client) => client.id === selectedId);
   const selectedRows = rows.filter((row) => row.clientId === selectedId);
+  const selectedDocuments = office.documents.filter((item) => item.clientId === selectedId);
+  const selectedInvoiceIds = new Set(selectedDocuments.map((item) => item.id));
+  const selectedPayments = office.payments.filter(
+    (item) => item.invoiceId && selectedInvoiceIds.has(item.invoiceId),
+  );
+  const selectedBilled = selectedDocuments
+    .filter((item) => item.kind === 'Invoice')
+    .reduce((sum, item) => sum + localValue(item.amount, item.exchangeRate), 0);
+  const selectedReceived =
+    selectedPayments
+      .filter((item) => item.status === 'Paid')
+      .reduce((sum, item) => sum + localValue(item.amount, item.exchangeRate), 0) +
+    selectedDocuments
+      .filter(
+        (document) =>
+          document.kind === 'Invoice' &&
+          document.status === 'Paid' &&
+          !selectedPayments.some((payment) => payment.invoiceId === document.id),
+      )
+      .reduce((sum, document) => sum + localValue(document.amount, document.exchangeRate), 0);
   if (!clients.length)
     return (
       <section className="local-empty-clients">
@@ -2710,6 +2955,7 @@ function ClientList({
                   onClick={() => {
                     setSelectedId(client.id);
                     setEditingId('');
+                    setWorkspaceTab('overview');
                   }}
                 >
                   <Eye size={16} />
@@ -2720,6 +2966,7 @@ function ClientList({
                   onClick={() => {
                     setSelectedId(client.id);
                     setEditingId(client.id);
+                    setWorkspaceTab('overview');
                   }}
                 >
                   <Pencil size={16} />
@@ -2755,8 +3002,8 @@ function ClientList({
                   <Users size={19} />
                 </span>
                 <div>
-                  <h2 id="client-detail-title">{selected.name}</h2>
-                  <p>{selected.company || 'Independent client'}</p>
+                  <h2 id="client-detail-title">{selected.company || selected.name}</h2>
+                  <p>{selected.name} · Company workspace</p>
                 </div>
               </div>
               <button aria-label="Close client details" onClick={() => setSelectedId('')}>
@@ -2817,45 +3064,159 @@ function ClientList({
               </div>
             ) : (
               <div className="local-client-profile">
-                <div className="local-client-profile-facts">
+                <div className="client-workspace-summary">
                   <span>
-                    <small>Business</small>
-                    <strong>{selected.company || 'Independent client'}</strong>
+                    <small>Projects</small>
+                    <strong>{selectedRows.length}</strong>
                   </span>
                   <span>
-                    <small>Country</small>
+                    <small>Invoices</small>
                     <strong>
-                      {countryFlags[selected.country] ?? '🌐'} {selected.country || 'Not set'}
+                      {selectedDocuments.filter((item) => item.kind === 'Invoice').length}
                     </strong>
                   </span>
                   <span>
-                    <small>Email</small>
-                    <strong>{selected.email || 'Not added'}</strong>
+                    <small>Billed</small>
+                    <strong>{compactMoney(selectedBilled)}</strong>
                   </span>
                   <span>
-                    <small>Phone</small>
-                    <strong>{selected.phone || 'Not added'}</strong>
+                    <small>Received</small>
+                    <strong>{compactMoney(selectedReceived)}</strong>
                   </span>
                 </div>
-                <div className="local-client-profile-projects">
-                  <div>
-                    <strong>Projects</strong>
-                    <small>{selectedRows.length} connected</small>
-                  </div>
-                  {selectedRows.length ? (
-                    selectedRows.map((row) => (
-                      <button key={row.id}>
-                        <span>
-                          <b>{row.project}</b>
-                          <small>{row.status}</small>
-                        </span>
-                        <strong>{money(localValue(row.value, row.exchangeRate))}</strong>
-                      </button>
-                    ))
-                  ) : (
-                    <p>No projects connected.</p>
-                  )}
+                <div className="client-workspace-tabs" role="tablist">
+                  {(['overview', 'billing', 'activity'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      role="tab"
+                      aria-selected={workspaceTab === tab}
+                      className={workspaceTab === tab ? 'active' : ''}
+                      onClick={() => setWorkspaceTab(tab)}
+                    >
+                      {tab[0].toUpperCase() + tab.slice(1)}
+                    </button>
+                  ))}
                 </div>
+                {workspaceTab === 'overview' && (
+                  <>
+                    <div className="local-client-profile-facts">
+                      <span>
+                        <small>Contact</small>
+                        <strong>{selected.name}</strong>
+                      </span>
+                      <span>
+                        <small>Country</small>
+                        <strong>
+                          {countryFlags[selected.country] ?? '🌐'} {selected.country || 'Not set'}
+                        </strong>
+                      </span>
+                      <span>
+                        <small>Email</small>
+                        <strong>{selected.email || 'Not added'}</strong>
+                      </span>
+                      <span>
+                        <small>Phone</small>
+                        <strong>{selected.phone || 'Not added'}</strong>
+                      </span>
+                    </div>
+                    <div className="local-client-profile-projects">
+                      <div>
+                        <strong>Projects</strong>
+                        <small>{selectedRows.length} connected</small>
+                      </div>
+                      {selectedRows.length ? (
+                        selectedRows.map((row) => (
+                          <button key={row.id}>
+                            <span>
+                              <b>{row.project}</b>
+                              <small>{row.status}</small>
+                            </span>
+                            <strong>{money(localValue(row.value, row.exchangeRate))}</strong>
+                          </button>
+                        ))
+                      ) : (
+                        <p>No projects connected.</p>
+                      )}
+                    </div>
+                  </>
+                )}
+                {workspaceTab === 'billing' && (
+                  <div className="client-workspace-ledger">
+                    {selectedDocuments.length ? (
+                      selectedDocuments.map((document) => {
+                        const received = selectedPayments
+                          .filter(
+                            (payment) =>
+                              payment.invoiceId === document.id && payment.status === 'Paid',
+                          )
+                          .reduce((sum, payment) => sum + payment.amount, 0);
+                        return (
+                          <article key={document.id}>
+                            <div>
+                              <strong>{document.number}</strong>
+                              <small>
+                                {document.kind} · {shortDate(document.dueDate)}
+                              </small>
+                            </div>
+                            <span>
+                              <b>
+                                {document.currency} {document.amount.toLocaleString()}
+                              </b>
+                              <small>
+                                {received > 0
+                                  ? `${document.currency} ${received.toLocaleString()} received`
+                                  : document.status}
+                              </small>
+                            </span>
+                          </article>
+                        );
+                      })
+                    ) : (
+                      <p>No invoices or quotations connected.</p>
+                    )}
+                  </div>
+                )}
+                {workspaceTab === 'activity' && (
+                  <div className="client-workspace-timeline">
+                    {[
+                      ...selectedPayments.map((payment) => ({
+                        id: payment.id,
+                        date: payment.date,
+                        title: payment.receiptNumber || 'Payment received',
+                        detail: `${payment.currency} ${payment.amount.toLocaleString()}`,
+                      })),
+                      ...selectedDocuments.map((document) => ({
+                        id: document.id,
+                        date: document.dueDate,
+                        title: `${document.kind} ${document.number}`,
+                        detail: document.status,
+                      })),
+                      ...selectedRows.map((row) => ({
+                        id: row.id,
+                        date: row.createdAt,
+                        title: row.project,
+                        detail: 'Project created',
+                      })),
+                    ]
+                      .toSorted((left, right) => right.date.localeCompare(left.date))
+                      .map((item) => (
+                        <article key={`${item.id}-${item.title}`}>
+                          <i />
+                          <div>
+                            <strong>{item.title}</strong>
+                            <small>
+                              {item.detail} · {shortDate(item.date)}
+                            </small>
+                          </div>
+                        </article>
+                      ))}
+                    {!selectedRows.length &&
+                    !selectedDocuments.length &&
+                    !selectedPayments.length ? (
+                      <p>No activity yet.</p>
+                    ) : null}
+                  </div>
+                )}
                 <button className="button button-primary" onClick={() => setEditingId(selected.id)}>
                   <Pencil size={16} /> Edit client
                 </button>
