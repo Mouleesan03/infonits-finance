@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowUp,
   Bot,
@@ -8,9 +8,27 @@ import {
   FilePlus2,
   Globe2,
   LoaderCircle,
+  Mic,
   Search,
+  Square,
   Sparkles,
+  Volume2,
 } from 'lucide-react';
+
+type SpeechRecognitionResultEventLike = {
+  results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }>;
+};
+type SpeechRecognitionLike = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionResultEventLike) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 export type AssistantAction =
   | { type: 'none' }
@@ -122,9 +140,11 @@ function FormattedMessage({ text }: { text: string }) {
 export function InfonitsAssistant({
   context,
   onApply,
+  voice,
 }: {
   context: object;
   onApply: (action: Exclude<AssistantAction, { type: 'none' }>) => string;
+  voice: { enabled: boolean; autoSpeak: boolean; rate: number; language: string };
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -136,6 +156,66 @@ export function InfonitsAssistant({
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+
+  useEffect(
+    () => () => {
+      recognitionRef.current?.stop();
+      window.speechSynthesis?.cancel();
+    },
+    [],
+  );
+
+  function speak(text: string) {
+    if (!voice.enabled || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(
+      text.replace(/\*\*/g, '').replace(/[📁💰📊👥🧾⏳⚠️✅•]/g, ' '),
+    );
+    utterance.lang = voice.language;
+    utterance.rate = voice.rate;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function toggleListening() {
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const speechWindow = window as typeof window & {
+      SpeechRecognition?: SpeechRecognitionConstructor;
+      webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    };
+    const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      setError('Voice input is not supported by this browser. You can still type your request.');
+      return;
+    }
+    const recognition = new Recognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = voice.language;
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((result) => result[0]?.transcript ?? '')
+        .join(' ')
+        .trim();
+      if (transcript) {
+        setInput(transcript);
+        void send(transcript);
+      }
+    };
+    recognition.onerror = () => {
+      setError('I could not hear that clearly. Tap the microphone and try again.');
+      setListening(false);
+    };
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+    setError('');
+    setListening(true);
+    recognition.start();
+  }
 
   async function send(message = input) {
     const clean = message.trim();
@@ -176,6 +256,7 @@ export function InfonitsAssistant({
           sources: data.sources,
         },
       ]);
+      if (voice.autoSpeak) speak(data.reply);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Infonits GPT is unavailable.');
     } finally {
@@ -203,7 +284,7 @@ export function InfonitsAssistant({
           <h1>Infonits GPT</h1>
           <p>Analyse, create, research and manage your workspace.</p>
         </div>
-        <i>Claude connected</i>
+        <i>{voice.enabled ? 'Voice assistant ready' : 'Claude connected'}</i>
       </header>
       <div className="assistant-body">
         <div className="assistant-messages" aria-live="polite">
@@ -216,6 +297,16 @@ export function InfonitsAssistant({
               )}
               <div>
                 <FormattedMessage text={message.text} />
+                {message.role === 'assistant' && voice.enabled && (
+                  <button
+                    type="button"
+                    className="assistant-speak-button"
+                    aria-label="Read this reply aloud"
+                    onClick={() => speak(message.text)}
+                  >
+                    <Volume2 size={14} /> Listen
+                  </button>
+                )}
                 {message.sources && message.sources.length > 0 && (
                   <div className="assistant-sources" aria-label="Web sources">
                     <strong>Sources</strong>
@@ -297,6 +388,16 @@ export function InfonitsAssistant({
             placeholder="Ask Infonits GPT or describe a task…"
             rows={2}
           />
+          {voice.enabled && (
+            <button
+              type="button"
+              className={`assistant-mic-button ${listening ? 'listening' : ''}`}
+              aria-label={listening ? 'Stop listening' : 'Speak to Infonits GPT'}
+              onClick={toggleListening}
+            >
+              {listening ? <Square size={15} /> : <Mic size={18} />}
+            </button>
+          )}
           <button type="submit" disabled={busy || !input.trim()} aria-label="Send message">
             <ArrowUp size={18} />
           </button>

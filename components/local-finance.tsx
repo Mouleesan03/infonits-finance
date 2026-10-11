@@ -27,11 +27,13 @@ import {
   Plus,
   ReceiptText,
   RefreshCw,
+  Settings2,
   Sparkles,
   ShieldCheck,
   Trash2,
   TrendingUp,
   UserPlus,
+  UserCircle2,
   Users,
   UsersRound,
   WalletCards,
@@ -41,7 +43,19 @@ import { LocalOfficeModule, type OfficeSection } from './local-office-modules';
 import { LocalCloudSync } from './local-cloud-sync';
 import { InfonitsAssistant, type AssistantAction } from './infonits-assistant';
 
-type Section = 'dashboard' | 'assistant' | 'projects' | 'clients' | 'expenses' | OfficeSection;
+type Section =
+  'dashboard' | 'assistant' | 'projects' | 'clients' | 'expenses' | 'settings' | OfficeSection;
+export type WorkspacePreferences = {
+  businessName: string;
+  invoiceBankDefault: boolean;
+  bankDetails: string;
+  showPaymentTerms: boolean;
+  paymentTerms: string;
+  voiceEnabled: boolean;
+  autoSpeak: boolean;
+  speechRate: number;
+  voiceLanguage: string;
+};
 type LocalClient = {
   id: string;
   name: string;
@@ -156,6 +170,17 @@ const emptyExpense = {
   currency: 'LKR',
   date: today(),
 };
+const defaultPreferences: WorkspacePreferences = {
+  businessName: 'Infonits (Pvt) Ltd',
+  invoiceBankDefault: false,
+  bankDetails: '',
+  showPaymentTerms: true,
+  paymentTerms: 'Payment is due within 10 days of the invoice date.',
+  voiceEnabled: true,
+  autoSpeak: true,
+  speechRate: 1,
+  voiceLanguage: 'en-US',
+};
 const money = (value: number) =>
   new Intl.NumberFormat('en-LK', {
     style: 'currency',
@@ -180,7 +205,7 @@ const shortDate = (value: string, includeYear = true) => {
 };
 const localValue = (value: number, rate: number) => value * rate;
 const clientLabel = (client: Pick<LocalClient, 'name' | 'company'>) =>
-  client.company.trim() ? `${client.company} · ${client.name}` : client.name;
+  client.company.trim() || client.name;
 
 function readOfficeOverview(): OfficeOverview {
   try {
@@ -227,6 +252,8 @@ export function LocalFinance() {
   const [officeFormSignal, setOfficeFormSignal] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [seenNotifications, setSeenNotifications] = useState<string[]>([]);
+  const [preferences, setPreferences] = useState<WorkspacePreferences>(defaultPreferences);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -242,6 +269,7 @@ export function LocalFinance() {
             expenses?: LocalExpense[];
             fxRates?: Record<string, number>;
             fxDate?: string;
+            preferences?: Partial<WorkspacePreferences>;
           })
         : null;
       savedDate = parsed?.fxDate ?? '';
@@ -272,6 +300,7 @@ export function LocalFinance() {
       setExpenses(parsed?.expenses ?? []);
       setFxRates(parsed?.fxRates ?? { LKR: 1 });
       setFxDate(savedDate);
+      setPreferences({ ...defaultPreferences, ...parsed?.preferences });
       setFxStatus(savedDate ? 'saved' : 'loading');
       setOfficeOverview(readOfficeOverview());
       setSeenNotifications(
@@ -318,10 +347,10 @@ export function LocalFinance() {
     if (loaded)
       localStorage.setItem(
         storageKey,
-        JSON.stringify({ month, rows, clients, expenses, fxRates, fxDate }),
+        JSON.stringify({ month, rows, clients, expenses, fxRates, fxDate, preferences }),
       );
     window.dispatchEvent(new Event('infonits:local-change'));
-  }, [clients, expenses, fxDate, fxRates, loaded, month, rows]);
+  }, [clients, expenses, fxDate, fxRates, loaded, month, preferences, rows]);
 
   useEffect(() => {
     const refreshOfficeOverview = () => setOfficeOverview(readOfficeOverview());
@@ -451,7 +480,12 @@ export function LocalFinance() {
         .slice(0, 20)
         .map((document) => ({
           number: document.number,
-          client: clients.find((client) => client.id === document.clientId)?.name ?? 'Unknown',
+          client: clientLabel(
+            clients.find((client) => client.id === document.clientId) ?? {
+              name: 'Unknown',
+              company: '',
+            },
+          ),
           status: document.status,
           amount: document.amount,
           currency: document.currency,
@@ -503,6 +537,7 @@ export function LocalFinance() {
     setSection(next);
     setMenuOpen(false);
     setNotificationsOpen(false);
+    setProfileOpen(false);
   }
 
   function rateFor(currency: string) {
@@ -643,7 +678,7 @@ export function LocalFinance() {
         },
         ...current,
       ]);
-      return `${action.project} was added to Projects${client ? ` for ${client.name}` : ''}.`;
+      return `${action.project} was added to Projects${client ? ` for ${clientLabel(client)}` : ''}.`;
     }
     if (action.type === 'create_expense') {
       setExpenses((current) => [
@@ -711,14 +746,15 @@ export function LocalFinance() {
         issueDate: today(),
         description: action.description,
         notes: action.notes,
-        includeBankDetails: action.includeBankDetails,
-        bankDetails: action.bankDetails,
+        includeBankDetails: action.includeBankDetails || preferences.invoiceBankDefault,
+        bankDetails:
+          action.bankDetails || (preferences.invoiceBankDefault ? preferences.bankDetails : ''),
       } as OfficeOverview['documents'][number]);
       saved.documents = documents;
       localStorage.setItem(officeStorageKey, JSON.stringify(saved));
       setOfficeOverview(readOfficeOverview());
       window.dispatchEvent(new Event('infonits:local-change'));
-      return `${kind} ${prefix}-${new Date().getFullYear()}-${String(next).padStart(3, '0')} was created for ${client.name}.`;
+      return `${kind} ${prefix}-${new Date().getFullYear()}-${String(next).padStart(3, '0')} was created for ${clientLabel(client)}.`;
     }
     if (action.type === 'create_letter') {
       letters.unshift({
@@ -781,6 +817,9 @@ export function LocalFinance() {
         projectId: row.id,
         amount: String(row.value),
         currency: row.currency,
+        notes: preferences.showPaymentTerms ? preferences.paymentTerms : '',
+        includeBankDetails: preferences.invoiceBankDefault,
+        bankDetails: preferences.invoiceBankDefault ? preferences.bankDetails : '',
       }),
     );
     setSection('invoices');
@@ -1011,6 +1050,13 @@ export function LocalFinance() {
               <ShieldCheck size={19} />
               <span>Users & roles</span>
             </button>
+            <button
+              className={section === 'settings' ? 'active' : ''}
+              onClick={() => changeSection('settings')}
+            >
+              <Settings2 size={19} />
+              <span>Settings</span>
+            </button>
           </SidebarGroup>
         </nav>
         <div className="local-sidebar-note">
@@ -1107,6 +1153,26 @@ export function LocalFinance() {
               )}
             </div>
             <LocalCloudSync />
+            <div className="local-profile-wrap">
+              <button
+                type="button"
+                className="local-profile-button"
+                aria-label="Open profile settings"
+                aria-expanded={profileOpen}
+                onClick={() => setProfileOpen((open) => !open)}
+              >
+                <UserCircle2 size={19} />
+              </button>
+              {profileOpen && (
+                <section className="local-profile-menu" aria-label="Profile menu">
+                  <strong>{preferences.businessName || 'Workspace'}</strong>
+                  <small>Workspace administrator</small>
+                  <button type="button" onClick={() => changeSection('settings')}>
+                    <Settings2 size={15} /> Profile & settings
+                  </button>
+                </section>
+              )}
+            </div>
           </div>
         </header>
 
@@ -1127,7 +1193,20 @@ export function LocalFinance() {
           )}
 
           {section === 'assistant' && (
-            <InfonitsAssistant context={assistantContext} onApply={applyAssistantAction} />
+            <InfonitsAssistant
+              context={assistantContext}
+              onApply={applyAssistantAction}
+              voice={{
+                enabled: preferences.voiceEnabled,
+                autoSpeak: preferences.autoSpeak,
+                rate: preferences.speechRate,
+                language: preferences.voiceLanguage,
+              }}
+            />
+          )}
+
+          {section === 'settings' && (
+            <WorkspaceSettings preferences={preferences} onChange={setPreferences} />
           )}
 
           {section === 'projects' && (
@@ -1298,7 +1377,9 @@ export function LocalFinance() {
             </>
           )}
 
-          {!['dashboard', 'assistant', 'projects', 'clients', 'expenses'].includes(section) && (
+          {!['dashboard', 'assistant', 'projects', 'clients', 'expenses', 'settings'].includes(
+            section,
+          ) && (
             <LocalOfficeModule
               section={section as OfficeSection}
               clients={clients}
@@ -1306,6 +1387,11 @@ export function LocalFinance() {
               expenses={expenses}
               rates={fxRates}
               openFormSignal={officeFormSignal}
+              invoiceDefaults={{
+                includeBankDetails: preferences.invoiceBankDefault,
+                bankDetails: preferences.bankDetails,
+                notes: preferences.showPaymentTerms ? preferences.paymentTerms : '',
+              }}
             />
           )}
         </main>
@@ -1370,6 +1456,144 @@ function SidebarGroup({ label, children }: { label: string; children: React.Reac
       </div>
       <div className="local-nav-group-links">{children}</div>
     </section>
+  );
+}
+
+function WorkspaceSettings({
+  preferences,
+  onChange,
+}: {
+  preferences: WorkspacePreferences;
+  onChange: React.Dispatch<React.SetStateAction<WorkspacePreferences>>;
+}) {
+  const update = <K extends keyof WorkspacePreferences>(key: K, value: WorkspacePreferences[K]) =>
+    onChange((current) => ({ ...current, [key]: value }));
+  return (
+    <>
+      <PageHeading
+        eyebrow="WORKSPACE"
+        title="Profile & settings"
+        subtitle="Set invoice defaults and how your personal assistant listens and speaks."
+      >
+        <span className="settings-saved">
+          <Check size={15} /> Saved automatically
+        </span>
+      </PageHeading>
+      <section className="workspace-settings-grid">
+        <article className="workspace-settings-card">
+          <header>
+            <UserCircle2 size={19} />
+            <div>
+              <h2>Business profile</h2>
+              <p>Used across your workspace documents.</p>
+            </div>
+          </header>
+          <label>
+            <span>Business name</span>
+            <input
+              value={preferences.businessName}
+              onChange={(e) => update('businessName', e.target.value)}
+            />
+          </label>
+        </article>
+        <article className="workspace-settings-card">
+          <header>
+            <CreditCard size={19} />
+            <div>
+              <h2>Invoice defaults</h2>
+              <p>New invoices start with these choices. You can override each invoice.</p>
+            </div>
+          </header>
+          <label className="settings-switch">
+            <input
+              type="checkbox"
+              checked={preferences.invoiceBankDefault}
+              onChange={(e) => update('invoiceBankDefault', e.target.checked)}
+            />
+            <span>Show bank details by default</span>
+          </label>
+          <label>
+            <span>Bank details</span>
+            <textarea
+              rows={4}
+              value={preferences.bankDetails}
+              onChange={(e) => update('bankDetails', e.target.value)}
+              placeholder={'Bank name\nAccount name\nAccount number / SWIFT'}
+            />
+          </label>
+          <label className="settings-switch">
+            <input
+              type="checkbox"
+              checked={preferences.showPaymentTerms}
+              onChange={(e) => update('showPaymentTerms', e.target.checked)}
+            />
+            <span>Show payment terms by default</span>
+          </label>
+          <label>
+            <span>Payment terms</span>
+            <textarea
+              rows={3}
+              value={preferences.paymentTerms}
+              onChange={(e) => update('paymentTerms', e.target.value)}
+            />
+          </label>
+        </article>
+        <article className="workspace-settings-card">
+          <header>
+            <Bot size={19} />
+            <div>
+              <h2>AI personal assistant</h2>
+              <p>Control voice input and spoken answers.</p>
+            </div>
+          </header>
+          <label className="settings-switch">
+            <input
+              type="checkbox"
+              checked={preferences.voiceEnabled}
+              onChange={(e) => update('voiceEnabled', e.target.checked)}
+            />
+            <span>Enable microphone mode</span>
+          </label>
+          <label className="settings-switch">
+            <input
+              type="checkbox"
+              checked={preferences.autoSpeak}
+              disabled={!preferences.voiceEnabled}
+              onChange={(e) => update('autoSpeak', e.target.checked)}
+            />
+            <span>Read assistant replies aloud</span>
+          </label>
+          <div className="settings-two-column">
+            <label>
+              <span>Voice language</span>
+              <select
+                value={preferences.voiceLanguage}
+                onChange={(e) => update('voiceLanguage', e.target.value)}
+              >
+                <option value="en-US">English (US)</option>
+                <option value="en-GB">English (UK)</option>
+                <option value="en-IN">English (South Asia)</option>
+                <option value="ta-IN">Tamil</option>
+              </select>
+            </label>
+            <label>
+              <span>Speaking speed</span>
+              <select
+                value={preferences.speechRate}
+                onChange={(e) => update('speechRate', Number(e.target.value))}
+              >
+                <option value={0.85}>Calm</option>
+                <option value={1}>Normal</option>
+                <option value={1.15}>Fast</option>
+              </select>
+            </label>
+          </div>
+          <small className="settings-help">
+            Microphone access is requested only when you tap the mic in Infonits GPT.
+          </small>
+        </article>
+      </section>
+    </>
   );
 }
 
@@ -2141,7 +2365,8 @@ function ProjectTable({
           const value = localValue(row.value, row.exchangeRate);
           const workCost = row.workDue + row.workPaid;
           const mine = value - row.advance - workCost;
-          const clientName = clients.find((client) => client.id === row.clientId)?.name;
+          const client = clients.find((item) => item.id === row.clientId);
+          const clientName = client ? clientLabel(client) : '';
           const isEditing = editingId === row.id;
           return (
             <article className="local-project-record" key={row.id}>
@@ -2457,10 +2682,11 @@ function ClientList({
           );
           return (
             <article className="local-client-card" key={client.id}>
-              <div className="local-client-avatar">{client.name.slice(0, 2).toUpperCase()}</div>
+              <div className="local-client-avatar">
+                {(client.company.trim() || client.name).slice(0, 2).toUpperCase()}
+              </div>
               <div className="local-client-details">
-                <h2>{client.name}</h2>
-                <p>{client.company || 'Independent client'}</p>
+                <h2>{client.company.trim() || client.name}</h2>
                 <div className="local-client-meta">
                   <span className="local-client-country-display">
                     {countryFlags[client.country] ?? '🌐'} {client.country || 'Country not set'}

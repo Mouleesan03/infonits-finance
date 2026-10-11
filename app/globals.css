@@ -7784,6 +7784,253 @@ tr:hover .cell-edit,
     flex-wrap: wrap;
   }
 }
+
+/* Workspace settings, voice controls and strict iPhone containment. */
+.local-profile-wrap {
+  position: relative;
+}
+.local-profile-button {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #dce5ef;
+  border-radius: 11px;
+  background: #fff;
+  color: #385572;
+}
+.local-profile-menu {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: 0;
+  z-index: 700;
+  width: 230px;
+  padding: 14px;
+  border: 1px solid #dce5ef;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 18px 44px rgba(20, 42, 70, 0.18);
+}
+.local-profile-menu strong,
+.local-profile-menu small {
+  display: block;
+}
+.local-profile-menu strong {
+  color: #213852;
+  font-size: 12px;
+}
+.local-profile-menu small {
+  margin-top: 3px;
+  color: #7a899b;
+  font-size: 9px;
+}
+.local-profile-menu button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 9px;
+  background: #edf5ff;
+  color: #1768bd;
+  font-size: 10px;
+  font-weight: 700;
+}
+.settings-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.workspace-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.workspace-settings-card {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid #dfe6ee;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 26px rgba(31, 50, 81, 0.05);
+}
+.workspace-settings-card:nth-child(2) {
+  grid-row: span 2;
+}
+.workspace-settings-card > header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-bottom: 13px;
+  border-bottom: 1px solid #e9eef4;
+  color: #2671c1;
+}
+.workspace-settings-card h2 {
+  color: #243951;
+  font-size: 14px;
+}
+.workspace-settings-card p,
+.settings-help {
+  margin-top: 3px;
+  color: #7a899b;
+  font-size: 9px;
+  line-height: 1.55;
+}
+.workspace-settings-card label > span {
+  display: block;
+  margin-bottom: 6px;
+  color: #546a82;
+  font-size: 10px;
+  font-weight: 700;
+}
+.workspace-settings-card input:not([type='checkbox']),
+.workspace-settings-card select,
+.workspace-settings-card textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid #d9e2ec;
+  border-radius: 9px;
+  background: #fbfcfe;
+  color: #263950;
+  font: inherit;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+.workspace-settings-card textarea {
+  resize: vertical;
+}
+.settings-switch {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: #f2f7fd;
+}
+.settings-switch input {
+  width: 17px;
+  height: 17px;
+  accent-color: #176bc5;
+}
+.settings-switch span {
+  margin: 0 !important;
+  color: #304862 !important;
+}
+.settings-two-column {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.assistant-composer:has(.assistant-mic-button) {
+  grid-template-columns: minmax(0, 1fr) 42px 42px;
+}
+.assistant-composer > .assistant-mic-button {
+  border: 1px solid #cfdceb;
+  background: #fff;
+  color: #246fbd;
+}
+.assistant-composer > .assistant-mic-button.listening {
+  border-color: #ec8f91;
+  background: #fff0f0;
+  color: #c93f45;
+  animation: assistant-pulse 1.2s ease-in-out infinite;
+}
+.assistant-speak-button {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 5px;
+  width: auto !important;
+  margin-top: 8px !important;
+  padding: 6px 8px !important;
+  border: 1px solid #d9e5f1 !important;
+  border-radius: 8px !important;
+  background: #f5f9fd !important;
+  color: #326da8 !important;
+  font-size: 9px !important;
+}
+@keyframes assistant-pulse {
+  50% {
+    box-shadow: 0 0 0 5px rgba(210, 61, 69, 0.12);
+  }
+}
+
+@media (max-width: 720px) {
+  .workspace-settings-grid,
+  .settings-two-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .workspace-settings-card:nth-child(2) {
+    grid-row: auto;
+  }
+  .workspace-settings-card {
+    min-width: 0;
+    padding: 15px;
+  }
+  .local-profile-menu {
+    position: fixed;
+    top: 66px;
+    right: 12px;
+    width: min(230px, calc(100vw - 24px));
+  }
+  .local-sheet-card,
+  .local-sheet-toolbar,
+  .local-sheet-toolbar > div,
+  .office-main-calendar,
+  .office-month-grid,
+  .office-post-weekdays,
+  .office-post-days,
+  .office-calendar-day {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+  .local-sheet-card,
+  .local-sheet-toolbar,
+  .office-main-calendar,
+  .office-month-grid {
+    overflow: hidden;
+  }
+  .local-sheet-toolbar input[type='month'],
+  .office-month,
+  input[type='month'] {
+    display: block;
+    inline-size: 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 16px !important;
+  }
+  .office-post-weekdays,
+  .office-post-days {
+    width: 100%;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+  .office-post-weekdays > *,
+  .office-post-days > * {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .assistant-composer:has(.assistant-mic-button) {
+    grid-template-columns: minmax(0, 1fr) 42px 42px;
+  }
+  .assistant-composer textarea {
+    min-width: 0;
+    font-size: 16px;
+  }
+}
 @media (max-width: 370px) {
   .summary-card {
     padding: 14px 10px;

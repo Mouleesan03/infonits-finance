@@ -210,8 +210,7 @@ const money = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value);
 const lkr = (amount: number, rate: number) => amount * rate;
-const clientLabel = (client: ClientRef) =>
-  client.company.trim() ? `${client.company} · ${client.name}` : client.name;
+const clientLabel = (client: ClientRef) => client.company.trim() || client.name;
 const documentTotal = (item: SalesDocument) =>
   Math.max(
     0,
@@ -246,6 +245,7 @@ export function LocalOfficeModule({
   projects,
   expenses,
   rates,
+  invoiceDefaults,
   openFormSignal = 0,
 }: {
   section: OfficeSection;
@@ -253,6 +253,7 @@ export function LocalOfficeModule({
   projects: ProjectRef[];
   expenses: OperatingExpense[];
   rates: Record<string, number>;
+  invoiceDefaults?: { includeBankDetails: boolean; bankDetails: string; notes: string };
   openFormSignal?: number;
 }) {
   const [store, setStore] = useState<Store>(emptyStore);
@@ -318,6 +319,7 @@ export function LocalOfficeModule({
         clients={clients}
         projects={projects}
         rates={rates}
+        invoiceDefaults={invoiceDefaults}
         search={search}
         setSearch={setSearch}
         formOpen={formOpen}
@@ -789,6 +791,7 @@ function SalesDocuments({
   clients,
   projects,
   rates,
+  invoiceDefaults,
   search,
   setSearch,
   formOpen,
@@ -801,6 +804,7 @@ function SalesDocuments({
   clients: ClientRef[];
   projects: ProjectRef[];
   rates: Record<string, number>;
+  invoiceDefaults?: { includeBankDetails: boolean; bankDetails: string; notes: string };
   search: string;
   setSearch: (value: string) => void;
   formOpen: boolean;
@@ -819,9 +823,12 @@ function SalesDocuments({
     discount: '0',
     advance: '0',
     description: '',
-    notes: 'Payment is due within 10 days of the invoice date.',
-    includeBankDetails: false,
-    bankDetails: '',
+    notes:
+      kind === 'Invoice'
+        ? (invoiceDefaults?.notes ?? 'Payment is due within 10 days of the invoice date.')
+        : '',
+    includeBankDetails: kind === 'Invoice' && (invoiceDefaults?.includeBankDetails ?? false),
+    bankDetails: kind === 'Invoice' ? (invoiceDefaults?.bankDetails ?? '') : '',
   });
   const [preview, setPreview] = useState<SalesDocument | null>(null);
   const [editingId, setEditingId] = useState('');
@@ -949,9 +956,12 @@ function SalesDocuments({
       discount: '0',
       advance: '0',
       description: '',
-      notes: 'Payment is due within 10 days of the invoice date.',
-      includeBankDetails: false,
-      bankDetails: '',
+      notes:
+        kind === 'Invoice'
+          ? (invoiceDefaults?.notes ?? 'Payment is due within 10 days of the invoice date.')
+          : '',
+      includeBankDetails: kind === 'Invoice' && (invoiceDefaults?.includeBankDetails ?? false),
+      bankDetails: kind === 'Invoice' ? (invoiceDefaults?.bankDetails ?? '') : '',
     });
     setEditingId('');
     setFormOpen(false);
