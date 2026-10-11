@@ -738,6 +738,136 @@
   }
 }
 
+/* Persistent responsive workspace used for browser-comment mobile QA. */
+.mobile-preview-page {
+  min-height: 100dvh;
+  background: radial-gradient(circle at 50% 0%, #e5efff, #f4f7fb 45%, #e9eef5);
+  color: #1d334d;
+}
+.mobile-preview-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 72px;
+  padding: 12px 24px;
+  border-bottom: 1px solid #d8e2ee;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 6px 20px rgba(20, 46, 78, 0.08);
+  backdrop-filter: blur(16px);
+}
+.mobile-preview-toolbar > div {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.mobile-preview-toolbar > div > span {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: #e9f2ff;
+  color: #176bc5;
+}
+.mobile-preview-toolbar strong,
+.mobile-preview-toolbar small {
+  display: block;
+}
+.mobile-preview-toolbar strong {
+  font-size: 14px;
+}
+.mobile-preview-toolbar small {
+  margin-top: 2px;
+  color: #71849a;
+  font-size: 10px;
+}
+.mobile-preview-controls {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.mobile-preview-controls label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.mobile-preview-controls label > span {
+  color: #66798f;
+  font-size: 10px;
+  font-weight: 700;
+}
+.mobile-preview-controls select,
+.mobile-preview-controls button {
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 1px solid #d6e1ed;
+  border-radius: 9px;
+  background: #fff;
+  color: #29415d;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+.mobile-preview-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.mobile-preview-stage {
+  display: grid;
+  justify-items: center;
+  gap: 11px;
+  padding: 30px 20px 50px;
+  overflow: auto;
+}
+.mobile-device-shell {
+  padding: 10px;
+  border: 1px solid #243a55;
+  border-radius: 31px;
+  background: #101d2d;
+  box-shadow: 0 24px 60px rgba(17, 39, 66, 0.24);
+  transition: width 0.2s ease;
+}
+.mobile-device-speaker {
+  width: 72px;
+  height: 5px;
+  margin: 1px auto 8px;
+  border-radius: 999px;
+  background: #46586d;
+}
+.mobile-device-shell iframe {
+  display: block;
+  border: 0;
+  border-radius: 20px;
+  background: #fff;
+  transition:
+    width 0.2s ease,
+    height 0.2s ease;
+}
+.mobile-preview-stage > p {
+  color: #6b7e94;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .mobile-preview-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 12px;
+  }
+  .mobile-preview-controls {
+    justify-content: flex-start;
+  }
+  .mobile-preview-stage {
+    justify-items: start;
+    padding-inline: 10px;
+  }
+}
+
 /* Final interaction and responsive polish. */
 .local-topbar {
   position: relative;
@@ -11693,5 +11823,508 @@ tfoot td {
   .auth-box-v2 .auth-input-wrap input,
   .auth-pin-grid input {
     font-size: 16px !important;
+  }
+}
+
+/* Mobile app layout: final phone-width rules stay last in the cascade. */
+@media (max-width: 720px) {
+  .local-main {
+    width: 100%;
+    max-width: 100%;
+    padding: 14px 12px calc(104px + env(safe-area-inset-bottom));
+    overflow-x: clip;
+  }
+
+  .local-main > .local-titlebar {
+    min-height: 0;
+    gap: 16px;
+    padding: 18px 16px;
+    border-radius: 16px;
+  }
+
+  .local-main > .local-titlebar h1 {
+    font-size: 22px;
+    line-height: 1.15;
+  }
+
+  .local-main > .local-titlebar p {
+    margin-top: 5px;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .local-main > .local-titlebar .local-actions {
+    gap: 8px;
+  }
+
+  .local-main > .local-titlebar .button {
+    min-height: 42px;
+  }
+
+  /* Dashboard invoices read as individual mobile records. */
+  .local-recent-invoices-card {
+    overflow: hidden;
+    border-radius: 16px;
+  }
+
+  .local-recent-invoices-card .local-card-heading {
+    align-items: flex-start;
+    padding: 15px 14px 10px;
+  }
+
+  .local-recent-invoices-card .local-card-heading > div {
+    min-width: 0;
+  }
+
+  .local-recent-invoices-card .local-card-heading small {
+    line-height: 1.4;
+  }
+
+  .local-recent-invoices-card .local-card-link {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 0 2px 0 8px;
+  }
+
+  .local-invoice-filters {
+    gap: 6px;
+    padding: 8px 12px 11px;
+    border-bottom: 0;
+    scrollbar-width: none;
+  }
+
+  .local-invoice-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .local-invoice-filters button {
+    min-height: 32px;
+    padding: 7px 12px;
+    font-size: 10px;
+  }
+
+  .local-invoice-preview-list {
+    display: grid;
+    gap: 9px;
+    padding: 0 12px 12px;
+  }
+
+  .local-invoice-preview-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'invoice status'
+      'amount amount'
+      'actions actions';
+    gap: 10px 12px;
+    padding: 13px;
+    border: 1px solid #e2e9f2;
+    border-radius: 13px;
+    background: #f9fbfe;
+  }
+
+  .local-invoice-preview-main {
+    grid-area: invoice;
+  }
+
+  .local-invoice-preview-row > .invoice-state {
+    grid-area: status;
+    align-self: start;
+    min-width: 66px;
+  }
+
+  .local-invoice-preview-row > b {
+    grid-area: amount;
+    padding-top: 9px;
+    border-top: 1px solid #e6ecf3;
+    font-size: 13px;
+    text-align: left;
+  }
+
+  .local-invoice-preview-actions {
+    grid-area: actions;
+    justify-content: flex-start;
+  }
+
+  .local-invoice-preview-actions button {
+    width: 40px;
+    height: 38px;
+  }
+
+  .local-invoice-summary {
+    gap: 7px;
+    padding: 10px 12px 12px;
+    border-top: 0;
+    background: #fff;
+  }
+
+  .local-invoice-summary > span {
+    padding: 10px 8px;
+    border-radius: 9px;
+    background: #f1f6fc;
+  }
+
+  .local-invoice-summary small {
+    font-size: 7px;
+  }
+
+  .local-invoice-summary strong {
+    font-size: 11px;
+  }
+
+  /* Project month selector and records stay inside the phone viewport. */
+  .local-sheet-card {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .local-sheet-toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    min-height: 0;
+    padding: 15px;
+  }
+
+  .local-sheet-toolbar input[type='month'] {
+    width: 100%;
+    max-width: none;
+    min-height: 46px;
+    padding-inline: 12px;
+  }
+
+  .local-project-ledger,
+  .local-project-records {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .local-project-record {
+    position: relative;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    padding: 14px;
+  }
+
+  .local-project-number {
+    position: absolute;
+    top: 15px;
+    left: 14px;
+    display: grid;
+    place-items: center;
+    width: 25px;
+    height: 25px;
+    border-radius: 8px;
+    background: #edf4fd;
+    color: #3974b4;
+    font-size: 9px;
+  }
+
+  .local-project-main {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    padding-left: 34px !important;
+  }
+
+  .local-project-main > strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .local-project-status {
+    grid-column: 2;
+    grid-row: 1;
+    width: 114px;
+    min-width: 114px;
+    padding: 0 !important;
+  }
+
+  .local-project-status select {
+    width: 114px;
+    min-width: 114px;
+    min-height: 38px;
+    padding: 7px 30px 7px 11px !important;
+    font-size: 11px !important;
+  }
+
+  .local-project-value,
+  .local-project-money {
+    width: 100%;
+    min-width: 0;
+    padding: 10px !important;
+    border-radius: 10px;
+    overflow-wrap: anywhere;
+  }
+
+  .local-project-value {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .local-project-money.income {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .local-project-money.outcome {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .local-project-money.profit,
+  .local-project-money.negative {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .local-project-record .local-card-actions {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    gap: 7px;
+    padding-top: 2px;
+  }
+
+  .local-project-record .local-row-action,
+  .local-project-record .local-delete {
+    width: 40px;
+    height: 38px;
+  }
+
+  .local-project-editor {
+    grid-column: 1 / -1;
+    grid-row: 5;
+    width: 100%;
+  }
+
+  .local-project-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding-top: 10px;
+    background: transparent;
+  }
+
+  .local-project-totals > div {
+    padding: 11px 12px;
+    border-radius: 10px;
+  }
+
+  /* Relationship cards keep identity first and totals in one compact row. */
+  .local-client-grid {
+    gap: 11px;
+  }
+
+  .local-client-card {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 11px;
+    min-height: 0;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .local-client-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .local-client-details {
+    min-width: 0;
+  }
+
+  .local-client-details h2,
+  .local-client-details p {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .local-client-details .local-client-meta {
+    margin-top: 7px;
+  }
+
+  .local-client-actions {
+    grid-column: 3;
+    grid-row: 1;
+    gap: 4px;
+  }
+
+  .local-client-actions .local-row-action,
+  .local-client-actions .local-delete {
+    width: 34px;
+    height: 34px;
+  }
+
+  .local-client-stats {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+    gap: 8px;
+    padding-top: 11px;
+  }
+
+  .local-client-stats > span {
+    min-width: 0;
+    padding: 10px !important;
+  }
+
+  .local-client-stats strong {
+    min-width: 0;
+    font-size: 10px;
+    overflow-wrap: anywhere;
+  }
+
+  /* Invoice lists use scan-friendly cards instead of compressed desktop rows. */
+  .invoice-kpis {
+    display: flex;
+    gap: 10px;
+    margin-inline: -12px;
+    padding: 0 12px 4px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .invoice-kpis::-webkit-scrollbar {
+    display: none;
+  }
+
+  .invoice-kpis article,
+  .invoice-kpis article:last-child {
+    flex: 0 0 154px;
+    min-height: 104px;
+    grid-column: auto;
+    scroll-snap-align: start;
+  }
+
+  .invoice-status-card {
+    gap: 13px;
+    padding: 14px;
+  }
+
+  .invoice-status-bars {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .invoice-status-bars::-webkit-scrollbar {
+    display: none;
+  }
+
+  .invoice-status-bars button {
+    flex: 0 0 118px;
+  }
+
+  .sales-document-panel .office-toolbar {
+    padding: 12px;
+  }
+
+  .sales-document-panel .office-table tbody {
+    gap: 11px;
+    padding: 0;
+  }
+
+  .sales-document-panel .office-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    padding: 13px;
+  }
+
+  .sales-document-panel .office-table td {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-content: start;
+    gap: 4px;
+    min-height: 0;
+    padding: 9px 7px;
+    border-bottom: 1px solid #edf1f5;
+  }
+
+  .sales-document-panel .office-table td::before {
+    font-size: 8px;
+  }
+
+  .sales-document-panel .office-table td[data-label='Number'],
+  .sales-document-panel .office-table td[data-label='Client'],
+  .sales-document-panel .office-table td.office-row-actions {
+    grid-column: 1 / -1;
+  }
+
+  .sales-document-panel .office-table td[data-label='Number'] {
+    padding: 2px 7px 10px;
+  }
+
+  .sales-document-panel .office-table td[data-label='Number'] strong {
+    color: #1d4f89;
+    font-size: 14px;
+  }
+
+  .sales-document-panel .office-table td[data-label='Client'] {
+    padding-top: 0;
+  }
+
+  .sales-document-panel .office-table td.office-row-actions {
+    display: flex;
+    min-height: 46px;
+    padding: 10px 7px 0;
+    border-bottom: 0;
+  }
+
+  .sales-document-panel .office-table td.office-row-actions button {
+    width: 40px;
+    height: 38px;
+  }
+
+  .sales-document-panel .office-status {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+  }
+
+  /* Shared module records follow the same card rhythm. */
+  .office-panel,
+  .office-report-card,
+  .office-main-calendar,
+  .office-post-calendar,
+  .office-post-projects,
+  .office-post-records {
+    max-width: 100%;
+  }
+
+  .office-toolbar,
+  .office-form,
+  .local-entry-form,
+  .local-client-form {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .office-table tbody tr {
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 390px) {
+  .local-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .local-summary article {
+    min-height: 112px;
+    padding: 13px;
+  }
+
+  .local-client-actions .local-row-action,
+  .local-client-actions .local-delete {
+    width: 32px;
+  }
+
+  .local-project-status,
+  .local-project-status select {
+    width: 110px;
+    min-width: 110px;
   }
 }
