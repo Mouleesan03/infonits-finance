@@ -14399,10 +14399,10 @@ tfoot td {
   .invoice-kpis article.red,
   .invoice-kpis article.purple {
     grid-column: span 2;
-    grid-template-columns: 28px minmax(0, 1fr);
-    gap: 5px;
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 4px;
     min-height: 86px;
-    padding: 10px;
+    padding: 8px;
   }
   .invoice-kpis article.blue {
     background: #eef6ff;
@@ -14436,8 +14436,8 @@ tfoot td {
   .invoice-kpis article.green .invoice-kpi-icon,
   .invoice-kpis article.red .invoice-kpi-icon,
   .invoice-kpis article.purple .invoice-kpi-icon {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
   }
   .invoice-kpis article.amber .invoice-kpi-icon {
@@ -14484,7 +14484,7 @@ tfoot td {
   .invoice-kpis article.red .invoice-kpi-copy > strong,
   .invoice-kpis article.purple .invoice-kpi-copy > strong {
     padding-right: 5px;
-    font-size: 12.5px;
+    font-size: 11px;
   }
   .invoice-kpi-chevron {
     display: block;
