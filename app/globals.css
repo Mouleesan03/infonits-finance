@@ -12932,3 +12932,187 @@ tfoot td {
     min-width: 110px;
   }
 }
+/* Automation workspace */
+.recurring-invoice-panel {
+  margin: 0 0 16px;
+  padding: 18px;
+  border: 1px solid #d7e3f0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgb(27 57 92 / 7%);
+}
+.recurring-invoice-panel > header,
+.recurring-invoice-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.recurring-invoice-panel h2 {
+  margin: 0;
+  color: #142a47;
+  font-size: 17px;
+}
+.recurring-invoice-panel p {
+  margin: 3px 0 0;
+  color: #73839b;
+  font-size: 12px;
+}
+.recurring-invoice-panel > header > span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #e7f8f1;
+  color: #087b5a;
+  font-size: 11px;
+  font-weight: 800;
+}
+.recurring-invoice-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #f5f8fc;
+}
+.recurring-invoice-form label {
+  display: grid;
+  gap: 6px;
+  color: #50637d;
+  font-size: 11px;
+  font-weight: 800;
+}
+.recurring-invoice-form label.wide {
+  grid-column: span 2;
+}
+.recurring-invoice-form input,
+.recurring-invoice-form select {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #d4dfec;
+  border-radius: 10px;
+  background: #fff;
+  color: #203652;
+  font: inherit;
+}
+.recurring-invoice-form .button {
+  align-self: end;
+  height: 42px;
+}
+.recurring-invoice-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+.recurring-invoice-list article {
+  padding: 11px 12px;
+  border: 1px solid #e1e9f2;
+  border-radius: 12px;
+}
+.recurring-invoice-list article > span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #eef2f7;
+  color: #8090a4;
+}
+.recurring-invoice-list article > span.active {
+  background: #e8f7f2;
+  color: #0b8a64;
+}
+.recurring-invoice-list article > div {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.recurring-invoice-list article strong {
+  color: #1d3452;
+  font-size: 13px;
+}
+.recurring-invoice-list article small {
+  overflow: hidden;
+  color: #75869c;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recurring-invoice-list article > b {
+  color: #183758;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.report-card-intro {
+  min-height: 32px;
+  margin: -4px 0 8px;
+  color: #77879d;
+  font-size: 11px;
+}
+.report-client-card div span {
+  display: grid;
+  gap: 2px;
+}
+.report-client-card div span small {
+  color: #7a8aa0;
+  font-size: 10px;
+  font-weight: 500;
+}
+.assistant-action-review {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.assistant-action-list {
+  display: grid;
+  gap: 6px;
+  padding: 11px;
+  border: 1px solid #cfe0f4;
+  border-radius: 11px;
+  background: #f6f9fd;
+}
+.assistant-action-list > strong {
+  color: #183758;
+  font-size: 12px;
+}
+.assistant-action-list > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #536982;
+  font-size: 11px;
+}
+
+@media (max-width: 700px) {
+  .recurring-invoice-panel {
+    padding: 14px;
+    border-radius: 15px;
+  }
+  .recurring-invoice-panel > header {
+    align-items: flex-start;
+  }
+  .recurring-invoice-form {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+  .recurring-invoice-form label.wide {
+    grid-column: auto;
+  }
+  .recurring-invoice-list article {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+  }
+  .recurring-invoice-list article > b {
+    grid-column: 2 / -1;
+  }
+  .recurring-invoice-list article .button {
+    grid-column: 2;
+  }
+  .recurring-invoice-list article .local-delete {
+    grid-column: 3;
+    grid-row: 3;
+  }
+}

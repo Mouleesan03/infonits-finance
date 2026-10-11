@@ -63,6 +63,10 @@ export type WorkspacePreferences = {
   autoSpeak: boolean;
   speechRate: number;
   voiceLanguage: string;
+  notificationsEnabled: boolean;
+  invoiceReminderDays: number;
+  renewalReminderDays: number;
+  eventReminderDays: number;
 };
 type LocalClient = {
   id: string;
@@ -103,6 +107,7 @@ type OfficeOverview = {
     number: string;
     projectId: string;
     clientId?: string;
+    issueDate?: string;
     dueDate: string;
     status: string;
     amount: number;
@@ -137,6 +142,19 @@ type OfficeOverview = {
   }>;
   events: Array<{ id: string; title: string; date: string; type: string }>;
   letters: Array<{ id: string; client: string; subject: string; date: string }>;
+  recurringInvoices: Array<{
+    id: string;
+    clientId: string;
+    projectId: string;
+    amount: number;
+    currency: string;
+    exchangeRate: number;
+    frequency: 'Monthly' | 'Quarterly' | 'Yearly';
+    nextRun: string;
+    description: string;
+    active: boolean;
+    lastGenerated?: string;
+  }>;
 };
 
 const storageKey = 'infonits-finance-local-v1';
@@ -191,6 +209,10 @@ const defaultPreferences: WorkspacePreferences = {
   autoSpeak: true,
   speechRate: 1,
   voiceLanguage: 'en-US',
+  notificationsEnabled: true,
+  invoiceReminderDays: 7,
+  renewalReminderDays: 30,
+  eventReminderDays: 7,
 };
 const money = (value: number) =>
   new Intl.NumberFormat('en-LK', {
@@ -229,9 +251,17 @@ function readOfficeOverview(): OfficeOverview {
       renewals: saved.renewals ?? [],
       events: saved.events ?? [],
       letters: saved.letters ?? [],
+      recurringInvoices: saved.recurringInvoices ?? [],
     };
   } catch {
-    return { documents: [], payments: [], renewals: [], events: [], letters: [] };
+    return {
+      documents: [],
+      payments: [],
+      renewals: [],
+      events: [],
+      letters: [],
+      recurringInvoices: [],
+    };
   }
 }
 
@@ -257,6 +287,7 @@ export function LocalFinance() {
     renewals: [],
     events: [],
     letters: [],
+    recurringInvoices: [],
   });
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -364,6 +395,65 @@ export function LocalFinance() {
   }, [clients, expenses, fxDate, fxRates, loaded, month, preferences, rows]);
 
   useEffect(() => {
+    if (!loaded) return;
+    const office = readOfficeOverview();
+    const due = office.recurringInvoices.filter(
+      (item) => item.active && item.nextRun <= today() && item.lastGenerated !== item.nextRun,
+    );
+    if (!due.length) return;
+    let documents = [...office.documents];
+    const recurringInvoices = office.recurringInvoices.map((schedule) => {
+      if (!due.some((item) => item.id === schedule.id)) return schedule;
+      const sequence =
+        documents
+          .filter((item) => item.kind === 'Invoice')
+          .reduce(
+            (highest, item) => Math.max(highest, Number(item.number.split('-').at(-1)) || 0),
+            0,
+          ) + 1;
+      const runDate = schedule.nextRun;
+      documents.unshift({
+        id: crypto.randomUUID(),
+        kind: 'Invoice',
+        number: `INV-${new Date().getFullYear()}-${String(sequence).padStart(3, '0')}`,
+        clientId: schedule.clientId,
+        projectId: schedule.projectId,
+        issueDate: runDate,
+        dueDate: addDays(runDate, 10),
+        status: 'Pending',
+        amount: schedule.amount,
+        currency: schedule.currency,
+        exchangeRate: schedule.exchangeRate,
+        description: schedule.description,
+        notes: preferences.showPaymentTerms ? preferences.paymentTerms : '',
+        includeBankDetails: preferences.invoiceBankDefault,
+        bankDetails: preferences.invoiceBankDefault ? preferences.bankDetails : '',
+      });
+      const next = new Date(`${runDate}T00:00:00Z`);
+      if (schedule.frequency === 'Yearly') next.setUTCFullYear(next.getUTCFullYear() + 1);
+      else next.setUTCMonth(next.getUTCMonth() + (schedule.frequency === 'Quarterly' ? 3 : 1));
+      let nextRun = next.toISOString().slice(0, 10);
+      while (nextRun <= today()) {
+        const later = new Date(`${nextRun}T00:00:00Z`);
+        if (schedule.frequency === 'Yearly') later.setUTCFullYear(later.getUTCFullYear() + 1);
+        else later.setUTCMonth(later.getUTCMonth() + (schedule.frequency === 'Quarterly' ? 3 : 1));
+        nextRun = later.toISOString().slice(0, 10);
+      }
+      return { ...schedule, lastGenerated: runDate, nextRun };
+    });
+    const raw = JSON.parse(localStorage.getItem(officeStorageKey) ?? '{}') as Record<
+      string,
+      unknown
+    >;
+    localStorage.setItem(
+      officeStorageKey,
+      JSON.stringify({ ...raw, documents, recurringInvoices }),
+    );
+    setOfficeOverview({ ...office, documents, recurringInvoices });
+    window.dispatchEvent(new Event('infonits:local-change'));
+  }, [loaded]);
+
+  useEffect(() => {
     const refreshOfficeOverview = () => setOfficeOverview(readOfficeOverview());
     window.addEventListener('infonits:local-change', refreshOfficeOverview);
     window.addEventListener('storage', refreshOfficeOverview);
@@ -451,7 +541,12 @@ export function LocalFinance() {
   const notifications = useMemo(() => {
     const now = new Date(`${today()}T00:00:00`).getTime();
     const invoiceItems = officeOverview.documents
-      .filter((item) => item.kind === 'Invoice' && item.status !== 'Paid')
+      .filter((item) => {
+        if (!preferences.notificationsEnabled || item.kind !== 'Invoice' || item.status === 'Paid')
+          return false;
+        const due = new Date(`${item.dueDate || today()}T00:00:00`).getTime();
+        return due - now <= preferences.invoiceReminderDays * 86_400_000;
+      })
       .map((item) => {
         const due = item.dueDate ? new Date(`${item.dueDate}T00:00:00`).getTime() : now;
         const overdue = item.status === 'Overdue' || due < now;
@@ -471,7 +566,10 @@ export function LocalFinance() {
       .filter((item) => {
         if (!item.date) return false;
         const due = new Date(`${item.date}T00:00:00`).getTime();
-        return due - now <= 30 * 86_400_000;
+        return (
+          preferences.notificationsEnabled &&
+          due - now <= preferences.renewalReminderDays * 86_400_000
+        );
       })
       .map((item) => ({
         id: item.id,
@@ -480,8 +578,27 @@ export function LocalFinance() {
         tone: 'warning',
         section: 'renewals' as Section,
       }));
-    return [...invoiceItems, ...renewalItems].slice(0, 8);
-  }, [officeOverview]);
+    const eventItems = officeOverview.events
+      .filter((item) => {
+        if (!preferences.notificationsEnabled || !item.date) return false;
+        const due = new Date(`${item.date}T00:00:00`).getTime();
+        return due >= now && due - now <= preferences.eventReminderDays * 86_400_000;
+      })
+      .map((item) => ({
+        id: `event-${item.id}`,
+        title: item.title,
+        detail: `${item.type} · ${shortDate(item.date)}`,
+        tone: 'info',
+        section: 'calendar' as Section,
+      }));
+    return [...invoiceItems, ...renewalItems, ...eventItems].slice(0, 12);
+  }, [
+    officeOverview,
+    preferences.eventReminderDays,
+    preferences.invoiceReminderDays,
+    preferences.notificationsEnabled,
+    preferences.renewalReminderDays,
+  ]);
 
   const unreadNotifications = notifications.filter(
     (notification) => !seenNotifications.includes(notification.id),
@@ -654,7 +771,11 @@ export function LocalFinance() {
     setOfficeFormSignal((current) => current + 1);
   }
 
-  function applyAssistantAction(action: Exclude<AssistantAction, { type: 'none' }>) {
+  function applyAssistantAction(action: Exclude<AssistantAction, { type: 'none' }>): string {
+    if (action.type === 'batch') {
+      const results = action.actions.map((item) => applyAssistantAction(item));
+      return `${action.title} applied. ${results.join(' ')}`;
+    }
     const findClient = (name: string) => {
       const target = name.trim().toLowerCase();
       return clients.find(
@@ -1237,7 +1358,12 @@ export function LocalFinance() {
           )}
 
           {section === 'attention' && (
-            <AttentionCenter office={officeOverview} clients={clients} onSection={changeSection} />
+            <AttentionCenter
+              office={officeOverview}
+              clients={clients}
+              preferences={preferences}
+              onSection={changeSection}
+            />
           )}
 
           {section === 'settings' && (
@@ -1634,6 +1760,64 @@ function WorkspaceSettings({
             Microphone access is requested only when you tap the mic in Infonits GPT.
           </small>
         </article>
+        <article className="workspace-settings-card">
+          <header>
+            <Bell size={19} />
+            <div>
+              <h2>Reminders</h2>
+              <p>Choose when items appear in the bell and Attention center.</p>
+            </div>
+          </header>
+          <label className="settings-switch">
+            <input
+              type="checkbox"
+              checked={preferences.notificationsEnabled}
+              onChange={(event) => update('notificationsEnabled', event.target.checked)}
+            />
+            <span>Enable workspace reminders</span>
+          </label>
+          <div className="settings-two-column">
+            <label>
+              <span>Invoice notice</span>
+              <select
+                value={preferences.invoiceReminderDays}
+                disabled={!preferences.notificationsEnabled}
+                onChange={(event) => update('invoiceReminderDays', Number(event.target.value))}
+              >
+                <option value={3}>3 days before</option>
+                <option value={7}>7 days before</option>
+                <option value={14}>14 days before</option>
+              </select>
+            </label>
+            <label>
+              <span>Renewal notice</span>
+              <select
+                value={preferences.renewalReminderDays}
+                disabled={!preferences.notificationsEnabled}
+                onChange={(event) => update('renewalReminderDays', Number(event.target.value))}
+              >
+                <option value={14}>14 days before</option>
+                <option value={30}>30 days before</option>
+                <option value={60}>60 days before</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            <span>Calendar notice</span>
+            <select
+              value={preferences.eventReminderDays}
+              disabled={!preferences.notificationsEnabled}
+              onChange={(event) => update('eventReminderDays', Number(event.target.value))}
+            >
+              <option value={1}>1 day before</option>
+              <option value={3}>3 days before</option>
+              <option value={7}>7 days before</option>
+            </select>
+          </label>
+          <small className="settings-help">
+            Overdue items remain visible until they are resolved.
+          </small>
+        </article>
       </section>
     </>
   );
@@ -1821,10 +2005,12 @@ function ProjectDetail({
 function AttentionCenter({
   office,
   clients,
+  preferences,
   onSection,
 }: {
   office: OfficeOverview;
   clients: LocalClient[];
+  preferences: WorkspacePreferences;
   onSection: (section: Section) => void;
 }) {
   const [filter, setFilter] = useState<'All' | 'Urgent' | 'Upcoming'>('All');
@@ -1840,7 +2026,12 @@ function AttentionCenter({
       .reduce((sum, payment) => sum + localValue(payment.amount, payment.exchangeRate), 0);
   const items = [
     ...office.documents
-      .filter((item) => item.kind === 'Invoice' && item.status !== 'Paid')
+      .filter((item) => {
+        if (!preferences.notificationsEnabled || item.kind !== 'Invoice' || item.status === 'Paid')
+          return false;
+        const due = item.dueDate ? new Date(`${item.dueDate}T00:00:00`).getTime() : now;
+        return due - now <= preferences.invoiceReminderDays * day;
+      })
       .map((item) => {
         const due = item.dueDate ? new Date(`${item.dueDate}T00:00:00`).getTime() : now;
         const balance = Math.max(
@@ -1876,14 +2067,21 @@ function AttentionCenter({
         { label: 'Domain', date: renewal.domainDue },
         { label: 'Hosting', date: renewal.hostingDue },
       ]
-        .filter(({ date }) => date && new Date(`${date}T00:00:00`).getTime() - now <= 30 * day)
+        .filter(
+          ({ date }) =>
+            date &&
+            preferences.notificationsEnabled &&
+            new Date(`${date}T00:00:00`).getTime() - now <= preferences.renewalReminderDays * day,
+        )
         .map(({ label, date }) => {
           const due = new Date(`${date}T00:00:00`).getTime();
           const urgent = due < now;
           return {
             id: `renewal-${renewal.id}-${label}`,
             title: `${renewal.website} ${label.toLowerCase()} renewal`,
-            detail: urgent ? 'Renewal is overdue' : 'Renew within 30 days',
+            detail: urgent
+              ? 'Renewal is overdue'
+              : `Renew within ${preferences.renewalReminderDays} days`,
             date: due,
             dateLabel: urgent
               ? `${Math.ceil((now - due) / day)} days overdue`
@@ -1896,7 +2094,11 @@ function AttentionCenter({
     ...office.events
       .filter((event) => {
         const time = new Date(`${event.date}T00:00:00`).getTime();
-        return time >= now && time - now <= 7 * day;
+        return (
+          preferences.notificationsEnabled &&
+          time >= now &&
+          time - now <= preferences.eventReminderDays * day
+        );
       })
       .map((event) => ({
         id: `event-${event.id}`,

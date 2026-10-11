@@ -3,8 +3,7 @@ import { generateText, Output } from 'ai';
 import { z } from 'zod';
 import { authorize } from '@/lib/supabase/server';
 
-const actionSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('none') }),
+const atomicActionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('create_client'),
     name: z.string().min(1),
@@ -68,6 +67,15 @@ const actionSchema = z.discriminatedUnion('type', [
     body: z.string().min(1),
     preparedBy: z.string(),
     date: z.string(),
+  }),
+]);
+const actionSchema = z.union([
+  z.object({ type: z.literal('none') }),
+  atomicActionSchema,
+  z.object({
+    type: z.literal('batch'),
+    title: z.string().min(1).max(120),
+    actions: z.array(atomicActionSchema).min(2).max(10),
   }),
 ]);
 
@@ -184,7 +192,8 @@ export async function POST(request: Request) {
         'You are Infonits GPT, an advanced operations assistant inside a small finance workspace. ' +
         'Use the supplied workspace context for business records and conversation history for follow-up requests. ' +
         'When web search is available and the user asks for online, current, latest, research, comparison, or news information, use it and summarise the answer clearly. ' +
-        'You may propose exactly one supported workspace action. ' +
+        'You may propose one supported workspace action or a batch of 2 to 10 actions when the user explicitly asks for several records or a monthly set. ' +
+        'Use batch only when every item is ready to review, and give the batch a short descriptive title. Batch actions should use existing clients and projects so they can be applied safely. ' +
         'Never claim an action has already happened: the user must review and apply it in the UI. ' +
         'If required details such as amount, client, or date are missing, ask one focused question and return action type none. ' +
         'Use YYYY-MM-DD dates and an existing client or project name when possible. ' +

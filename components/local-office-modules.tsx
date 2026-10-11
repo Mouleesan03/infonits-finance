@@ -18,6 +18,7 @@ import {
   Pencil,
   Plus,
   Printer,
+  Repeat2,
   Search,
   Send,
   ShieldCheck,
@@ -160,6 +161,19 @@ type CalendarEvent = {
   count?: number;
   remarks?: string;
 };
+type RecurringInvoice = {
+  id: string;
+  clientId: string;
+  projectId: string;
+  amount: number;
+  currency: string;
+  exchangeRate: number;
+  frequency: 'Monthly' | 'Quarterly' | 'Yearly';
+  nextRun: string;
+  description: string;
+  active: boolean;
+  lastGenerated?: string;
+};
 type Store = {
   documents: SalesDocument[];
   payments: Payment[];
@@ -169,6 +183,7 @@ type Store = {
   letters: ServiceLetter[];
   users: WorkspaceUser[];
   events: CalendarEvent[];
+  recurringInvoices: RecurringInvoice[];
 };
 
 const storeKey = 'infonits-finance-office-v1';
@@ -211,6 +226,14 @@ const emptyStore: Store = {
     },
   ],
   events: [],
+  recurringInvoices: [],
+};
+
+const advanceRecurringDate = (date: string, frequency: RecurringInvoice['frequency']) => {
+  const value = new Date(`${date}T00:00:00Z`);
+  if (frequency === 'Yearly') value.setUTCFullYear(value.getUTCFullYear() + 1);
+  else value.setUTCMonth(value.getUTCMonth() + (frequency === 'Quarterly' ? 3 : 1));
+  return value.toISOString().slice(0, 10);
 };
 
 const money = (value: number) =>
@@ -280,6 +303,7 @@ export function LocalOfficeModule({
           ...emptyStore,
           ...savedStore,
           documents: savedStore.documents ?? [],
+          recurringInvoices: savedStore.recurringInvoices ?? [],
         };
         setStore({
           ...parsed,
@@ -296,6 +320,55 @@ export function LocalOfficeModule({
       setLoaded(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    setStore((current) => {
+      const due = current.recurringInvoices.filter(
+        (schedule) =>
+          schedule.active &&
+          schedule.nextRun <= today() &&
+          schedule.lastGenerated !== schedule.nextRun,
+      );
+      if (!due.length) return current;
+      let documents = [...current.documents];
+      const recurringInvoices = current.recurringInvoices.map((schedule) => {
+        if (!due.some((item) => item.id === schedule.id)) return schedule;
+        const runDate = schedule.nextRun;
+        documents = [
+          {
+            id: crypto.randomUUID(),
+            kind: 'Invoice',
+            number: nextNumber('Invoice', documents),
+            clientId: schedule.clientId,
+            projectId: schedule.projectId,
+            issueDate: runDate,
+            dueDate: addDays(runDate, 10),
+            amount: schedule.amount,
+            currency: schedule.currency,
+            exchangeRate: schedule.exchangeRate,
+            status: 'Pending',
+            description: schedule.description,
+            notes: invoiceDefaults?.notes ?? '',
+            includeBankDetails: invoiceDefaults?.includeBankDetails ?? false,
+            bankDetails: invoiceDefaults?.includeBankDetails
+              ? (invoiceDefaults.bankDetails ?? '')
+              : '',
+          },
+          ...documents,
+        ];
+        let nextRun = advanceRecurringDate(runDate, schedule.frequency);
+        while (nextRun <= today()) nextRun = advanceRecurringDate(nextRun, schedule.frequency);
+        return { ...schedule, lastGenerated: runDate, nextRun };
+      });
+      return { ...current, documents, recurringInvoices };
+    });
+  }, [
+    invoiceDefaults?.bankDetails,
+    invoiceDefaults?.includeBankDetails,
+    invoiceDefaults?.notes,
+    loaded,
+  ]);
 
   useEffect(() => {
     if (loaded) {
@@ -331,6 +404,7 @@ export function LocalOfficeModule({
         rates={rates}
         invoiceDefaults={invoiceDefaults}
         payments={store.payments}
+        recurringInvoices={store.recurringInvoices}
         search={search}
         setSearch={setSearch}
         formOpen={formOpen}
@@ -339,6 +413,7 @@ export function LocalOfficeModule({
           update('documents', [...store.documents.filter((item) => item.kind !== kind), ...items])
         }
         onPaymentsChange={(items) => update('payments', items)}
+        onRecurringChange={(items) => update('recurringInvoices', items)}
       />
     );
   }
@@ -427,6 +502,7 @@ export function LocalOfficeModule({
       posts={store.posts}
       projects={projects}
       clients={clients}
+      recurringInvoices={store.recurringInvoices}
     />
   );
 }
@@ -806,12 +882,14 @@ function SalesDocuments({
   rates,
   invoiceDefaults,
   payments,
+  recurringInvoices,
   search,
   setSearch,
   formOpen,
   setFormOpen,
   onChange,
   onPaymentsChange,
+  onRecurringChange,
 }: {
   kind: DocumentKind;
   items: SalesDocument[];
@@ -821,12 +899,14 @@ function SalesDocuments({
   rates: Record<string, number>;
   invoiceDefaults?: { includeBankDetails: boolean; bankDetails: string; notes: string };
   payments: Payment[];
+  recurringInvoices: RecurringInvoice[];
   search: string;
   setSearch: (value: string) => void;
   formOpen: boolean;
   setFormOpen: (value: boolean) => void;
   onChange: (items: SalesDocument[]) => void;
   onPaymentsChange: (items: Payment[]) => void;
+  onRecurringChange: (items: RecurringInvoice[]) => void;
 }) {
   const [draft, setDraft] = useState({
     clientId: '',
@@ -852,6 +932,16 @@ function SalesDocuments({
   const [statusFilter, setStatusFilter] = useState('All');
   const [paymentTarget, setPaymentTarget] = useState<SalesDocument | null>(null);
   const [paymentDraft, setPaymentDraft] = useState({ amount: '', date: today(), note: '' });
+  const [recurringOpen, setRecurringOpen] = useState(false);
+  const [recurringDraft, setRecurringDraft] = useState({
+    clientId: '',
+    projectId: '',
+    amount: '',
+    currency: 'LKR',
+    frequency: 'Monthly' as RecurringInvoice['frequency'],
+    nextRun: today(),
+    description: '',
+  });
   const names = new Map(clients.map((client) => [client.id, clientLabel(client)]));
   const clientDetails = new Map(clients.map((client) => [client.id, client]));
   const projectNames = new Map(projects.map((project) => [project.id, project.project]));
@@ -1061,6 +1151,35 @@ function SalesDocuments({
     setPaymentTarget(null);
     setPaymentDraft({ amount: '', date: today(), note: '' });
   }
+  function saveRecurringInvoice(event: React.FormEvent) {
+    event.preventDefault();
+    const amount = Number(recurringDraft.amount);
+    if (!recurringDraft.clientId || !Number.isFinite(amount) || amount <= 0) return;
+    onRecurringChange([
+      {
+        id: crypto.randomUUID(),
+        clientId: recurringDraft.clientId,
+        projectId: recurringDraft.projectId,
+        amount,
+        currency: recurringDraft.currency,
+        exchangeRate: recurringDraft.currency === 'LKR' ? 1 : (rates[recurringDraft.currency] ?? 1),
+        frequency: recurringDraft.frequency,
+        nextRun: recurringDraft.nextRun,
+        description: recurringDraft.description.trim(),
+        active: true,
+      },
+      ...recurringInvoices,
+    ]);
+    setRecurringDraft({
+      clientId: '',
+      projectId: '',
+      amount: '',
+      currency: 'LKR',
+      frequency: 'Monthly',
+      nextRun: today(),
+      description: '',
+    });
+  }
   return (
     <>
       <ModuleHeader
@@ -1069,7 +1188,180 @@ function SalesDocuments({
         subtitle={`Create and track client ${kind.toLowerCase()}s in one clear list.`}
         action={`New ${kind.toLowerCase()}`}
         onAction={() => setFormOpen(!formOpen)}
-      />
+      >
+        {kind === 'Invoice' && (
+          <button
+            className="button button-outline"
+            type="button"
+            onClick={() => setRecurringOpen((open) => !open)}
+          >
+            <Repeat2 size={16} /> Recurring
+          </button>
+        )}
+      </ModuleHeader>
+      {kind === 'Invoice' && recurringOpen && (
+        <section className="recurring-invoice-panel">
+          <header>
+            <div>
+              <h2>Recurring invoices</h2>
+              <p>Create the next invoice automatically on its scheduled date.</p>
+            </div>
+            <span>{recurringInvoices.filter((item) => item.active).length} active</span>
+          </header>
+          <form className="recurring-invoice-form" onSubmit={saveRecurringInvoice}>
+            <label>
+              <span>Client *</span>
+              <select
+                required
+                value={recurringDraft.clientId}
+                onChange={(event) =>
+                  setRecurringDraft({ ...recurringDraft, clientId: event.target.value })
+                }
+              >
+                <option value="">Choose client</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {clientLabel(client)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Project</span>
+              <select
+                value={recurringDraft.projectId}
+                onChange={(event) =>
+                  setRecurringDraft({ ...recurringDraft, projectId: event.target.value })
+                }
+              >
+                <option value="">No project</option>
+                {projects
+                  .filter(
+                    (project) =>
+                      !recurringDraft.clientId || project.clientId === recurringDraft.clientId,
+                  )
+                  .map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.project}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
+              <span>Amount *</span>
+              <input
+                required
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={recurringDraft.amount}
+                onChange={(event) =>
+                  setRecurringDraft({ ...recurringDraft, amount: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              <span>Currency</span>
+              <select
+                value={recurringDraft.currency}
+                onChange={(event) =>
+                  setRecurringDraft({ ...recurringDraft, currency: event.target.value })
+                }
+              >
+                {currencies.map((currency) => (
+                  <option key={currency}>{currency}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Frequency</span>
+              <select
+                value={recurringDraft.frequency}
+                onChange={(event) =>
+                  setRecurringDraft({
+                    ...recurringDraft,
+                    frequency: event.target.value as RecurringInvoice['frequency'],
+                  })
+                }
+              >
+                <option>Monthly</option>
+                <option>Quarterly</option>
+                <option>Yearly</option>
+              </select>
+            </label>
+            <label>
+              <span>Next invoice</span>
+              <input
+                required
+                type="date"
+                value={recurringDraft.nextRun}
+                onChange={(event) =>
+                  setRecurringDraft({ ...recurringDraft, nextRun: event.target.value })
+                }
+              />
+            </label>
+            <label className="wide">
+              <span>Description</span>
+              <input
+                value={recurringDraft.description}
+                onChange={(event) =>
+                  setRecurringDraft({ ...recurringDraft, description: event.target.value })
+                }
+                placeholder="Monthly support, hosting or retainer"
+              />
+            </label>
+            <button className="button button-primary" type="submit">
+              <Plus size={16} /> Add schedule
+            </button>
+          </form>
+          {recurringInvoices.length > 0 && (
+            <div className="recurring-invoice-list">
+              {recurringInvoices.map((schedule) => (
+                <article key={schedule.id}>
+                  <span className={schedule.active ? 'active' : ''}>
+                    <Repeat2 size={16} />
+                  </span>
+                  <div>
+                    <strong>{names.get(schedule.clientId) ?? 'Unknown client'}</strong>
+                    <small>
+                      {schedule.description ||
+                        projectNames.get(schedule.projectId) ||
+                        'Recurring invoice'}{' '}
+                      · {schedule.frequency} · next {schedule.nextRun}
+                    </small>
+                  </div>
+                  <b>
+                    {schedule.currency} {schedule.amount.toLocaleString()}
+                  </b>
+                  <button
+                    type="button"
+                    className="button button-outline"
+                    onClick={() =>
+                      onRecurringChange(
+                        recurringInvoices.map((item) =>
+                          item.id === schedule.id ? { ...item, active: !item.active } : item,
+                        ),
+                      )
+                    }
+                  >
+                    {schedule.active ? 'Pause' : 'Resume'}
+                  </button>
+                  <button
+                    type="button"
+                    className="local-delete"
+                    aria-label="Delete recurring invoice"
+                    onClick={() =>
+                      onRecurringChange(recurringInvoices.filter((item) => item.id !== schedule.id))
+                    }
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
       {kind === 'Invoice' && (
         <>
           <section className="invoice-kpis" aria-label="Invoice totals">
@@ -3916,18 +4208,20 @@ function ReportsModule({
   posts,
   projects,
   clients,
+  recurringInvoices,
 }: {
   documents: SalesDocument[];
   payments: Payment[];
   posts: PostPlan[];
   projects: ProjectRef[];
   clients: ClientRef[];
+  recurringInvoices: RecurringInvoice[];
 }) {
-  const paidInvoices = documents
-    .filter((x) => x.kind === 'Invoice' && x.status === 'Paid')
+  const paidInvoices = payments
+    .filter((x) => x.type === 'Income' && x.status === 'Paid' && x.invoiceId)
     .reduce((s, x) => s + lkr(x.amount, x.exchangeRate), 0);
   const income = payments
-    .filter((x) => x.type === 'Income' && x.status === 'Paid')
+    .filter((x) => x.type === 'Income' && x.status === 'Paid' && !x.invoiceId)
     .reduce((s, x) => s + lkr(x.amount, x.exchangeRate), 0);
   const expenses = payments
     .filter((x) => x.type === 'Expense' && x.status === 'Paid')
@@ -3936,6 +4230,55 @@ function ReportsModule({
   const projectCost = projects.reduce((s, x) => s + x.workDue + x.workPaid, 0);
   const required = posts.reduce((s, x) => s + x.required, 0);
   const posted = posts.reduce((s, x) => s + x.posted, 0);
+  const monthStarts = Array.from({ length: 3 }, (_, index) => {
+    const value = new Date(`${thisMonth()}-01T00:00:00Z`);
+    value.setUTCMonth(value.getUTCMonth() + index);
+    return value.toISOString().slice(0, 7);
+  });
+  const forecast = monthStarts.map((month) => {
+    const invoiceIncome = documents
+      .filter(
+        (item) =>
+          item.kind === 'Invoice' && item.status !== 'Paid' && item.dueDate.startsWith(month),
+      )
+      .reduce(
+        (sum, item) =>
+          sum +
+          lkr(
+            Math.max(0, documentTotal(item) - paidForInvoice(item.id, payments)),
+            item.exchangeRate,
+          ),
+        0,
+      );
+    const recurringIncome = recurringInvoices
+      .filter((item) => item.active && item.nextRun.startsWith(month))
+      .reduce((sum, item) => sum + lkr(item.amount, item.exchangeRate), 0);
+    return { month, income: invoiceIncome + recurringIncome };
+  });
+  const clientProfitability = clients
+    .map((client) => {
+      const clientProjects = projects.filter((project) => project.clientId === client.id);
+      const value = clientProjects.reduce(
+        (sum, project) => sum + lkr(project.value, project.exchangeRate),
+        0,
+      );
+      const cost = clientProjects.reduce(
+        (sum, project) => sum + project.workDue + project.workPaid,
+        0,
+      );
+      const received = payments
+        .filter(
+          (payment) =>
+            payment.status === 'Paid' &&
+            payment.invoiceId &&
+            clientProjects.some((project) => project.id === payment.projectId),
+        )
+        .reduce((sum, payment) => sum + lkr(payment.amount, payment.exchangeRate), 0);
+      return { id: client.id, label: clientLabel(client), value, received, profit: value - cost };
+    })
+    .filter((item) => item.value > 0)
+    .toSorted((left, right) => right.profit - left.profit)
+    .slice(0, 5);
   function download() {
     const rows = [
       ['Metric', 'Value'],
@@ -4008,6 +4351,42 @@ function ReportsModule({
             ['Remaining', Math.max(0, required - posted)],
           ]}
         />
+        <article className="office-report-card report-forecast-card">
+          <h2>90-day cash forecast</h2>
+          <p className="report-card-intro">
+            Expected from open invoices and active recurring schedules.
+          </p>
+          {forecast.map((item) => (
+            <div key={item.month}>
+              <span>
+                {new Date(`${item.month}-02`).toLocaleDateString('en', {
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+              <strong>{money(item.income)}</strong>
+            </div>
+          ))}
+        </article>
+        <article className="office-report-card report-client-card">
+          <h2>Client profitability</h2>
+          <p className="report-card-intro">
+            Project value after recorded work costs, with cash received.
+          </p>
+          {clientProfitability.length ? (
+            clientProfitability.map((item) => (
+              <div key={item.id}>
+                <span>
+                  <b>{item.label}</b>
+                  <small>{money(item.received)} received</small>
+                </span>
+                <strong>{money(item.profit)}</strong>
+              </div>
+            ))
+          ) : (
+            <p>No project value recorded yet.</p>
+          )}
+        </article>
       </section>
     </>
   );

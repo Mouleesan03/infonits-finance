@@ -30,8 +30,7 @@ type SpeechRecognitionLike = {
 };
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
-export type AssistantAction =
-  | { type: 'none' }
+export type AssistantAtomicAction =
   | {
       type: 'create_client';
       name: string;
@@ -86,6 +85,10 @@ export type AssistantAction =
       preparedBy: string;
       date: string;
     };
+export type AssistantAction =
+  | { type: 'none' }
+  | AssistantAtomicAction
+  | { type: 'batch'; title: string; actions: AssistantAtomicAction[] };
 
 type AssistantSource = { title: string; url: string };
 
@@ -96,7 +99,23 @@ type ChatMessage = {
   action?: AssistantAction;
   sources?: AssistantSource[];
   applied?: boolean;
+  reviewing?: boolean;
 };
+
+function actionLabel(action: AssistantAtomicAction) {
+  const labels: Record<AssistantAtomicAction['type'], string> = {
+    create_client: 'Create client',
+    create_project: 'Create project',
+    create_expense: 'Add expense',
+    create_invoice: 'Create invoice',
+    create_quotation: 'Create quotation',
+    create_payment: 'Add finance record',
+    create_event: 'Add calendar event',
+    create_renewal: 'Add renewal',
+    create_letter: 'Create service letter',
+  };
+  return labels[action.type];
+}
 
 function InlineMessage({ text }: { text: string }) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
@@ -273,6 +292,12 @@ export function InfonitsAssistant({
     ]);
   }
 
+  function review(message: ChatMessage) {
+    setMessages((current) =>
+      current.map((item) => (item.id === message.id ? { ...item, reviewing: true } : item)),
+    );
+  }
+
   return (
     <section className="assistant-page" aria-label="Infonits GPT">
       <header className="assistant-header">
@@ -318,10 +343,37 @@ export function InfonitsAssistant({
                   </div>
                 )}
                 {message.action && message.action.type !== 'none' && (
-                  <button type="button" disabled={message.applied} onClick={() => apply(message)}>
-                    {message.applied ? <CheckCircle2 size={15} /> : <Sparkles size={15} />}
-                    {message.applied ? 'Applied' : 'Review & apply'}
-                  </button>
+                  <div className="assistant-action-review">
+                    {message.reviewing && !message.applied && (
+                      <div className="assistant-action-list">
+                        <strong>
+                          {message.action.type === 'batch'
+                            ? message.action.title
+                            : 'Proposed workspace change'}
+                        </strong>
+                        {(message.action.type === 'batch'
+                          ? message.action.actions
+                          : [message.action]
+                        ).map((action, index) => (
+                          <span key={`${action.type}-${index}`}>
+                            <CheckCircle2 size={13} /> {actionLabel(action)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      disabled={message.applied}
+                      onClick={() => (message.reviewing ? apply(message) : review(message))}
+                    >
+                      {message.applied ? <CheckCircle2 size={15} /> : <Sparkles size={15} />}
+                      {message.applied
+                        ? 'Applied'
+                        : message.reviewing
+                          ? `Apply ${message.action.type === 'batch' ? message.action.actions.length : 1} change${message.action.type === 'batch' && message.action.actions.length !== 1 ? 's' : ''}`
+                          : 'Review changes'}
+                    </button>
+                  </div>
                 )}
               </div>
             </article>
@@ -361,6 +413,7 @@ export function InfonitsAssistant({
             'Create an invoice',
             'Create a quotation',
             'Draft a service letter',
+            'Prepare this month’s invoices',
             'Search the web',
             'What needs attention?',
           ].map((prompt) => (
