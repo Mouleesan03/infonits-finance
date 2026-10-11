@@ -11826,6 +11826,14 @@ tfoot td {
   }
 }
 
+.local-project-metrics {
+  display: contents;
+}
+
+.local-project-record .local-card-actions button > span {
+  display: none;
+}
+
 /* Mobile app layout: final phone-width rules stay last in the cascade. */
 @media (max-width: 720px) {
   .local-main {
@@ -11912,11 +11920,10 @@ tfoot td {
   .local-invoice-preview-row {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-      'invoice status'
-      'amount amount'
-      'actions actions';
-    gap: 10px 12px;
-    padding: 13px;
+      'invoice amount'
+      'status actions';
+    gap: 9px 12px;
+    padding: 12px;
     border: 1px solid #e2e9f2;
     border-radius: 13px;
     background: #f9fbfe;
@@ -11928,26 +11935,28 @@ tfoot td {
 
   .local-invoice-preview-row > .invoice-state {
     grid-area: status;
-    align-self: start;
+    align-self: center;
+    justify-self: start;
     min-width: 66px;
   }
 
   .local-invoice-preview-row > b {
     grid-area: amount;
-    padding-top: 9px;
-    border-top: 1px solid #e6ecf3;
-    font-size: 13px;
-    text-align: left;
+    align-self: start;
+    padding: 1px 0 0;
+    border: 0;
+    font-size: 12px;
+    text-align: right;
   }
 
   .local-invoice-preview-actions {
     grid-area: actions;
-    justify-content: flex-start;
+    justify-content: flex-end;
   }
 
   .local-invoice-preview-actions button {
-    width: 40px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
   }
 
   .local-invoice-summary {
@@ -12008,24 +12017,14 @@ tfoot td {
   }
 
   .local-project-number {
-    position: absolute;
-    top: 15px;
-    left: 14px;
-    display: grid;
-    place-items: center;
-    width: 25px;
-    height: 25px;
-    border-radius: 8px;
-    background: #edf4fd;
-    color: #3974b4;
-    font-size: 9px;
+    display: none;
   }
 
   .local-project-main {
     grid-column: 1;
     grid-row: 1;
     min-width: 0;
-    padding-left: 34px !important;
+    padding-left: 0 !important;
   }
 
   .local-project-main > strong {
@@ -12049,52 +12048,73 @@ tfoot td {
     font-size: 11px !important;
   }
 
-  .local-project-value,
-  .local-project-money {
+  .local-project-metrics {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: hidden;
+    border: 1px solid #e4eaf1;
+    border-radius: 11px;
+    background: #f8fafc;
+  }
+
+  .local-project-metrics > .local-project-value,
+  .local-project-metrics > .local-project-money {
+    grid-column: auto;
+    grid-row: auto;
     width: 100%;
     min-width: 0;
-    padding: 10px !important;
-    border-radius: 10px;
+    min-height: 62px;
+    padding: 10px 11px !important;
+    border-radius: 0;
+    background: transparent;
     overflow-wrap: anywhere;
   }
 
-  .local-project-value {
-    grid-column: 1;
-    grid-row: 2;
+  .local-project-metrics > :nth-child(odd) {
+    border-right: 1px solid #e4eaf1;
   }
 
-  .local-project-money.income {
-    grid-column: 2;
-    grid-row: 2;
-  }
-
-  .local-project-money.outcome {
-    grid-column: 1;
-    grid-row: 3;
-  }
-
-  .local-project-money.profit,
-  .local-project-money.negative {
-    grid-column: 2;
-    grid-row: 3;
+  .local-project-metrics > :nth-child(-n + 2) {
+    border-bottom: 1px solid #e4eaf1;
   }
 
   .local-project-record .local-card-actions {
     grid-column: 1 / -1;
-    grid-row: 4;
-    gap: 7px;
-    padding-top: 2px;
+    grid-row: 3;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    padding-top: 0;
   }
 
   .local-project-record .local-row-action,
   .local-project-record .local-delete {
-    width: 40px;
-    height: 38px;
+    width: 100%;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border-radius: 9px;
+    background: #f1f5fa;
+  }
+
+  .local-project-record .local-delete {
+    background: #fff3f3;
+    color: #c65555;
+  }
+
+  .local-project-record .local-card-actions button > span {
+    display: inline;
+    font-size: 9px;
+    font-weight: 700;
   }
 
   .local-project-editor {
     grid-column: 1 / -1;
-    grid-row: 5;
+    grid-row: 4;
     width: 100%;
   }
 

@@ -13,10 +13,9 @@ export default async function Page({
   const query = await searchParams;
   if (query.code) redirect(`/auth/callback?code=${encodeURIComponent(query.code)}`);
   if (query.token_hash && (query.type === 'invite' || query.type === 'recovery')) {
-    redirect(
-      `/auth/confirm?token_hash=${encodeURIComponent(query.token_hash)}&type=${query.type}`,
-    );
+    redirect(`/auth/confirm?token_hash=${encodeURIComponent(query.token_hash)}&type=${query.type}`);
   }
+  if (section.length === 0) redirect('/local');
   const allowed = ['dashboard', 'projects', 'clients', 'payments', 'costs', 'expenses', 'settings'];
   if (
     section.length > 2 ||

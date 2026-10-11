@@ -2152,24 +2152,26 @@ function ProjectTable({
                   {clientName || 'No client'} · {shortDate(row.createdAt)}
                 </small>
               </div>
-              <div className="local-project-value">
-                <strong title={money(value)}>{compactMoney(value)}</strong>
-                <small>
-                  {row.currency} {compactNumber(row.value)}
-                </small>
+              <div className="local-project-metrics">
+                <div className="local-project-value">
+                  <strong title={money(value)}>{compactMoney(value)}</strong>
+                  <small>
+                    {row.currency} {compactNumber(row.value)}
+                  </small>
+                </div>
+                <strong className="local-project-money income" title={money(row.advance)}>
+                  {compactMoney(row.advance)}
+                </strong>
+                <strong className="local-project-money outcome" title={money(workCost)}>
+                  {compactMoney(workCost)}
+                </strong>
+                <strong
+                  className={`local-project-money ${mine < 0 ? 'negative' : 'profit'}`}
+                  title={money(mine)}
+                >
+                  {compactMoney(mine)}
+                </strong>
               </div>
-              <strong className="local-project-money income" title={money(row.advance)}>
-                {compactMoney(row.advance)}
-              </strong>
-              <strong className="local-project-money outcome" title={money(workCost)}>
-                {compactMoney(workCost)}
-              </strong>
-              <strong
-                className={`local-project-money ${mine < 0 ? 'negative' : 'profit'}`}
-                title={money(mine)}
-              >
-                {compactMoney(mine)}
-              </strong>
               <div className="local-project-status">
                 <select
                   aria-label="Payment status"
@@ -2193,6 +2195,7 @@ function ProjectTable({
                   onClick={() => setEditingId(isEditing ? null : row.id)}
                 >
                   {isEditing ? <X size={16} /> : <Pencil size={16} />}
+                  <span>{isEditing ? 'Close' : 'Edit'}</span>
                 </button>
                 <button
                   className="local-row-action neutral"
@@ -2201,6 +2204,7 @@ function ProjectTable({
                   onClick={() => onView(row.id)}
                 >
                   <Eye size={16} />
+                  <span>View</span>
                 </button>
                 <button
                   className="local-row-action"
@@ -2209,6 +2213,7 @@ function ProjectTable({
                   onClick={() => onInvoice(row)}
                 >
                   <FilePlus2 size={16} />
+                  <span>Invoice</span>
                 </button>
                 <button
                   className="local-delete"
@@ -2216,6 +2221,7 @@ function ProjectTable({
                   onClick={() => onDelete(row.id)}
                 >
                   <Trash2 size={16} />
+                  <span>Delete</span>
                 </button>
               </div>
               {isEditing && (
