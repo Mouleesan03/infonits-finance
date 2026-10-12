@@ -15317,3 +15317,82 @@ tfoot td {
     padding: 0;
   }
 }
+
+/* Mobile invoices keep the three most actionable totals visible above the list. */
+@media (max-width: 720px) {
+  .invoice-kpis {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    margin: 0 0 10px;
+    padding: 0;
+  }
+
+  .invoice-kpis article,
+  .invoice-kpis article:last-child {
+    grid-column: auto;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 6px;
+    min-width: 0;
+    min-height: 78px;
+    padding: 9px 8px;
+    border-radius: 13px;
+  }
+
+  .invoice-kpis article.amber,
+  .invoice-kpis article.purple {
+    display: none;
+  }
+
+  .invoice-kpis article.blue,
+  .invoice-kpis article.green,
+  .invoice-kpis article.red {
+    display: grid;
+    grid-column: auto !important;
+  }
+
+  .invoice-kpis article .invoice-kpi-icon,
+  .invoice-kpis article.green .invoice-kpi-icon,
+  .invoice-kpis article.red .invoice-kpi-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+  }
+
+  .invoice-kpis .invoice-kpi-copy {
+    display: contents;
+    min-width: 0;
+  }
+
+  .invoice-kpis .invoice-kpi-copy > span {
+    font-size: 9px;
+    line-height: 1.2;
+  }
+
+  .invoice-kpis .invoice-kpi-copy > strong,
+  .invoice-kpis article.green .invoice-kpi-copy > strong,
+  .invoice-kpis article.red .invoice-kpi-copy > strong {
+    grid-column: 1 / -1;
+    overflow: hidden;
+    padding: 0;
+    font-size: 12px;
+    text-overflow: ellipsis;
+  }
+
+  .invoice-kpis .invoice-kpi-copy > small,
+  .invoice-kpis .invoice-kpi-chevron {
+    display: none;
+  }
+
+  .office-post-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .office-post-projects,
+  .office-post-calendar,
+  .office-post-projects .office-table-wrap,
+  .office-post-project-table {
+    width: 100%;
+    min-width: 0 !important;
+  }
+}
