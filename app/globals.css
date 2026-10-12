@@ -14742,16 +14742,24 @@ tfoot td {
 
   .sales-document-panel .office-table tr.sales-document-row {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-auto-rows: min-content;
+    align-content: start;
     gap: 7px 10px;
+    height: auto !important;
     padding: 12px;
     border-radius: 14px;
+  }
+
+  .sales-document-panel .office-table tr.sales-document-row td {
+    height: auto !important;
+    min-height: 0 !important;
   }
 
   .sales-document-panel .office-table tr.sales-document-row td[data-label='Number'] {
     grid-column: 1 / -1;
     grid-template-columns: 34px minmax(0, 1fr);
     min-height: 38px;
-    padding: 0 92px 5px 0;
+    padding: 0 102px 5px 0;
   }
 
   .sales-document-panel .office-document-number-icon {
@@ -14780,6 +14788,14 @@ tfoot td {
     font-size: 9.5px;
   }
 
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Date'] {
+    grid-column: 1;
+  }
+
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Due'] {
+    grid-column: 2;
+  }
+
   .sales-document-panel .office-document-date-icon {
     width: 13px;
     height: 13px;
@@ -14793,13 +14809,13 @@ tfoot td {
   .sales-document-panel .office-table tr.sales-document-row td[data-label='Status'] {
     top: 15px;
     right: 12px;
-    width: 82px;
+    width: 92px;
   }
 
   .sales-document-panel .office-table tr.sales-document-row .office-status {
-    width: 82px;
+    width: 92px;
     min-height: 28px;
-    padding: 3px 18px 3px 8px;
+    padding: 3px 15px 3px 8px;
     font-size: 9px !important;
   }
 
@@ -14847,7 +14863,10 @@ tfoot td {
   .finance-ledger-panel .office-table tr.finance-ledger-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    grid-auto-rows: min-content;
+    align-content: start;
     gap: 7px 12px;
+    height: auto !important;
     padding: 13px;
     border: 1px solid #dce5ef;
     border-radius: 14px;
@@ -14858,6 +14877,7 @@ tfoot td {
   .finance-ledger-panel .office-table tr.finance-ledger-row td[data-label] {
     display: block;
     grid-column: auto;
+    height: auto !important;
     min-height: 0;
     padding: 0;
   }
@@ -14867,16 +14887,29 @@ tfoot td {
   }
 
   .finance-ledger-row td[data-label='Date'] {
+    grid-column: 1;
+    grid-row: 1;
     color: #718197;
     font-size: 10px;
   }
 
   .finance-ledger-row td[data-label='Type'],
   .finance-ledger-row td[data-label='Status'] {
+    grid-column: 2;
     justify-self: end;
   }
 
+  .finance-ledger-row td[data-label='Type'] {
+    grid-row: 1;
+  }
+
+  .finance-ledger-row td[data-label='Status'] {
+    grid-row: 2;
+  }
+
   .finance-ledger-row td[data-label='Category'] {
+    grid-column: 1;
+    grid-row: 2;
     color: #263e5a;
     font-size: 11.5px;
     font-weight: 700;
@@ -14891,6 +14924,7 @@ tfoot td {
 
   .finance-ledger-row td[data-label='Note'] {
     grid-column: 1 / -1 !important;
+    grid-row: 3;
     padding: 7px 0 !important;
     border-block: 1px solid #edf2f7;
     color: #43576f;
@@ -14901,6 +14935,11 @@ tfoot td {
     font-size: 13px;
   }
 
+  .finance-ledger-row td[data-label='Amount'] {
+    grid-column: 1;
+    grid-row: 4;
+  }
+
   .finance-ledger-row td[data-label='Amount'] small {
     margin-top: 1px;
     font-size: 9px;
@@ -14908,7 +14947,7 @@ tfoot td {
 
   .finance-ledger-panel .office-table tr.finance-ledger-row td.office-row-actions {
     grid-column: 2;
-    grid-row: auto;
+    grid-row: 4;
     justify-self: end;
     padding: 0;
   }

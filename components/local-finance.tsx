@@ -308,6 +308,105 @@ export function LocalFinance() {
     let active = true;
     let savedDate = '';
     try {
+      const previewQuery = new URLSearchParams(window.location.search);
+      const previewSection = previewQuery.get('ui-section');
+      if (
+        process.env.NODE_ENV === 'development' &&
+        previewSection &&
+        ['dashboard', 'invoices', 'quotations', 'payments', 'clients', 'expenses', 'team'].includes(
+          previewSection,
+        )
+      ) {
+        setSection(previewSection as Section);
+      }
+      if (
+        process.env.NODE_ENV === 'development' &&
+        previewQuery.get('mobile-preview') === '1' &&
+        !localStorage.getItem(storageKey)
+      ) {
+        const previewClient = {
+          id: 'preview-client',
+          name: 'Nexplate',
+          company: 'Nexplate',
+          email: 'hello@example.com',
+          phone: '',
+          country: 'Switzerland',
+        };
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify({
+            clients: [previewClient],
+            rows: [
+              {
+                id: 'preview-project',
+                project: 'Website development',
+                clientId: previewClient.id,
+                value: 318994,
+                currency: 'LKR',
+                exchangeRate: 1,
+                note: '',
+                advance: 0,
+                workDue: 0,
+                workPaid: 0,
+                status: 'Waiting',
+                createdAt: today(),
+              },
+            ],
+            expenses: [],
+            fxRates: { LKR: 1, USD: 330.32 },
+          }),
+        );
+        localStorage.setItem(
+          officeStorageKey,
+          JSON.stringify({
+            documents: [
+              {
+                id: 'preview-invoice',
+                kind: 'Invoice',
+                number: 'INV-2026-003',
+                clientId: previewClient.id,
+                projectId: 'preview-project',
+                issueDate: today(),
+                dueDate: addDays(today(), 10),
+                amount: 100,
+                currency: 'USD',
+                exchangeRate: 330.32,
+                status: 'Pending',
+              },
+              {
+                id: 'preview-quotation',
+                kind: 'Quotation',
+                number: 'QUO-2026-001',
+                clientId: previewClient.id,
+                projectId: 'preview-project',
+                issueDate: today(),
+                dueDate: addDays(today(), 10),
+                amount: 100,
+                currency: 'USD',
+                exchangeRate: 330.32,
+                status: 'Draft',
+              },
+            ],
+            payments: [
+              {
+                id: 'preview-payment',
+                type: 'Income',
+                category: 'Project',
+                note: 'Website deposit',
+                amount: 100,
+                currency: 'USD',
+                exchangeRate: 330.32,
+                date: today(),
+                status: 'Paid',
+              },
+            ],
+            renewals: [],
+            events: [],
+            letters: [],
+            recurringInvoices: [],
+          }),
+        );
+      }
       const saved = localStorage.getItem(storageKey);
       const parsed = saved
         ? (JSON.parse(saved) as {
