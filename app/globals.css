@@ -14759,7 +14759,7 @@ tfoot td {
     grid-column: 1 / -1;
     grid-template-columns: 34px minmax(0, 1fr);
     min-height: 38px;
-    padding: 0 102px 5px 0;
+    padding: 0 114px 5px 0;
   }
 
   .sales-document-panel .office-document-number-icon {
@@ -14809,11 +14809,11 @@ tfoot td {
   .sales-document-panel .office-table tr.sales-document-row td[data-label='Status'] {
     top: 15px;
     right: 12px;
-    width: 92px;
+    width: 104px;
   }
 
   .sales-document-panel .office-table tr.sales-document-row .office-status {
-    width: 92px;
+    width: 104px;
     min-height: 28px;
     padding: 3px 15px 3px 8px;
     font-size: 9px !important;
