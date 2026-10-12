@@ -5,6 +5,8 @@ import {
   AlertCircle,
   AlertTriangle,
   CalendarDays,
+  Camera,
+  ChartNoAxesColumnIncreasing,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -21,7 +23,9 @@ import {
   LogOut,
   Mail,
   MoreVertical,
+  Music2,
   Pencil,
+  PieChart,
   Plus,
   Printer,
   Repeat2,
@@ -29,6 +33,7 @@ import {
   Send,
   ShieldCheck,
   SlidersHorizontal,
+  ThumbsUp,
   Trash2,
   UserRound,
   UsersRound,
@@ -253,6 +258,25 @@ const compactMoney = (value: number) =>
   `LKR ${new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)}`;
 const lkr = (amount: number, rate: number) => amount * rate;
 const clientLabel = (client: ClientRef) => client.company.trim() || client.name;
+const socialPlatform = (platform: string) => {
+  const normalized = platform.toLowerCase();
+  if (normalized === 'facebook') return 'Facebook';
+  if (normalized === 'tiktok') return 'TikTok';
+  return 'Instagram';
+};
+const platformIcon = (platform: string) => {
+  const iconProps = { size: 16, strokeWidth: 2 };
+  switch (socialPlatform(platform)) {
+    case 'Instagram':
+      return <Camera {...iconProps} />;
+    case 'Facebook':
+      return <ThumbsUp {...iconProps} />;
+    case 'TikTok':
+      return <Music2 {...iconProps} />;
+    default:
+      return <Camera {...iconProps} />;
+  }
+};
 const documentTotal = (item: SalesDocument) =>
   Math.max(
     0,
@@ -314,6 +338,10 @@ export function LocalOfficeModule({
           ...emptyStore,
           ...savedStore,
           documents: savedStore.documents ?? [],
+          posts: (savedStore.posts ?? []).map((item) => ({
+            ...item,
+            platform: socialPlatform(item.platform),
+          })),
           recurringInvoices: savedStore.recurringInvoices ?? [],
         };
         setStore({
@@ -511,6 +539,7 @@ export function LocalOfficeModule({
     <ReportsModule
       documents={store.documents}
       payments={store.payments}
+      operatingExpenses={expenses}
       posts={store.posts}
       projects={projects}
       clients={clients}
@@ -799,9 +828,7 @@ function CalendarEventModal({
                 >
                   <option>Instagram</option>
                   <option>Facebook</option>
-                  <option>LinkedIn</option>
                   <option>TikTok</option>
-                  <option>YouTube</option>
                   <option>Other</option>
                 </select>
               </label>
@@ -3144,10 +3171,7 @@ function PostsModule({
             >
               <option>Instagram</option>
               <option>Facebook</option>
-              <option>LinkedIn</option>
               <option>TikTok</option>
-              <option>YouTube</option>
-              <option>Other</option>
             </select>
           </label>
           <label>
@@ -3192,7 +3216,7 @@ function PostsModule({
           <header>
             <div>
               <h2>Projects</h2>
-              <p>Team, platforms and monthly count</p>
+              <p>Client plans, channel and monthly progress</p>
             </div>
           </header>
           {!items.length ? (
@@ -3206,12 +3230,10 @@ function PostsModule({
               <table className="office-table office-post-project-table">
                 <thead>
                   <tr>
-                    <th>Client</th>
-                    <th>Project</th>
+                    <th>Client / project</th>
                     <th>Platform</th>
                     <th>Team</th>
-                    <th>This month</th>
-                    <th>Remaining</th>
+                    <th>Posts</th>
                     <th />
                   </tr>
                 </thead>
@@ -3230,12 +3252,16 @@ function PostsModule({
                       <tr key={item.id}>
                         <td data-label="Client">
                           <strong>{names.get(item.clientId) || 'Unknown'}</strong>
-                        </td>
-                        <td data-label="Project">
-                          {projectNames.get(item.projectId) || 'No project'}
+                          <small>{projectNames.get(item.projectId) || 'No project'}</small>
                         </td>
                         <td data-label="Platform">
-                          <span className="office-pill">{item.platform}</span>
+                          <span
+                            className="office-platform-icon"
+                            aria-label={socialPlatform(item.platform)}
+                            title={socialPlatform(item.platform)}
+                          >
+                            {platformIcon(item.platform)}
+                          </span>
                         </td>
                         <td data-label="Team">
                           <select
@@ -3259,17 +3285,17 @@ function PostsModule({
                             ))}
                           </select>
                         </td>
-                        <td data-label="This month">
+                        <td data-label="Posts" className="office-post-progress">
                           {tracked ? (
-                            `${postedCount} / ${item.required}`
+                            <>
+                              <strong>
+                                {postedCount}/{item.required}
+                              </strong>
+                              <small>{Math.max(0, item.required - postedCount)} left</small>
+                            </>
                           ) : (
                             <small>Not tracked</small>
                           )}
-                        </td>
-                        <td data-label="Remaining">
-                          <strong>
-                            {tracked ? Math.max(0, item.required - postedCount) : '—'}
-                          </strong>
                         </td>
                         <td className="office-row-actions">
                           <button
@@ -4381,6 +4407,7 @@ function CalendarModule({
 function ReportsModule({
   documents,
   payments,
+  operatingExpenses,
   posts,
   projects,
   clients,
@@ -4388,6 +4415,7 @@ function ReportsModule({
 }: {
   documents: SalesDocument[];
   payments: Payment[];
+  operatingExpenses: OperatingExpense[];
   posts: PostPlan[];
   projects: ProjectRef[];
   clients: ClientRef[];
@@ -4399,11 +4427,16 @@ function ReportsModule({
   const income = payments
     .filter((x) => x.type === 'Income' && x.status === 'Paid' && !x.invoiceId)
     .reduce((s, x) => s + lkr(x.amount, x.exchangeRate), 0);
-  const expenses = payments
+  const manualExpenses = payments
     .filter((x) => x.type === 'Expense' && x.status === 'Paid')
     .reduce((s, x) => s + lkr(x.amount, x.exchangeRate), 0);
   const projectValue = projects.reduce((s, x) => s + lkr(x.value, x.exchangeRate), 0);
   const projectCost = projects.reduce((s, x) => s + x.workDue + x.workPaid, 0);
+  const operatingExpenseTotal = operatingExpenses.reduce(
+    (sum, item) => sum + lkr(item.amount, item.exchangeRate),
+    0,
+  );
+  const expenses = manualExpenses + operatingExpenseTotal + projectCost;
   const required = posts.reduce((s, x) => s + x.required, 0);
   const posted = posts.reduce((s, x) => s + x.posted, 0);
   const monthStarts = Array.from({ length: 3 }, (_, index) => {
@@ -4455,6 +4488,33 @@ function ReportsModule({
     .filter((item) => item.value > 0)
     .toSorted((left, right) => right.profit - left.profit)
     .slice(0, 5);
+  const cashTrend = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(`${thisMonth()}-01T00:00:00Z`);
+    date.setUTCMonth(date.getUTCMonth() - (5 - index));
+    const month = date.toISOString().slice(0, 7);
+    const monthPayments = payments.filter(
+      (payment) => payment.status === 'Paid' && payment.date.startsWith(month),
+    );
+    return {
+      month,
+      label: date.toLocaleDateString('en', { month: 'short', timeZone: 'UTC' }),
+      income: monthPayments
+        .filter((payment) => payment.type === 'Income')
+        .reduce((sum, payment) => sum + lkr(payment.amount, payment.exchangeRate), 0),
+      expenses:
+        monthPayments
+          .filter((payment) => payment.type === 'Expense')
+          .reduce((sum, payment) => sum + lkr(payment.amount, payment.exchangeRate), 0) +
+        operatingExpenses
+          .filter((item) => item.date.startsWith(month))
+          .reduce((sum, item) => sum + lkr(item.amount, item.exchangeRate), 0) +
+        (month === thisMonth() ? projectCost : 0),
+    };
+  });
+  const cashTrendMax = Math.max(1, ...cashTrend.flatMap((item) => [item.income, item.expenses]));
+  const paidCash = paidInvoices + income;
+  const cashMixTotal = Math.max(1, paidCash + expenses);
+  const paidCashShare = Math.round((paidCash / cashMixTotal) * 100);
   function download() {
     const rows = [
       ['Metric', 'Value'],
@@ -4496,6 +4556,86 @@ function ReportsModule({
         <Metric label="Paid expenses" value={expenses} tone="red" />
         <Metric label="Net balance" value={paidInvoices + income - expenses} tone="blue" />
         <Metric label="Project profit" value={projectValue - projectCost} tone="amber" />
+      </section>
+      <section className="office-report-visuals" aria-label="Financial charts">
+        <article className="report-chart-card">
+          <header>
+            <span className="report-chart-icon">
+              <ChartNoAxesColumnIncreasing size={19} />
+            </span>
+            <div>
+              <h2>Six-month cash movement</h2>
+              <p>Paid income and expenses by month</p>
+            </div>
+            <div className="report-chart-legend" aria-label="Chart legend">
+              <span className="income">Income</span>
+              <span className="expense">Expenses</span>
+            </div>
+          </header>
+          <div className="report-bar-chart">
+            {cashTrend.map((item) => (
+              <div className="report-bar-group" key={item.month}>
+                <div className="report-bars">
+                  <i
+                    className="income"
+                    style={{
+                      height: `${Math.max(item.income ? 8 : 2, (item.income / cashTrendMax) * 100)}%`,
+                    }}
+                    title={`${item.label} income: ${money(item.income)}`}
+                  />
+                  <i
+                    className="expense"
+                    style={{
+                      height: `${Math.max(item.expenses ? 8 : 2, (item.expenses / cashTrendMax) * 100)}%`,
+                    }}
+                    title={`${item.label} expenses: ${money(item.expenses)}`}
+                  />
+                </div>
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </article>
+        <article className="report-chart-card report-donut-card">
+          <header>
+            <span className="report-chart-icon violet">
+              <PieChart size={19} />
+            </span>
+            <div>
+              <h2>Cash mix</h2>
+              <p>Paid inflow compared with outflow</p>
+            </div>
+          </header>
+          <div className="report-donut-body">
+            <div
+              className="report-donut"
+              style={{
+                background: `conic-gradient(#2377de 0 ${paidCashShare}%, #f07c67 ${paidCashShare}% 100%)`,
+              }}
+              role="img"
+              aria-label={`${paidCashShare}% income and ${100 - paidCashShare}% expenses`}
+            >
+              <span>
+                <strong>{paidCashShare}%</strong>
+                <small>income</small>
+              </span>
+            </div>
+            <div className="report-donut-values">
+              <div>
+                <span>
+                  <i className="income" /> Paid income
+                </span>
+                <strong>{compactMoney(paidCash)}</strong>
+              </div>
+              <div>
+                <span>
+                  <i className="expense" /> Paid expenses
+                </span>
+                <strong>{compactMoney(expenses)}</strong>
+              </div>
+            </div>
+          </div>
+        </article>
       </section>
       <section className="office-report-grid">
         <ReportCard

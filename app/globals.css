@@ -738,6 +738,730 @@
   }
 }
 
+/* Final product UI system: one control scale across desktop and mobile. */
+.local-app {
+  --ui-control-height: 40px;
+  --ui-control-radius: 10px;
+  --ui-font-control: 12.5px;
+  --ui-font-label: 11px;
+  --ui-font-body: 13px;
+  --ui-border: #dfe7f0;
+  --ui-ink: #243a54;
+  --ui-muted: #718197;
+}
+
+.local-app .button {
+  min-height: var(--ui-control-height);
+  padding: 0 14px;
+  border-radius: var(--ui-control-radius);
+  font-size: var(--ui-font-control);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.local-nav button,
+.local-sidebar-footer button {
+  min-height: 40px;
+  font-size: 12.5px;
+  line-height: 1.2;
+}
+
+.office-status,
+.office-status-button,
+.office-pill {
+  min-height: 26px;
+  padding: 5px 9px;
+  font-size: 10.5px;
+  line-height: 1;
+}
+
+.finance-ledger-panel .office-status-button,
+.finance-ledger-panel .office-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 62px;
+  font-size: 10.5px;
+}
+
+.local-activity-list strong,
+.local-dashboard-page .local-activity-list strong {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.local-outstanding-total .local-attention-open {
+  min-width: 76px;
+  padding-inline: 12px;
+}
+
+/* Invoice KPIs use a quiet card system with icon, copy and action on one line. */
+.invoice-kpis {
+  gap: 12px;
+}
+
+.invoice-kpis article,
+.invoice-kpis article.blue,
+.invoice-kpis article.amber,
+.invoice-kpis article.green,
+.invoice-kpis article.red,
+.invoice-kpis article.purple {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 11px;
+  min-height: 108px;
+  padding: 15px;
+  border: 1px solid var(--ui-border);
+  border-radius: 15px;
+  background: #fff;
+  color: var(--ui-ink);
+  box-shadow: 0 8px 24px rgba(28, 50, 80, 0.055);
+}
+
+.invoice-kpi-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 11px;
+  background: #eaf3ff;
+  color: #2374d6;
+}
+
+.invoice-kpis article.amber .invoice-kpi-icon {
+  background: #fff3df;
+  color: #c97912;
+}
+
+.invoice-kpis article.green .invoice-kpi-icon {
+  background: #e7f8f0;
+  color: #17855f;
+}
+
+.invoice-kpis article.red .invoice-kpi-icon {
+  background: #fff0ec;
+  color: #d15b48;
+}
+
+.invoice-kpis article.purple .invoice-kpi-icon {
+  background: #f2edff;
+  color: #7651c7;
+}
+
+.invoice-kpis .invoice-kpi-copy {
+  min-width: 0;
+}
+
+.invoice-kpis .invoice-kpi-copy > span {
+  color: var(--ui-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.invoice-kpis .invoice-kpi-copy > strong,
+.invoice-kpis article.green .invoice-kpi-copy > strong,
+.invoice-kpis article.red .invoice-kpi-copy > strong,
+.invoice-kpis article.purple .invoice-kpi-copy > strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 5px;
+  padding: 0;
+  color: #203650;
+  font-size: clamp(15px, 1.15vw, 19px);
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invoice-kpis .invoice-kpi-copy > small {
+  margin-top: 5px;
+  color: #8794a6;
+  font-size: 10px;
+}
+
+.invoice-kpi-chevron {
+  display: block;
+  color: #9caabc;
+}
+
+.invoice-kpi-hit:focus-visible {
+  outline: 3px solid rgba(35, 116, 214, 0.28);
+  outline-offset: 2px;
+}
+
+/* Post tracker gives client/project names room and uses recognisable platform icons. */
+.office-post-project-table {
+  min-width: 820px;
+  table-layout: fixed;
+}
+
+.office-post-project-table th:first-child,
+.office-post-project-table td:first-child {
+  width: 21%;
+}
+
+.office-post-project-table th:nth-child(2),
+.office-post-project-table td:nth-child(2) {
+  width: 21%;
+}
+
+.office-post-project-table th:nth-child(3),
+.office-post-project-table td:nth-child(3) {
+  width: 9%;
+  text-align: center;
+}
+
+.office-platform-icon {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid #dce7f2;
+  border-radius: 9px;
+  background: #f6f9fd;
+  color: #286fb9;
+}
+
+/* Reports: visual trend and proportion cards complement the detailed tables. */
+.office-report-visuals {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.75fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.report-chart-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--ui-border);
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(28, 50, 80, 0.05);
+}
+
+.report-chart-card > header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.report-chart-card > header > div:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+}
+
+.report-chart-card h2 {
+  color: #233b58;
+  font-size: 14px;
+}
+
+.report-chart-card header p {
+  margin-top: 2px;
+  color: #8290a2;
+  font-size: 10.5px;
+}
+
+.report-chart-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 11px;
+  background: #eaf3ff;
+  color: #2374d6;
+}
+
+.report-chart-icon.violet {
+  background: #f1edff;
+  color: #7251c4;
+}
+
+.report-chart-legend {
+  display: flex;
+  gap: 12px;
+  color: #718197;
+  font-size: 10px;
+}
+
+.report-chart-legend span::before,
+.report-donut-values i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 5px;
+  border-radius: 999px;
+  background: #2377de;
+  content: '';
+}
+
+.report-chart-legend .expense::before,
+.report-donut-values i.expense {
+  background: #f07c67;
+}
+
+.report-bar-chart {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: end;
+  gap: 12px;
+  height: 218px;
+  margin-top: 20px;
+  padding: 16px 12px 0;
+  border-radius: 12px;
+  background: repeating-linear-gradient(to top, #edf2f7 0 1px, transparent 1px 25%);
+}
+
+.report-bar-group {
+  display: grid;
+  grid-template-rows: 1fr 20px;
+  align-items: end;
+  height: 100%;
+  gap: 7px;
+}
+
+.report-bars {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 5px;
+  height: 100%;
+}
+
+.report-bars i {
+  width: min(18px, 38%);
+  min-height: 3px;
+  border-radius: 5px 5px 2px 2px;
+  background: linear-gradient(180deg, #4c93eb, #2377de);
+}
+
+.report-bars i.expense {
+  background: linear-gradient(180deg, #f59a87, #ee715d);
+}
+
+.report-bar-group > span {
+  color: #7d8ca0;
+  font-size: 10px;
+  text-align: center;
+}
+
+.report-donut-body {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  padding-top: 22px;
+}
+
+.report-donut {
+  display: grid;
+  width: 154px;
+  height: 154px;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.report-donut::before {
+  grid-area: 1 / 1;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #edf1f6;
+  content: '';
+}
+
+.report-donut > span {
+  z-index: 1;
+  grid-area: 1 / 1;
+  text-align: center;
+}
+
+.report-donut strong,
+.report-donut small {
+  display: block;
+}
+
+.report-donut strong {
+  color: #223b58;
+  font-size: 24px;
+}
+
+.report-donut small {
+  margin-top: 2px;
+  color: #8190a3;
+  font-size: 10px;
+}
+
+.report-donut-values {
+  display: grid;
+  width: 100%;
+  gap: 9px;
+}
+
+.report-donut-values > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #718197;
+  font-size: 10.5px;
+}
+
+.report-donut-values strong {
+  color: #263d58;
+  font-size: 11px;
+}
+
+.office-report-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Settings is presented as one coherent control centre. */
+.settings-control-center {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+  padding: 16px 18px;
+  border: 1px solid #d9e6f3;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #f8fbff, #eef6ff);
+}
+
+.settings-control-copy {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.settings-control-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+  background: #1f73d4;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(31, 115, 212, 0.2);
+}
+
+.settings-control-copy strong {
+  color: #203a58;
+  font-size: 14px;
+}
+
+.settings-control-copy p {
+  margin-top: 2px;
+  color: #74859a;
+  font-size: 11px;
+}
+
+.settings-control-stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.settings-control-stats > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 6px 10px;
+  border: 1px solid #d8e5f2;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #61758d;
+  font-size: 10.5px;
+}
+
+.settings-control-stats b {
+  color: #246fbd;
+  font-size: 11.5px;
+}
+
+.settings-control-stats .is-secure {
+  border-color: #d0ecdf;
+  background: #edf9f4;
+  color: #23795c;
+}
+
+.workspace-settings-grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.workspace-settings-card {
+  grid-column: span 6;
+  gap: 15px;
+  padding: 19px;
+  border-color: var(--ui-border);
+  border-radius: 15px;
+  box-shadow: 0 8px 24px rgba(28, 50, 80, 0.045);
+}
+
+.workspace-settings-card.profile,
+.workspace-settings-card.assistant {
+  grid-column: span 5;
+}
+
+.workspace-settings-card.documents,
+.workspace-settings-card.reminders {
+  grid-column: span 7;
+}
+
+.workspace-settings-card > header {
+  align-items: center;
+  padding-bottom: 14px;
+  color: inherit;
+}
+
+.workspace-settings-card-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 11px;
+  background: #eaf3ff;
+  color: #2374d6;
+}
+
+.workspace-settings-card.documents .workspace-settings-card-icon {
+  background: #edf8f3;
+  color: #21805f;
+}
+
+.workspace-settings-card.assistant .workspace-settings-card-icon {
+  background: #f1edff;
+  color: #7453c3;
+}
+
+.workspace-settings-card.reminders .workspace-settings-card-icon {
+  background: #fff3df;
+  color: #bd7218;
+}
+
+.workspace-settings-card h2 {
+  font-size: 14px;
+}
+
+.workspace-settings-card p,
+.settings-help {
+  font-size: 10.5px;
+}
+
+.workspace-settings-card label > span {
+  font-size: 10.5px;
+}
+
+.settings-switch {
+  min-height: 44px;
+  border: 1px solid #e2eaf3;
+  background: #f7fafd;
+}
+
+.settings-users-embed {
+  margin-top: 14px;
+}
+
+@media (max-width: 1100px) {
+  .invoice-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .invoice-kpis article:nth-child(n + 4) {
+    min-height: 96px;
+  }
+
+  .office-report-visuals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .report-donut-body {
+    grid-template-columns: auto minmax(220px, 0.6fr);
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 720px) {
+  .local-app {
+    --ui-control-height: 42px;
+    --ui-font-control: 12px;
+  }
+
+  .local-app .button {
+    min-height: 42px;
+    padding-inline: 12px;
+  }
+
+  .local-nav button,
+  .local-sidebar-footer button {
+    min-height: 42px;
+  }
+
+  .local-outstanding-total .local-attention-open {
+    width: 42px;
+    min-width: 42px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .local-outstanding-total .local-attention-open svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .invoice-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 7px;
+  }
+
+  .invoice-kpis article,
+  .invoice-kpis article:last-child,
+  .invoice-kpis article.blue,
+  .invoice-kpis article.green,
+  .invoice-kpis article.red {
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 7px;
+    min-height: 82px;
+    padding: 10px 8px;
+  }
+
+  .invoice-kpis article.amber,
+  .invoice-kpis article.purple {
+    display: none;
+  }
+
+  .invoice-kpis .invoice-kpi-icon,
+  .invoice-kpis article.green .invoice-kpi-icon,
+  .invoice-kpis article.red .invoice-kpi-icon {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+  }
+
+  .invoice-kpis .invoice-kpi-copy {
+    display: block;
+    min-width: 0;
+  }
+
+  .invoice-kpis .invoice-kpi-copy > span {
+    overflow: hidden;
+    font-size: 8.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .invoice-kpis .invoice-kpi-copy > strong,
+  .invoice-kpis article.green .invoice-kpi-copy > strong,
+  .invoice-kpis article.red .invoice-kpi-copy > strong {
+    display: block;
+    margin-top: 4px;
+    font-size: 11.5px;
+  }
+
+  .invoice-kpis .invoice-kpi-copy > small,
+  .invoice-kpi-chevron {
+    display: none;
+  }
+
+  .office-post-project-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: auto;
+  }
+
+  .office-post-project-table th:first-child,
+  .office-post-project-table td:first-child,
+  .office-post-project-table th:nth-child(2),
+  .office-post-project-table td:nth-child(2),
+  .office-post-project-table th:nth-child(3),
+  .office-post-project-table td:nth-child(3) {
+    width: auto;
+  }
+
+  .office-platform-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .office-report-visuals,
+  .office-report-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .report-chart-card {
+    padding: 14px;
+  }
+
+  .report-chart-card > header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .report-chart-legend {
+    width: 100%;
+    padding-left: 48px;
+  }
+
+  .report-bar-chart {
+    height: 190px;
+    gap: 6px;
+    padding-inline: 7px;
+  }
+
+  .report-donut-body {
+    grid-template-columns: 1fr;
+  }
+
+  .report-donut {
+    width: 140px;
+    height: 140px;
+  }
+
+  .report-donut::before {
+    width: 94px;
+    height: 94px;
+  }
+
+  .settings-control-center {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 14px;
+  }
+
+  .settings-control-stats {
+    justify-content: flex-start;
+  }
+
+  .workspace-settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .workspace-settings-card,
+  .workspace-settings-card.profile,
+  .workspace-settings-card.documents,
+  .workspace-settings-card.assistant,
+  .workspace-settings-card.reminders {
+    grid-column: auto;
+    padding: 14px;
+  }
+
+  .settings-two-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Connected client workspace, invoice receipts and attention queue. */
 .client-workspace-summary {
   display: grid;
@@ -15394,5 +16118,553 @@ tfoot td {
   .office-post-project-table {
     width: 100%;
     min-width: 0 !important;
+  }
+}
+
+/* Final cascade lock for the shared control system. Keep this block last. */
+.local-app .button {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  line-height: 1;
+}
+
+.local-nav button,
+.local-sidebar-footer button {
+  min-height: 40px;
+  font-size: 12.5px;
+  line-height: 1.2;
+}
+
+.finance-ledger-panel .office-status-button,
+.finance-ledger-panel .office-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 62px;
+  min-height: 26px;
+  padding: 5px 9px;
+  font-size: 10.5px;
+  line-height: 1;
+}
+
+.local-dashboard-page .local-activity-list strong {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.invoice-kpis article,
+.invoice-kpis article.blue,
+.invoice-kpis article.amber,
+.invoice-kpis article.green,
+.invoice-kpis article.red,
+.invoice-kpis article.purple {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 11px;
+  min-height: 108px;
+  padding: 15px;
+  border: 1px solid #dfe7f0;
+  border-radius: 15px;
+  background: #fff;
+  color: #243a54;
+  box-shadow: 0 8px 24px rgba(28, 50, 80, 0.055);
+}
+
+.invoice-kpi-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 11px;
+}
+
+.invoice-kpis .invoice-kpi-copy {
+  display: block;
+  min-width: 0;
+}
+
+.invoice-kpis .invoice-kpi-copy > strong,
+.invoice-kpis article.green .invoice-kpi-copy > strong,
+.invoice-kpis article.red .invoice-kpi-copy > strong,
+.invoice-kpis article.purple .invoice-kpi-copy > strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 5px;
+  padding: 0;
+  color: #203650;
+  font-size: clamp(15px, 1.15vw, 19px);
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invoice-kpi-chevron {
+  display: block;
+  position: relative;
+  right: auto;
+  color: #9caabc;
+}
+
+.office-post-project-table {
+  min-width: 900px;
+  table-layout: fixed;
+}
+
+.office-post-project-table th:first-child,
+.office-post-project-table td:first-child,
+.office-post-project-table th:nth-child(2),
+.office-post-project-table td:nth-child(2) {
+  width: 21%;
+}
+
+.office-post-project-table th:nth-child(3),
+.office-post-project-table td:nth-child(3) {
+  width: 9%;
+  text-align: center;
+}
+
+.workspace-settings-grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.workspace-settings-card.profile,
+.workspace-settings-card.assistant {
+  grid-column: span 5;
+}
+
+.workspace-settings-card.documents,
+.workspace-settings-card.reminders {
+  grid-column: span 7;
+}
+
+@media (max-width: 720px) {
+  .local-app .button {
+    min-height: 42px;
+    padding-inline: 12px;
+    font-size: 12px;
+  }
+
+  .invoice-kpis article,
+  .invoice-kpis article:last-child,
+  .invoice-kpis article.blue,
+  .invoice-kpis article.green,
+  .invoice-kpis article.red {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 7px;
+    min-height: 82px;
+    padding: 10px 8px;
+  }
+
+  .invoice-kpis article.amber,
+  .invoice-kpis article.purple {
+    display: none;
+  }
+
+  .invoice-kpis .invoice-kpi-icon,
+  .invoice-kpis article.green .invoice-kpi-icon,
+  .invoice-kpis article.red .invoice-kpi-icon {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+  }
+
+  .invoice-kpis .invoice-kpi-copy {
+    display: block;
+  }
+
+  .invoice-kpis .invoice-kpi-copy > strong,
+  .invoice-kpis article.green .invoice-kpi-copy > strong,
+  .invoice-kpis article.red .invoice-kpi-copy > strong {
+    display: block;
+    margin-top: 4px;
+    font-size: 11.5px;
+  }
+
+  .invoice-kpis .invoice-kpi-copy > small,
+  .invoice-kpi-chevron {
+    display: none;
+  }
+
+  .office-post-project-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: auto;
+  }
+
+  .office-post-project-table th:first-child,
+  .office-post-project-table td:first-child,
+  .office-post-project-table th:nth-child(2),
+  .office-post-project-table td:nth-child(2),
+  .office-post-project-table th:nth-child(3),
+  .office-post-project-table td:nth-child(3) {
+    width: auto;
+  }
+
+  .workspace-settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .workspace-settings-card,
+  .workspace-settings-card.profile,
+  .workspace-settings-card.documents,
+  .workspace-settings-card.assistant,
+  .workspace-settings-card.reminders {
+    grid-column: auto;
+    padding: 14px;
+  }
+}
+
+/* Final compact workspace pass: shared controls, tables and settings layout. */
+.office-status,
+.office-inline-select,
+.agent-lead-status,
+.local-invoice-status {
+  width: 112px;
+  min-width: 112px;
+  height: 34px;
+  min-height: 34px;
+  box-sizing: border-box;
+  padding: 0 28px 0 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.agent-lead-status {
+  align-self: start;
+  margin: 0;
+}
+
+.local-invoice-preview-row {
+  grid-template-columns: minmax(0, 1fr) 112px 76px 96px;
+}
+
+.local-invoice-status {
+  justify-self: end;
+}
+
+.attention-center-list strong {
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.attention-center-list small,
+.attention-center-list > button > span {
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.attention-center-list > button {
+  padding-block: 13px;
+}
+
+.invoice-kpis article,
+.invoice-kpis article.blue,
+.invoice-kpis article.amber,
+.invoice-kpis article.green,
+.invoice-kpis article.red,
+.invoice-kpis article.purple {
+  grid-template-columns: 34px minmax(0, 1fr) 14px;
+  gap: 9px;
+  min-height: 94px;
+  padding: 12px;
+}
+
+.invoice-kpi-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+.invoice-kpi-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.invoice-kpi-chevron {
+  width: 14px;
+  height: 14px;
+}
+
+.invoice-status-bars button i {
+  width: 100% !important;
+}
+
+.office-post-projects .office-table-wrap {
+  overflow-x: hidden;
+}
+
+.office-post-project-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.office-post-project-table th,
+.office-post-project-table td {
+  padding-inline: 10px;
+}
+
+.office-post-project-table th:first-child,
+.office-post-project-table td:first-child {
+  width: 36%;
+}
+
+.office-post-project-table th:nth-child(2),
+.office-post-project-table td:nth-child(2) {
+  width: 12%;
+  text-align: center;
+}
+
+.office-post-project-table th:nth-child(3),
+.office-post-project-table td:nth-child(3) {
+  width: 28%;
+}
+
+.office-post-project-table th:nth-child(4),
+.office-post-project-table td:nth-child(4) {
+  width: 16%;
+}
+
+.office-post-project-table th:last-child,
+.office-post-project-table td:last-child {
+  width: 8%;
+}
+
+.office-post-project-table td:first-child strong,
+.office-post-project-table td:first-child small,
+.office-post-progress strong,
+.office-post-progress small {
+  display: block;
+}
+
+.office-post-project-table td:first-child small,
+.office-post-progress small {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #8190a3;
+  font-size: 9.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.office-post-project-table .office-inline-select {
+  width: 100%;
+  min-width: 0;
+  max-width: 150px;
+}
+
+.settings-shell {
+  display: grid;
+  grid-template-columns: 205px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.settings-section-nav {
+  position: sticky;
+  top: 76px;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid #dce6f0;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(28, 50, 80, 0.05);
+}
+
+.settings-section-nav > span {
+  padding: 5px 9px 8px;
+  color: #8b99aa;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.settings-section-nav a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  padding: 0 10px;
+  border-radius: 9px;
+  color: #52677f;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.settings-section-nav a:hover,
+.settings-section-nav a.active {
+  background: #eaf3ff;
+  color: #176bd1;
+}
+
+.settings-section-nav small {
+  margin-top: 7px;
+  padding: 11px 9px 3px;
+  border-top: 1px solid #edf1f5;
+  color: #8997a8;
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+.settings-content {
+  min-width: 0;
+}
+
+.settings-content > section,
+.workspace-settings-card {
+  scroll-margin-top: 82px;
+}
+
+.settings-content .settings-control-center {
+  margin-bottom: 12px;
+}
+
+.settings-content .workspace-settings-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.workspace-settings-column {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+  align-content: start;
+}
+
+.settings-content .workspace-settings-card,
+.settings-content .workspace-settings-card.profile,
+.settings-content .workspace-settings-card.documents,
+.settings-content .workspace-settings-card.assistant,
+.settings-content .workspace-settings-card.reminders {
+  grid-column: auto;
+  padding: 16px;
+}
+
+.settings-content .settings-users-embed {
+  margin-top: 12px;
+}
+
+@media (max-width: 980px) {
+  .settings-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-section-nav {
+    position: static;
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .settings-section-nav > span,
+  .settings-section-nav small {
+    display: none;
+  }
+
+  .settings-section-nav a {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .invoice-kpis article,
+  .invoice-kpis article:last-child,
+  .invoice-kpis article.blue,
+  .invoice-kpis article.green,
+  .invoice-kpis article.red {
+    grid-template-columns: 28px minmax(0, 1fr);
+    min-height: 74px;
+    padding: 9px 8px;
+  }
+
+  .invoice-kpis .invoice-kpi-icon,
+  .invoice-kpis article.green .invoice-kpi-icon,
+  .invoice-kpis article.red .invoice-kpi-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .local-invoice-preview-row {
+    grid-template-columns: minmax(0, 1fr) 82px;
+  }
+
+  .local-invoice-preview-row > b,
+  .local-invoice-preview-actions {
+    grid-column: auto;
+  }
+
+  .local-invoice-status {
+    width: 82px;
+    min-width: 82px;
+    height: 30px;
+    min-height: 30px;
+    padding: 0 21px 0 9px;
+    font-size: 10px !important;
+    line-height: 28px;
+  }
+
+  .office-post-projects .office-table-wrap {
+    overflow-x: visible;
+  }
+
+  .office-post-project-table,
+  .office-post-project-table tbody,
+  .office-post-project-table tr,
+  .office-post-project-table td {
+    display: block;
+  }
+
+  .office-post-project-table thead {
+    display: none;
+  }
+
+  .office-post-project-table tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    padding: 12px;
+    border-bottom: 1px solid #e8edf3;
+  }
+
+  .office-post-project-table td,
+  .office-post-project-table td:first-child,
+  .office-post-project-table td:nth-child(2),
+  .office-post-project-table td:nth-child(3),
+  .office-post-project-table td:nth-child(4),
+  .office-post-project-table td:last-child {
+    width: auto;
+    padding: 0;
+    border: 0;
+    text-align: left;
+  }
+
+  .office-post-project-table td:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .office-post-project-table td:last-child {
+    position: absolute;
+    right: 12px;
+  }
+
+  .settings-content .workspace-settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-control-center {
+    align-items: flex-start;
   }
 }

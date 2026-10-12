@@ -335,7 +335,9 @@ export function LocalFinance() {
       const previewSection = previewQuery.get('ui-section');
       const isMobilePreview =
         process.env.NODE_ENV === 'development' && previewQuery.get('mobile-preview') === '1';
-      setMobilePreview(isMobilePreview);
+      const isUiPreview =
+        process.env.NODE_ENV === 'development' && previewQuery.get('ui-preview') === '1';
+      setMobilePreview(isMobilePreview || isUiPreview);
       if (
         process.env.NODE_ENV === 'development' &&
         previewSection &&
@@ -1049,6 +1051,24 @@ export function LocalFinance() {
     window.dispatchEvent(new Event('infonits:local-change'));
   }
 
+  function updateDashboardInvoiceStatus(id: string, status: string) {
+    let saved: Record<string, unknown>;
+    try {
+      saved = JSON.parse(localStorage.getItem(officeStorageKey) ?? '{}') as Record<string, unknown>;
+    } catch {
+      saved = {};
+    }
+    const documents = Array.isArray(saved.documents)
+      ? (saved.documents as OfficeOverview['documents'])
+      : [];
+    saved.documents = documents.map((document) =>
+      document.id === id ? { ...document, status } : document,
+    );
+    localStorage.setItem(officeStorageKey, JSON.stringify(saved));
+    setOfficeOverview(readOfficeOverview());
+    window.dispatchEvent(new Event('infonits:local-change'));
+  }
+
   function exportCsv() {
     const clientNames = new Map(clients.map((client) => [client.id, clientLabel(client)]));
     const csv = [
@@ -1141,19 +1161,11 @@ export function LocalFinance() {
               <span>Dashboard</span>
             </button>
             <button
-              className={section === 'assistant' ? 'active' : ''}
-              onClick={() => changeSection('assistant')}
-            >
-              <Bot size={19} />
-              <span>Infonits GPT</span>
-              <i className="local-ai-nav-dot" />
-            </button>
-            <button
               className={section === 'attention' ? 'active' : ''}
               onClick={() => changeSection('attention')}
             >
               <AlertTriangle size={19} />
-              <span>Attention center</span>
+              <span>Attention</span>
               <b>{notifications.length}</b>
             </button>
             <button
@@ -1395,6 +1407,7 @@ export function LocalFinance() {
               onSection={changeSection}
               onInvoiceView={(id) => openDashboardInvoice(id, 'view')}
               onInvoiceEdit={(id) => openDashboardInvoice(id, 'edit')}
+              onInvoiceStatusChange={updateDashboardInvoiceStatus}
               onInvoiceDelete={deleteDashboardInvoice}
             />
           )}
@@ -1718,171 +1731,246 @@ function WorkspaceSettings({
       <PageHeading
         eyebrow="WORKSPACE"
         title="Settings"
-        subtitle="Manage business details, invoice defaults, reminders and workspace access."
+        subtitle="Control business identity, document defaults, automation and workspace access."
       />
-      <section className="workspace-settings-grid">
-        <article className="workspace-settings-card">
-          <header>
-            <UserCircle2 size={19} />
-            <div>
-              <h2>Business profile</h2>
-              <p>Used across your workspace documents.</p>
+      <section className="settings-shell">
+        <aside className="settings-section-nav" aria-label="Settings sections">
+          <span>SETTINGS</span>
+          <a className="active" href="#settings-overview">
+            <LayoutDashboard size={16} /> Overview
+          </a>
+          <a href="#settings-profile">
+            <UserCircle2 size={16} /> Business profile
+          </a>
+          <a href="#settings-documents">
+            <CreditCard size={16} /> Invoice defaults
+          </a>
+          <a href="#settings-assistant">
+            <Bot size={16} /> Assistant
+          </a>
+          <a href="#settings-reminders">
+            <Bell size={16} /> Reminders
+          </a>
+          <a href="#settings-access">
+            <ShieldCheck size={16} /> Access & security
+          </a>
+          <small>Changes are saved automatically on this device.</small>
+        </aside>
+        <div className="settings-content">
+          <section
+            className="settings-control-center"
+            id="settings-overview"
+            aria-label="Workspace settings overview"
+          >
+            <div className="settings-control-copy">
+              <span className="settings-control-icon">
+                <Settings2 size={22} />
+              </span>
+              <div>
+                <strong>Workspace control centre</strong>
+                <p>Changes save automatically on this device.</p>
+              </div>
             </div>
-          </header>
-          <label>
-            <span>Business name</span>
-            <input
-              value={preferences.businessName}
-              onChange={(e) => update('businessName', e.target.value)}
-            />
-          </label>
-        </article>
-        <article className="workspace-settings-card">
-          <header>
-            <CreditCard size={19} />
-            <div>
-              <h2>Invoice defaults</h2>
-              <p>New invoices start with these choices. You can override each invoice.</p>
+            <div className="settings-control-stats">
+              <span>
+                <b>{clients.length}</b> clients
+              </span>
+              <span>
+                <b>{projects.length}</b> projects
+              </span>
+              <span>
+                <b>{expenses.length}</b> expenses
+              </span>
+              <span className="is-secure">
+                <ShieldCheck size={14} /> Local preview
+              </span>
             </div>
-          </header>
-          <label className="settings-switch">
-            <input
-              type="checkbox"
-              checked={preferences.invoiceBankDefault}
-              onChange={(e) => update('invoiceBankDefault', e.target.checked)}
-            />
-            <span>Show bank details by default</span>
-          </label>
-          {preferences.invoiceBankDefault && (
-            <label>
-              <span>Bank details</span>
-              <textarea
-                rows={4}
-                value={preferences.bankDetails}
-                onChange={(e) => update('bankDetails', e.target.value)}
-                placeholder={'Bank name\nAccount name\nAccount number / SWIFT'}
-              />
-            </label>
-          )}
-          <label className="settings-switch">
-            <input
-              type="checkbox"
-              checked={preferences.showPaymentTerms}
-              onChange={(e) => update('showPaymentTerms', e.target.checked)}
-            />
-            <span>Show payment terms by default</span>
-          </label>
-          {preferences.showPaymentTerms && (
-            <label>
-              <span>Payment terms</span>
-              <textarea
-                rows={3}
-                value={preferences.paymentTerms}
-                onChange={(e) => update('paymentTerms', e.target.value)}
-              />
-            </label>
-          )}
-        </article>
-        <article className="workspace-settings-card">
-          <header>
-            <Bot size={19} />
-            <div>
-              <h2>AI personal assistant</h2>
-              <p>Control microphone input for Claude requests.</p>
+          </section>
+          <section className="workspace-settings-grid">
+            <div className="workspace-settings-column">
+              <article className="workspace-settings-card profile" id="settings-profile">
+                <header>
+                  <span className="workspace-settings-card-icon">
+                    <UserCircle2 size={19} />
+                  </span>
+                  <div>
+                    <h2>Business profile</h2>
+                    <p>Used across your workspace documents.</p>
+                  </div>
+                </header>
+                <label>
+                  <span>Business name</span>
+                  <input
+                    value={preferences.businessName}
+                    onChange={(e) => update('businessName', e.target.value)}
+                  />
+                </label>
+              </article>
+              <article className="workspace-settings-card assistant" id="settings-assistant">
+                <header>
+                  <span className="workspace-settings-card-icon">
+                    <Bot size={19} />
+                  </span>
+                  <div>
+                    <h2>AI personal assistant</h2>
+                    <p>Control microphone input for Claude requests.</p>
+                  </div>
+                </header>
+                <label className="settings-switch">
+                  <input
+                    type="checkbox"
+                    checked={preferences.voiceEnabled}
+                    onChange={(e) => update('voiceEnabled', e.target.checked)}
+                  />
+                  <span>Enable microphone mode</span>
+                </label>
+                <div>
+                  <label>
+                    <span>Voice language</span>
+                    <select
+                      value={preferences.voiceLanguage}
+                      onChange={(e) => update('voiceLanguage', e.target.value)}
+                    >
+                      <option value="en-US">English (US)</option>
+                      <option value="en-GB">English (UK)</option>
+                      <option value="en-IN">English (South Asia)</option>
+                      <option value="ta-IN">Tamil</option>
+                    </select>
+                  </label>
+                </div>
+              </article>
             </div>
-          </header>
-          <label className="settings-switch">
-            <input
-              type="checkbox"
-              checked={preferences.voiceEnabled}
-              onChange={(e) => update('voiceEnabled', e.target.checked)}
-            />
-            <span>Enable microphone mode</span>
-          </label>
-          <div>
-            <label>
-              <span>Voice language</span>
-              <select
-                value={preferences.voiceLanguage}
-                onChange={(e) => update('voiceLanguage', e.target.value)}
-              >
-                <option value="en-US">English (US)</option>
-                <option value="en-GB">English (UK)</option>
-                <option value="en-IN">English (South Asia)</option>
-                <option value="ta-IN">Tamil</option>
-              </select>
-            </label>
-          </div>
-        </article>
-        <article className="workspace-settings-card">
-          <header>
-            <Bell size={19} />
-            <div>
-              <h2>Reminders</h2>
-              <p>Choose when items appear in the bell and Attention center.</p>
+            <div className="workspace-settings-column">
+              <article className="workspace-settings-card documents" id="settings-documents">
+                <header>
+                  <span className="workspace-settings-card-icon">
+                    <CreditCard size={19} />
+                  </span>
+                  <div>
+                    <h2>Invoice defaults</h2>
+                    <p>New invoices start with these choices. You can override each invoice.</p>
+                  </div>
+                </header>
+                <label className="settings-switch">
+                  <input
+                    type="checkbox"
+                    checked={preferences.invoiceBankDefault}
+                    onChange={(e) => update('invoiceBankDefault', e.target.checked)}
+                  />
+                  <span>Show bank details by default</span>
+                </label>
+                {preferences.invoiceBankDefault && (
+                  <label>
+                    <span>Bank details</span>
+                    <textarea
+                      rows={4}
+                      value={preferences.bankDetails}
+                      onChange={(e) => update('bankDetails', e.target.value)}
+                      placeholder={'Bank name\nAccount name\nAccount number / SWIFT'}
+                    />
+                  </label>
+                )}
+                <label className="settings-switch">
+                  <input
+                    type="checkbox"
+                    checked={preferences.showPaymentTerms}
+                    onChange={(e) => update('showPaymentTerms', e.target.checked)}
+                  />
+                  <span>Show payment terms by default</span>
+                </label>
+                {preferences.showPaymentTerms && (
+                  <label>
+                    <span>Payment terms</span>
+                    <textarea
+                      rows={3}
+                      value={preferences.paymentTerms}
+                      onChange={(e) => update('paymentTerms', e.target.value)}
+                    />
+                  </label>
+                )}
+              </article>
+              <article className="workspace-settings-card reminders" id="settings-reminders">
+                <header>
+                  <span className="workspace-settings-card-icon">
+                    <Bell size={19} />
+                  </span>
+                  <div>
+                    <h2>Reminders</h2>
+                    <p>Choose when items appear in the bell and Attention center.</p>
+                  </div>
+                </header>
+                <label className="settings-switch">
+                  <input
+                    type="checkbox"
+                    checked={preferences.notificationsEnabled}
+                    onChange={(event) => update('notificationsEnabled', event.target.checked)}
+                  />
+                  <span>Enable workspace reminders</span>
+                </label>
+                {preferences.notificationsEnabled && (
+                  <div className="settings-two-column">
+                    <label>
+                      <span>Invoice notice</span>
+                      <select
+                        value={preferences.invoiceReminderDays}
+                        disabled={!preferences.notificationsEnabled}
+                        onChange={(event) =>
+                          update('invoiceReminderDays', Number(event.target.value))
+                        }
+                      >
+                        <option value={3}>3 days before</option>
+                        <option value={7}>7 days before</option>
+                        <option value={14}>14 days before</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>Renewal notice</span>
+                      <select
+                        value={preferences.renewalReminderDays}
+                        disabled={!preferences.notificationsEnabled}
+                        onChange={(event) =>
+                          update('renewalReminderDays', Number(event.target.value))
+                        }
+                      >
+                        <option value={14}>14 days before</option>
+                        <option value={30}>30 days before</option>
+                        <option value={60}>60 days before</option>
+                      </select>
+                    </label>
+                  </div>
+                )}
+                {preferences.notificationsEnabled && (
+                  <label>
+                    <span>Calendar notice</span>
+                    <select
+                      value={preferences.eventReminderDays}
+                      disabled={!preferences.notificationsEnabled}
+                      onChange={(event) => update('eventReminderDays', Number(event.target.value))}
+                    >
+                      <option value={1}>1 day before</option>
+                      <option value={3}>3 days before</option>
+                      <option value={7}>7 days before</option>
+                    </select>
+                  </label>
+                )}
+              </article>
             </div>
-          </header>
-          <label className="settings-switch">
-            <input
-              type="checkbox"
-              checked={preferences.notificationsEnabled}
-              onChange={(event) => update('notificationsEnabled', event.target.checked)}
+          </section>
+          <section
+            className="settings-users-embed"
+            id="settings-access"
+            aria-label="Users and roles settings"
+          >
+            <LocalOfficeModule
+              section="users"
+              clients={clients}
+              projects={projects}
+              expenses={expenses}
+              rates={rates}
+              preview={preview}
             />
-            <span>Enable workspace reminders</span>
-          </label>
-          {preferences.notificationsEnabled && (
-            <div className="settings-two-column">
-              <label>
-                <span>Invoice notice</span>
-                <select
-                  value={preferences.invoiceReminderDays}
-                  disabled={!preferences.notificationsEnabled}
-                  onChange={(event) => update('invoiceReminderDays', Number(event.target.value))}
-                >
-                  <option value={3}>3 days before</option>
-                  <option value={7}>7 days before</option>
-                  <option value={14}>14 days before</option>
-                </select>
-              </label>
-              <label>
-                <span>Renewal notice</span>
-                <select
-                  value={preferences.renewalReminderDays}
-                  disabled={!preferences.notificationsEnabled}
-                  onChange={(event) => update('renewalReminderDays', Number(event.target.value))}
-                >
-                  <option value={14}>14 days before</option>
-                  <option value={30}>30 days before</option>
-                  <option value={60}>60 days before</option>
-                </select>
-              </label>
-            </div>
-          )}
-          {preferences.notificationsEnabled && (
-            <label>
-              <span>Calendar notice</span>
-              <select
-                value={preferences.eventReminderDays}
-                disabled={!preferences.notificationsEnabled}
-                onChange={(event) => update('eventReminderDays', Number(event.target.value))}
-              >
-                <option value={1}>1 day before</option>
-                <option value={3}>3 days before</option>
-                <option value={7}>7 days before</option>
-              </select>
-            </label>
-          )}
-        </article>
-      </section>
-      <section className="settings-users-embed" aria-label="Users and roles settings">
-        <LocalOfficeModule
-          section="users"
-          clients={clients}
-          projects={projects}
-          expenses={expenses}
-          rates={rates}
-          preview={preview}
-        />
+          </section>
+        </div>
       </section>
     </>
   );
@@ -2267,6 +2355,7 @@ function Dashboard({
   onSection,
   onInvoiceView,
   onInvoiceEdit,
+  onInvoiceStatusChange,
   onInvoiceDelete,
 }: {
   totals: { value: number; received: number; work: number; expenses: number; net: number };
@@ -2278,6 +2367,7 @@ function Dashboard({
   onSection: (section: Section) => void;
   onInvoiceView: (id: string) => void;
   onInvoiceEdit: (id: string) => void;
+  onInvoiceStatusChange: (id: string, status: string) => void;
   onInvoiceDelete: (id: string) => void;
 }) {
   const [invoiceFilter, setInvoiceFilter] = useState('All');
@@ -2457,8 +2547,13 @@ function Dashboard({
               {outstandingInvoices.length} invoice{outstandingInvoices.length === 1 ? '' : 's'}
               {outstandingClientCount ? ` from ${outstandingClientCount} clients` : ''}
             </span>
-            <button className="button button-outline" onClick={() => onSection('attention')}>
-              Open attention center <ArrowUpRight size={15} />
+            <button
+              className="button button-outline local-attention-open"
+              aria-label="Open attention center"
+              title="Open attention center"
+              onClick={() => onSection('attention')}
+            >
+              View <ArrowUpRight size={15} />
             </button>
           </div>
           {actions.length ? (
@@ -2523,9 +2618,16 @@ function Dashboard({
                       </small>
                     </span>
                   </button>
-                  <em className={`invoice-state ${invoice.status.toLowerCase()}`}>
-                    {invoice.status}
-                  </em>
+                  <select
+                    className={`office-status local-invoice-status ${invoice.status.toLowerCase()}`}
+                    aria-label={`Status for ${invoice.number}`}
+                    value={invoice.status}
+                    onChange={(event) => onInvoiceStatusChange(invoice.id, event.target.value)}
+                  >
+                    {['Pending', 'Sent', 'Partial', 'Paid', 'Overdue'].map((status) => (
+                      <option key={status}>{status}</option>
+                    ))}
+                  </select>
                   <b>
                     {invoice.currency} {compactNumber(invoice.amount)}
                   </b>
