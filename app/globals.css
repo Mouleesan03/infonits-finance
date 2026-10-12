@@ -14682,3 +14682,239 @@ tfoot td {
     color: #0f70d9;
   }
 }
+
+/* Compact mobile records: keep sales controls on one line and reduce card height. */
+@media (max-width: 720px) {
+  .invoice-kpis {
+    display: none !important;
+  }
+
+  .sales-document-panel .office-toolbar {
+    grid-template-columns: minmax(0, 1fr) 36px;
+    gap: 7px;
+    padding: 9px;
+  }
+
+  .sales-document-panel .office-toolbar .office-search,
+  .sales-document-panel .office-toolbar .office-search input {
+    min-height: 36px;
+  }
+
+  .sales-document-panel .office-toolbar .office-search input {
+    padding-inline: 9px;
+    font-size: 12px !important;
+  }
+
+  .sales-document-panel .invoice-filter-button {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+  }
+
+  .sales-document-panel .invoice-filter-chips.is-open {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .sales-document-panel .invoice-filter-chips.is-open::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sales-document-panel .invoice-filter-chips button {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 5px 6px;
+    font-size: 9px;
+    white-space: nowrap;
+  }
+
+  .sales-document-panel .office-toolbar > span {
+    display: none;
+  }
+
+  .sales-document-panel .office-table tbody {
+    gap: 8px;
+  }
+
+  .sales-document-panel .office-table tr.sales-document-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 7px 10px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Number'] {
+    grid-column: 1 / -1;
+    grid-template-columns: 34px minmax(0, 1fr);
+    min-height: 38px;
+    padding: 0 92px 5px 0;
+  }
+
+  .sales-document-panel .office-document-number-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+  }
+
+  .sales-document-panel .office-document-number-copy > strong {
+    font-size: 13px !important;
+  }
+
+  .sales-document-panel .office-document-number-copy > small {
+    font-size: 9.5px;
+  }
+
+  .sales-document-panel .office-document-more {
+    display: none;
+  }
+
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Date'],
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Due'] {
+    grid-template-columns: 14px minmax(0, 1fr);
+    gap: 5px;
+    padding: 5px 0;
+    font-size: 9.5px;
+  }
+
+  .sales-document-panel .office-document-date-icon {
+    width: 13px;
+    height: 13px;
+  }
+
+  .sales-document-panel td[data-label='Date'] > span > small,
+  .sales-document-panel td[data-label='Due'] > span > small {
+    font-size: 8px;
+  }
+
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Status'] {
+    top: 15px;
+    right: 12px;
+    width: 82px;
+  }
+
+  .sales-document-panel .office-table tr.sales-document-row .office-status {
+    width: 82px;
+    min-height: 28px;
+    padding: 3px 18px 3px 8px;
+    font-size: 9px !important;
+  }
+
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Total'] {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    min-width: 0;
+    padding: 5px 0 2px;
+    border-top: 1px solid #edf2f7;
+    text-align: left;
+  }
+
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Total'] strong {
+    font-size: 11px;
+  }
+
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Total'] small {
+    font-size: 8.5px;
+  }
+
+  .sales-document-panel .office-table tr.sales-document-row td.office-row-actions {
+    gap: 6px;
+    min-height: 34px;
+    padding-top: 7px;
+  }
+
+  .sales-document-panel .office-table tr.sales-document-row td.office-row-actions button {
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  .finance-ledger-panel {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .finance-ledger-panel .office-table tbody {
+    gap: 8px;
+  }
+
+  .finance-ledger-panel .office-table tr.finance-ledger-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 7px 12px;
+    padding: 13px;
+    border: 1px solid #dce5ef;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(31, 56, 88, 0.05);
+  }
+
+  .finance-ledger-panel .office-table tr.finance-ledger-row td[data-label] {
+    display: block;
+    grid-column: auto;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .finance-ledger-panel .office-table tr.finance-ledger-row td[data-label]::before {
+    display: none;
+  }
+
+  .finance-ledger-row td[data-label='Date'] {
+    color: #718197;
+    font-size: 10px;
+  }
+
+  .finance-ledger-row td[data-label='Type'],
+  .finance-ledger-row td[data-label='Status'] {
+    justify-self: end;
+  }
+
+  .finance-ledger-row td[data-label='Category'] {
+    color: #263e5a;
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+
+  .finance-ledger-row td[data-label='Category'] small {
+    margin-top: 1px;
+    color: #8a98aa;
+    font-size: 8.5px;
+    font-weight: 500;
+  }
+
+  .finance-ledger-row td[data-label='Note'] {
+    grid-column: 1 / -1 !important;
+    padding: 7px 0 !important;
+    border-block: 1px solid #edf2f7;
+    color: #43576f;
+    font-size: 11px;
+  }
+
+  .finance-ledger-row td[data-label='Amount'] strong {
+    font-size: 13px;
+  }
+
+  .finance-ledger-row td[data-label='Amount'] small {
+    margin-top: 1px;
+    font-size: 9px;
+  }
+
+  .finance-ledger-panel .office-table tr.finance-ledger-row td.office-row-actions {
+    grid-column: 2;
+    grid-row: auto;
+    justify-self: end;
+    padding: 0;
+  }
+
+  .finance-ledger-panel .office-table tr.finance-ledger-row td.office-row-actions button {
+    width: 32px;
+    height: 32px;
+  }
+}

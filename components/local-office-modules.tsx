@@ -2582,7 +2582,7 @@ function PaymentsModule({
           </button>
         </form>
       )}
-      <section className="office-panel">
+      <section className="office-panel finance-ledger-panel">
         {!ledgerRows.length ? (
           <Empty
             icon={<CircleDollarSign size={25} />}
@@ -2605,7 +2605,7 @@ function PaymentsModule({
               </thead>
               <tbody>
                 {ledgerRows.map((item) => (
-                  <tr key={item.id}>
+                  <tr className="finance-ledger-row" key={item.id}>
                     <td data-label="Date">{item.date}</td>
                     <td data-label="Type">
                       <span className={`office-pill ${item.type.toLowerCase()}`}>{item.type}</span>
