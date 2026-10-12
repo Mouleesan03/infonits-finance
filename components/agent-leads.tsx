@@ -31,6 +31,48 @@ type AgentLead = {
 
 const statuses: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Closed'];
 
+const previewLeads = (): AgentLead[] => {
+  const now = Date.now();
+  return [
+    {
+      id: 'preview-lead-1',
+      name: 'Ishara Jayasinghe',
+      email: 'ishara@lotus.example',
+      phone: '+94 77 555 0301',
+      message: 'We need a mobile-friendly booking site for our wellness studio.',
+      source: 'Website assistant',
+      page_url: 'https://infonits.example/services',
+      status: 'New',
+      created_at: new Date(now - 18 * 60 * 1000).toISOString(),
+      updated_at: new Date(now - 18 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'preview-lead-2',
+      name: 'Ethan Brown',
+      email: 'ethan@northstar.example',
+      phone: '+61 4 5555 0302',
+      message: 'Can your team redesign our customer dashboard this quarter?',
+      source: 'Pricing page',
+      page_url: 'https://infonits.example/pricing',
+      status: 'Contacted',
+      created_at: new Date(now - 5 * 60 * 60 * 1000).toISOString(),
+      updated_at: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'preview-lead-3',
+      name: 'Sofia Müller',
+      email: 'sofia@lumen.example',
+      phone: '+41 79 555 0303',
+      message: 'Looking for a long-term product design and development partner.',
+      source: 'Contact form',
+      page_url: 'https://infonits.example/contact',
+      status: 'Qualified',
+      created_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      updated_at: new Date(now - 24 * 60 * 60 * 1000).toISOString(),
+    },
+  ];
+};
+
 function relativeTime(value: string) {
   const then = new Date(value).getTime();
   const seconds = Math.max(0, Math.floor((Date.now() - then) / 1000));
@@ -44,7 +86,7 @@ function relativeTime(value: string) {
   return new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
-export function AgentLeads() {
+export function AgentLeads({ preview = false }: { preview?: boolean }) {
   const [leads, setLeads] = useState<AgentLead[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'All' | LeadStatus>('All');
@@ -54,6 +96,13 @@ export function AgentLeads() {
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setRefreshing(true);
+    if (preview) {
+      setLeads(previewLeads());
+      setUnavailable(false);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     const { data, error } = await browserClient()
       .from('agent_leads')
       .select('id,name,email,phone,message,source,page_url,status,created_at,updated_at')
@@ -67,10 +116,11 @@ export function AgentLeads() {
     }
     setLoading(false);
     setRefreshing(false);
-  }, []);
+  }, [preview]);
 
   useEffect(() => {
     void load(true);
+    if (preview) return;
     const timer = window.setInterval(() => void load(true), 30_000);
     const onFocus = () => void load(true);
     window.addEventListener('focus', onFocus);
@@ -78,7 +128,7 @@ export function AgentLeads() {
       window.clearInterval(timer);
       window.removeEventListener('focus', onFocus);
     };
-  }, [load]);
+  }, [load, preview]);
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -99,6 +149,7 @@ export function AgentLeads() {
   async function changeStatus(id: string, status: LeadStatus) {
     const before = leads;
     setLeads((current) => current.map((lead) => (lead.id === id ? { ...lead, status } : lead)));
+    if (preview) return;
     const { error } = await browserClient().from('agent_leads').update({ status }).eq('id', id);
     if (error) setLeads(before);
   }

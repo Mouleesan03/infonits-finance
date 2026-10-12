@@ -46,6 +46,7 @@ import { LocalCloudSync } from './local-cloud-sync';
 import { AgentLeads } from './agent-leads';
 import { InfonitsAssistant, type AssistantAction } from './infonits-assistant';
 import { browserClient } from '@/lib/supabase/browser';
+import { buildMobilePreviewData, mobilePreviewSeedVersion } from '@/lib/mobile-preview-data';
 
 type Section =
   | 'dashboard'
@@ -163,6 +164,27 @@ type OfficeOverview = {
 
 const storageKey = 'infonits-finance-local-v1';
 const officeStorageKey = 'infonits-finance-office-v1';
+const previewSeedKey = 'infonits-mobile-preview-seed-version';
+const previewSections: Section[] = [
+  'dashboard',
+  'attention',
+  'assistant',
+  'calendar',
+  'leads',
+  'clients',
+  'invoices',
+  'quotations',
+  'projects',
+  'team',
+  'posts',
+  'payments',
+  'expenses',
+  'reports',
+  'renewals',
+  'documents',
+  'settings',
+  'users',
+];
 const currencies = ['LKR', 'USD', 'GBP', 'EUR', 'AUD', 'CAD', 'INR', 'AED', 'SGD', 'JPY'];
 const countries = [
   'Sri Lanka',
@@ -303,6 +325,7 @@ export function LocalFinance() {
   const [preferences, setPreferences] = useState<WorkspacePreferences>(defaultPreferences);
   const [profileOpen, setProfileOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [mobilePreview, setMobilePreview] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -310,102 +333,21 @@ export function LocalFinance() {
     try {
       const previewQuery = new URLSearchParams(window.location.search);
       const previewSection = previewQuery.get('ui-section');
+      const isMobilePreview =
+        process.env.NODE_ENV === 'development' && previewQuery.get('mobile-preview') === '1';
+      setMobilePreview(isMobilePreview);
       if (
         process.env.NODE_ENV === 'development' &&
         previewSection &&
-        ['dashboard', 'invoices', 'quotations', 'payments', 'clients', 'expenses', 'team'].includes(
-          previewSection,
-        )
+        previewSections.includes(previewSection as Section)
       ) {
         setSection(previewSection as Section);
       }
-      if (
-        process.env.NODE_ENV === 'development' &&
-        previewQuery.get('mobile-preview') === '1' &&
-        !localStorage.getItem(storageKey)
-      ) {
-        const previewClient = {
-          id: 'preview-client',
-          name: 'Nexplate',
-          company: 'Nexplate',
-          email: 'hello@example.com',
-          phone: '',
-          country: 'Switzerland',
-        };
-        localStorage.setItem(
-          storageKey,
-          JSON.stringify({
-            clients: [previewClient],
-            rows: [
-              {
-                id: 'preview-project',
-                project: 'Website development',
-                clientId: previewClient.id,
-                value: 318994,
-                currency: 'LKR',
-                exchangeRate: 1,
-                note: '',
-                advance: 0,
-                workDue: 0,
-                workPaid: 0,
-                status: 'Waiting',
-                createdAt: today(),
-              },
-            ],
-            expenses: [],
-            fxRates: { LKR: 1, USD: 330.32 },
-          }),
-        );
-        localStorage.setItem(
-          officeStorageKey,
-          JSON.stringify({
-            documents: [
-              {
-                id: 'preview-invoice',
-                kind: 'Invoice',
-                number: 'INV-2026-003',
-                clientId: previewClient.id,
-                projectId: 'preview-project',
-                issueDate: today(),
-                dueDate: addDays(today(), 10),
-                amount: 100,
-                currency: 'USD',
-                exchangeRate: 330.32,
-                status: 'Pending',
-              },
-              {
-                id: 'preview-quotation',
-                kind: 'Quotation',
-                number: 'QUO-2026-001',
-                clientId: previewClient.id,
-                projectId: 'preview-project',
-                issueDate: today(),
-                dueDate: addDays(today(), 10),
-                amount: 100,
-                currency: 'USD',
-                exchangeRate: 330.32,
-                status: 'Draft',
-              },
-            ],
-            payments: [
-              {
-                id: 'preview-payment',
-                type: 'Income',
-                category: 'Project',
-                note: 'Website deposit',
-                amount: 100,
-                currency: 'USD',
-                exchangeRate: 330.32,
-                date: today(),
-                status: 'Paid',
-              },
-            ],
-            renewals: [],
-            events: [],
-            letters: [],
-            recurringInvoices: [],
-          }),
-        );
+      if (isMobilePreview && localStorage.getItem(previewSeedKey) !== mobilePreviewSeedVersion) {
+        const previewData = buildMobilePreviewData();
+        localStorage.setItem(storageKey, JSON.stringify(previewData.finance));
+        localStorage.setItem(officeStorageKey, JSON.stringify(previewData.office));
+        localStorage.setItem(previewSeedKey, mobilePreviewSeedVersion);
       }
       const saved = localStorage.getItem(storageKey);
       const parsed = saved
@@ -1487,6 +1429,7 @@ export function LocalFinance() {
               projects={rows}
               expenses={expenses}
               rates={fxRates}
+              preview={mobilePreview}
             />
           )}
 
@@ -1618,7 +1561,7 @@ export function LocalFinance() {
             </>
           )}
 
-          {section === 'leads' && <AgentLeads />}
+          {section === 'leads' && <AgentLeads preview={mobilePreview} />}
 
           {section === 'expenses' && (
             <>
@@ -1683,6 +1626,7 @@ export function LocalFinance() {
                 bankDetails: preferences.bankDetails,
                 notes: preferences.showPaymentTerms ? preferences.paymentTerms : '',
               }}
+              preview={mobilePreview}
             />
           )}
         </main>
@@ -1757,6 +1701,7 @@ function WorkspaceSettings({
   projects,
   expenses,
   rates,
+  preview,
 }: {
   preferences: WorkspacePreferences;
   onChange: React.Dispatch<React.SetStateAction<WorkspacePreferences>>;
@@ -1764,6 +1709,7 @@ function WorkspaceSettings({
   projects: LocalRow[];
   expenses: LocalExpense[];
   rates: Record<string, number>;
+  preview: boolean;
 }) {
   const update = <K extends keyof WorkspacePreferences>(key: K, value: WorkspacePreferences[K]) =>
     onChange((current) => ({ ...current, [key]: value }));
@@ -1935,6 +1881,7 @@ function WorkspaceSettings({
           projects={projects}
           expenses={expenses}
           rates={rates}
+          preview={preview}
         />
       </section>
     </>

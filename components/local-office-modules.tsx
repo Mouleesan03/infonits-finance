@@ -289,6 +289,7 @@ export function LocalOfficeModule({
   rates,
   invoiceDefaults,
   openFormSignal = 0,
+  preview = false,
 }: {
   section: OfficeSection;
   clients: ClientRef[];
@@ -297,6 +298,7 @@ export function LocalOfficeModule({
   rates: Record<string, number>;
   invoiceDefaults?: { includeBankDetails: boolean; bankDetails: string; notes: string };
   openFormSignal?: number;
+  preview?: boolean;
 }) {
   const [store, setStore] = useState<Store>(emptyStore);
   const [loaded, setLoaded] = useState(false);
@@ -491,6 +493,7 @@ export function LocalOfficeModule({
         formOpen={formOpen}
         setFormOpen={setFormOpen}
         onChange={(items) => update('users', items)}
+        preview={preview}
       />
     );
   if (section === 'calendar')
@@ -2456,7 +2459,7 @@ function PaymentsModule({
         eyebrow="FINANCE"
         title="Finance tracker"
         subtitle="Paid invoices, operating expenses and additional cash records in one connected ledger."
-        action="Add income or expense"
+        action="Add transaction"
         onAction={() => setFormOpen(!formOpen)}
       />
       <section className="office-metrics">
@@ -2748,7 +2751,7 @@ function TeamModule({
           </button>
         </form>
       )}
-      <section className="office-panel">
+      <section className="office-panel office-team-panel">
         <div className="office-toolbar">
           <SearchBox value={search} onChange={setSearch} placeholder="Search team" />
           <span>{items.filter((x) => x.status === 'Active').length} active</span>
@@ -3225,14 +3228,16 @@ function PostsModule({
                     const postedCount = Math.max(item.posted, eventCount);
                     return (
                       <tr key={item.id}>
-                        <td>
+                        <td data-label="Client">
                           <strong>{names.get(item.clientId) || 'Unknown'}</strong>
                         </td>
-                        <td>{projectNames.get(item.projectId) || 'No project'}</td>
-                        <td>
+                        <td data-label="Project">
+                          {projectNames.get(item.projectId) || 'No project'}
+                        </td>
+                        <td data-label="Platform">
                           <span className="office-pill">{item.platform}</span>
                         </td>
-                        <td>
+                        <td data-label="Team">
                           <select
                             className="office-inline-select"
                             value={item.memberId}
@@ -3254,19 +3259,19 @@ function PostsModule({
                             ))}
                           </select>
                         </td>
-                        <td>
+                        <td data-label="This month">
                           {tracked ? (
                             `${postedCount} / ${item.required}`
                           ) : (
                             <small>Not tracked</small>
                           )}
                         </td>
-                        <td>
+                        <td data-label="Remaining">
                           <strong>
                             {tracked ? Math.max(0, item.required - postedCount) : '—'}
                           </strong>
                         </td>
-                        <td>
+                        <td className="office-row-actions">
                           <button
                             className="local-delete"
                             aria-label="Delete post plan"
@@ -3554,7 +3559,7 @@ function RenewalsModule({
           </button>
         </form>
       )}
-      <section className="office-panel">
+      <section className="office-panel office-renewal-panel">
         {!items.length ? (
           <Empty
             icon={<Globe2 size={25} />}
@@ -3811,7 +3816,7 @@ function LettersModule({
           </button>
         </form>
       )}
-      <section className="office-panel">
+      <section className="office-panel office-letter-panel">
         {!items.length ? (
           <Empty
             icon={<FileText size={25} />}
@@ -3938,11 +3943,13 @@ function UsersModule({
   formOpen,
   setFormOpen,
   onChange,
+  preview,
 }: {
   items: WorkspaceUser[];
   formOpen: boolean;
   setFormOpen: (v: boolean) => void;
   onChange: (v: WorkspaceUser[]) => void;
+  preview: boolean;
 }) {
   const [accountEmail, setAccountEmail] = useState('');
   const [pinOpen, setPinOpen] = useState(false);
@@ -3959,6 +3966,10 @@ function UsersModule({
   });
 
   useEffect(() => {
+    if (preview) {
+      setAccountEmail('preview@infonits.local');
+      return;
+    }
     let active = true;
     void browserClient()
       .auth.getUser()
@@ -3968,12 +3979,16 @@ function UsersModule({
     return () => {
       active = false;
     };
-  }, []);
+  }, [preview]);
 
   async function changePin(event: React.FormEvent) {
     event.preventDefault();
     setAccountNotice('');
     setAccountError('');
+    if (preview) {
+      setAccountNotice('PIN changes are disabled in mobile preview.');
+      return;
+    }
     if (!isSixDigitPin(newPin)) {
       setAccountError('Enter exactly 6 numbers for the new PIN.');
       return;
@@ -4008,6 +4023,10 @@ function UsersModule({
   }
 
   async function logOut() {
+    if (preview) {
+      setAccountNotice('Sign-out is disabled in mobile preview.');
+      return;
+    }
     setAccountBusy(true);
     setAccountError('');
     const { error } = await browserClient().auth.signOut({ scope: 'local' });

@@ -14957,3 +14957,363 @@ tfoot td {
     height: 32px;
   }
 }
+
+/* Final compact mobile pass for the remaining record-heavy workspace pages. */
+@media (max-width: 720px) {
+  .local-expense-list > article {
+    grid-template-columns: 38px minmax(0, 1fr) 34px 34px;
+  }
+
+  .local-expense-list > article > div:not(.local-expense-amount):not(.local-expense-editor) {
+    grid-column: 2;
+  }
+
+  .local-expense-list > article > .local-row-action {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .local-expense-list > article > .local-delete {
+    grid-column: 4;
+    grid-row: 1;
+  }
+
+  .local-expense-list > article > .local-expense-amount {
+    grid-column: 2 / -1;
+  }
+
+  .office-renewal-panel,
+  .office-letter-panel {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .office-renewal-panel > .office-table-wrap > .office-table tbody,
+  .office-letter-panel > .office-table-wrap > .office-table tbody {
+    gap: 9px;
+    padding: 0;
+  }
+
+  .office-renewal-panel > .office-table-wrap > .office-table tbody tr,
+  .office-letter-panel > .office-table-wrap > .office-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 12px;
+    padding: 13px;
+    border: 1px solid #dae4ef;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 7px 22px rgba(31, 56, 88, 0.055);
+  }
+
+  .office-renewal-panel > .office-table-wrap > .office-table td[data-label],
+  .office-letter-panel > .office-table-wrap > .office-table td[data-label] {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-content: start;
+    gap: 3px;
+    grid-column: auto;
+    min-height: 0;
+    padding: 8px 0;
+    border-bottom: 1px solid #edf2f7;
+  }
+
+  .office-renewal-panel > .office-table-wrap > .office-table td[data-label]::before,
+  .office-letter-panel > .office-table-wrap > .office-table td[data-label]::before {
+    line-height: 1.2;
+  }
+
+  .office-renewal-panel td[data-label='Website'],
+  .office-renewal-panel td[data-label='Access IDs'],
+  .office-letter-panel td[data-label='Subject'] {
+    grid-column: 1 / -1 !important;
+  }
+
+  .office-renewal-panel td[data-label='Website link'],
+  .office-letter-panel td[data-label='Prepared by'] {
+    border-bottom: 0 !important;
+  }
+
+  .office-renewal-panel td.office-row-actions,
+  .office-letter-panel td.office-row-actions {
+    display: flex !important;
+    grid-column: 1 / -1 !important;
+    justify-content: flex-end;
+    align-self: end;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 6px;
+    min-height: 0 !important;
+    padding: 5px 0 0 !important;
+    border: 0 !important;
+  }
+
+  .office-renewal-panel td.office-row-actions::before,
+  .office-letter-panel td.office-row-actions::before {
+    display: none;
+  }
+
+  .office-renewal-panel td.office-row-actions button,
+  .office-letter-panel td.office-row-actions button {
+    width: 32px;
+    height: 32px;
+  }
+
+  .office-letter-panel td[data-label='Date'],
+  .office-letter-panel td[data-label='Client'] {
+    grid-row: 1;
+  }
+
+  .office-letter-panel td[data-label='Subject'] {
+    grid-row: 2;
+  }
+
+  .office-letter-panel td[data-label='Prepared by'] {
+    grid-row: 3;
+  }
+
+  .office-letter-panel td.office-row-actions {
+    grid-row: 4;
+  }
+
+  .office-renewal-panel td.office-row-actions {
+    grid-column: 2 !important;
+    grid-row: 4;
+  }
+}
+
+/* Focused mobile polish for leads, team, post tracking, finance and settings. */
+@media (max-width: 720px) {
+  .agent-lead-metrics {
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+  .agent-lead-metrics article {
+    grid-template-columns: 30px minmax(0, 1fr);
+    align-items: center;
+    justify-items: stretch;
+    gap: 8px;
+    min-height: 72px;
+    padding: 10px;
+  }
+  .agent-lead-metrics article > span {
+    width: 30px;
+    height: 30px;
+  }
+  .agent-lead-metrics article > div {
+    min-width: 0;
+  }
+  .agent-leads-toolbar {
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 9px;
+  }
+  .agent-leads-toolbar .office-search {
+    min-width: 100%;
+  }
+  .agent-leads-toolbar .office-filter-tabs {
+    flex-wrap: nowrap;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .agent-leads-toolbar .office-filter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .agent-leads-toolbar .office-filter-tabs button {
+    flex: 0 0 auto;
+    min-height: 30px;
+    padding: 6px 9px;
+  }
+  .agent-lead-grid {
+    gap: 8px;
+  }
+  .agent-lead-card {
+    gap: 8px;
+    padding: 11px;
+  }
+  .agent-lead-status {
+    width: 104px;
+    min-height: 32px;
+  }
+  .agent-lead-contact {
+    gap: 6px;
+  }
+  .agent-lead-contact a {
+    min-height: 30px;
+    padding-block: 5px;
+  }
+
+  .office-team-panel {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .office-team-panel .office-toolbar {
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 9px;
+    border: 1px solid #dfe7f0;
+    border-radius: 14px;
+    background: #fff;
+  }
+  .office-team-panel .office-card-grid {
+    gap: 8px;
+    padding: 0;
+  }
+  .office-team-panel .office-person {
+    min-height: 0;
+    padding: 10px;
+  }
+
+  .office-post-summary {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .office-post-summary article {
+    min-height: 76px;
+    padding: 11px;
+  }
+  .office-post-workspace {
+    gap: 10px;
+  }
+  .office-post-projects {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .office-post-projects > header {
+    margin-bottom: 8px;
+    padding: 0 2px;
+    border: 0;
+    background: transparent;
+  }
+  .office-post-projects .office-table-wrap {
+    overflow: visible;
+  }
+  .office-post-project-table tbody {
+    gap: 8px;
+    padding: 0;
+  }
+  .office-post-project-table tbody tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(86px, 0.7fr) 34px;
+    align-items: start;
+    align-content: start;
+    gap: 0 10px;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 11px;
+    border: 1px solid #dce5ef;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(31, 56, 88, 0.05);
+  }
+  .office-post-project-table tbody td[data-label] {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3px;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 6px 0;
+    border-bottom: 1px solid #edf2f7;
+  }
+  .office-post-project-table tbody td[data-label]::before {
+    line-height: 1.2;
+  }
+  .office-post-project-table td[data-label='Client'],
+  .office-post-project-table td[data-label='Project'],
+  .office-post-project-table td[data-label='Team'] {
+    grid-column: 1 / -1 !important;
+  }
+  .office-post-project-table td[data-label='Client'] {
+    padding-right: 42px;
+  }
+  .office-post-project-table td[data-label='Platform'],
+  .office-post-project-table td[data-label='This month'] {
+    grid-column: 1;
+  }
+  .office-post-project-table td[data-label='This month'],
+  .office-post-project-table td[data-label='Remaining'] {
+    border-bottom: 0;
+  }
+  .office-post-project-table td[data-label='Remaining'] {
+    grid-column: 2;
+  }
+  .office-post-project-table .office-inline-select {
+    width: 100%;
+    min-height: 36px;
+  }
+  .office-post-project-table td.office-row-actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+  .office-post-project-table td.office-row-actions::before {
+    display: none;
+  }
+  .office-post-project-table td.office-row-actions button {
+    width: 32px;
+    height: 32px;
+  }
+  .office-post-records {
+    margin-top: 10px;
+  }
+  .office-post-records .office-table-empty {
+    min-height: 72px !important;
+    padding: 18px 12px !important;
+  }
+
+  .finance-tracker-report {
+    padding: 12px;
+  }
+  .finance-ledger-panel .office-table tbody {
+    gap: 7px;
+  }
+  .finance-ledger-panel .office-table tr.finance-ledger-row {
+    gap: 6px 10px;
+    padding: 11px;
+  }
+  .finance-ledger-row td[data-label='Note'] {
+    padding: 5px 0 !important;
+  }
+
+  .workspace-settings-grid {
+    gap: 8px;
+  }
+  .workspace-settings-card {
+    gap: 9px;
+    padding: 12px;
+  }
+  .workspace-settings-card > header {
+    padding-bottom: 8px;
+  }
+  .settings-switch {
+    min-height: 42px;
+    padding: 9px;
+  }
+  .settings-two-column {
+    gap: 8px;
+  }
+  .settings-users-embed {
+    margin-top: 8px;
+  }
+  .settings-users-embed > .local-titlebar,
+  .settings-users-embed .office-account-card {
+    padding: 12px;
+  }
+  .settings-users-embed .office-card-grid {
+    gap: 8px;
+    padding: 0;
+  }
+}
