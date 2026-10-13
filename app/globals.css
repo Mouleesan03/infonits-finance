@@ -16314,10 +16314,7 @@ tfoot td {
 }
 
 /* Final compact workspace pass: shared controls, tables and settings layout. */
-.office-status,
-.office-inline-select,
-.agent-lead-status,
-.local-invoice-status {
+.office-inline-select {
   width: 112px;
   min-width: 112px;
   height: 34px;
@@ -16337,7 +16334,7 @@ tfoot td {
 }
 
 .local-invoice-preview-row {
-  grid-template-columns: minmax(0, 1fr) 112px 76px 96px;
+  grid-template-columns: minmax(0, 1fr) var(--ui-status-control-width, 124px) 76px 96px;
 }
 
 .local-invoice-status {
@@ -16589,22 +16586,12 @@ tfoot td {
   }
 
   .local-invoice-preview-row {
-    grid-template-columns: minmax(0, 1fr) 82px;
+    grid-template-columns: minmax(0, 1fr) var(--ui-status-control-width, 118px);
   }
 
   .local-invoice-preview-row > b,
   .local-invoice-preview-actions {
     grid-column: auto;
-  }
-
-  .local-invoice-status {
-    width: 82px;
-    min-width: 82px;
-    height: 30px;
-    min-height: 30px;
-    padding: 0 21px 0 9px;
-    font-size: 10px;
-    line-height: 28px;
   }
 
   .office-post-projects .office-table-wrap {
