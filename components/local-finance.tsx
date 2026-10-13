@@ -292,6 +292,8 @@ const compactNumber = (value: number) =>
     maximumFractionDigits: 1,
   }).format(value);
 const compactMoney = (value: number) => `LKR ${compactNumber(value)}`;
+const compactCurrency = (value: number, currency: string) => `${currency} ${compactNumber(value)}`;
+const usdFromLkr = (value: number, usdRate: number) => (usdRate > 0 ? value / usdRate : 0);
 const shortDate = (value: string, includeYear = true) => {
   if (!value) return '';
   const date = new Date(`${value}T00:00:00`);
@@ -617,7 +619,7 @@ export function LocalFinance() {
   );
 
   const totals = useMemo(() => {
-    const projects = effectiveRows.reduce(
+    const projects = monthRows.reduce(
       (sum, row) => {
         const valueLkr = localValue(row.value, row.exchangeRate);
         const receivedLkr = row.receivedLkr ?? localValue(row.advance, row.exchangeRate);
@@ -649,7 +651,7 @@ export function LocalFinance() {
       expenses: expenseTotal + additionalExpenses,
       net: projects.value - projects.work - expenseTotal - additionalExpenses,
     };
-  }, [effectiveRows, expenses, officeOverview.payments]);
+  }, [expenses, monthRows, officeOverview.payments]);
 
   const notifications = useMemo(() => {
     const now = new Date(`${today()}T00:00:00`).getTime();
@@ -1564,6 +1566,7 @@ export function LocalFinance() {
             <Dashboard
               totals={totals}
               rows={monthRows}
+              rates={fxRates}
               clients={clients}
               expenses={expenses}
               office={officeOverview}
@@ -1615,7 +1618,7 @@ export function LocalFinance() {
               <PageHeading
                 eyebrow="WORK"
                 title="Projects"
-                subtitle="Add projects, record money in or out, and see every value in LKR."
+                subtitle="Track every project in its original currency with the LKR equivalent underneath."
               >
                 <button onClick={exportCsv} className="button button-outline">
                   <Download size={16} /> Export
@@ -1651,7 +1654,7 @@ export function LocalFinance() {
                         year: 'numeric',
                       })}
                     </strong>
-                    <small>{monthRows.length} projects · all totals in LKR</small>
+                    <small>{monthRows.length} projects · USD summary with LKR equivalent</small>
                   </div>
                   <input
                     aria-label="Finance month"
@@ -1697,6 +1700,7 @@ export function LocalFinance() {
               <ClientList
                 clients={clients}
                 rows={effectiveRows}
+                rates={fxRates}
                 office={officeOverview}
                 onAdd={() => setClientFormOpen(true)}
                 onUpdate={(id, patch) =>
@@ -1826,6 +1830,7 @@ export function LocalFinance() {
       {selectedProject ? (
         <ProjectDetail
           row={selectedProject}
+          rates={fxRates}
           client={selectedProjectClient}
           invoices={selectedProjectInvoices}
           payments={officeOverview.payments}
@@ -2199,6 +2204,7 @@ function QuickAddMenu({
 
 function ProjectDetail({
   row,
+  rates,
   client,
   invoices,
   payments,
@@ -2207,6 +2213,7 @@ function ProjectDetail({
   onInvoice,
 }: {
   row: LocalRow;
+  rates: Record<string, number>;
   client?: LocalClient;
   invoices: OfficeOverview['documents'];
   payments: OfficeOverview['payments'];
@@ -2218,6 +2225,10 @@ function ProjectDetail({
   const received = row.receivedLkr ?? localValue(row.advance, row.exchangeRate);
   const work = localValue(row.workDue + row.workPaid, row.exchangeRate);
   const remaining = value - received - work;
+  const projectRate = row.exchangeRate || rates[row.currency] || 1;
+  const receivedOriginal = received / projectRate;
+  const workOriginal = work / projectRate;
+  const remainingOriginal = remaining / projectRate;
   const invoiceIds = new Set(invoices.map((invoice) => invoice.id));
   const projectPayments = payments
     .filter(
@@ -2248,19 +2259,23 @@ function ProjectDetail({
         <div className="local-detail-stats">
           <article>
             <span>Project value</span>
-            <strong>{money(value)}</strong>
+            <strong>{compactCurrency(row.value, row.currency)}</strong>
+            <small>{compactMoney(value)}</small>
           </article>
           <article className="income">
             <span>Received</span>
-            <strong>{money(received)}</strong>
+            <strong>{compactCurrency(receivedOriginal, row.currency)}</strong>
+            <small>{compactMoney(received)}</small>
           </article>
           <article className="outcome">
             <span>Work cost</span>
-            <strong>{money(work)}</strong>
+            <strong>{compactCurrency(workOriginal, row.currency)}</strong>
+            <small>{compactMoney(work)}</small>
           </article>
           <article className="highlight">
             <span>For me</span>
-            <strong>{money(remaining)}</strong>
+            <strong>{compactCurrency(remainingOriginal, row.currency)}</strong>
+            <small>{compactMoney(remaining)}</small>
           </article>
         </div>
         <dl className="local-detail-list">
@@ -2585,6 +2600,7 @@ function AttentionCenter({
 function Dashboard({
   totals,
   rows,
+  rates,
   clients,
   expenses,
   office,
@@ -2597,6 +2613,7 @@ function Dashboard({
 }: {
   totals: { value: number; received: number; work: number; expenses: number; net: number };
   rows: LocalRow[];
+  rates: Record<string, number>;
   clients: LocalClient[];
   expenses: LocalExpense[];
   office: OfficeOverview;
@@ -2613,6 +2630,7 @@ function Dashboard({
   const now = new Date(`${today()}T00:00:00`).getTime();
   const day = 86_400_000;
   const totalOutcome = totals.work + totals.expenses;
+  const usdRate = rates.USD ?? rows.find((row) => row.currency === 'USD')?.exchangeRate ?? 1;
   const collectionRate = totals.value
     ? Math.min(100, Math.round((totals.received / totals.value) * 100))
     : 0;
@@ -2741,28 +2759,38 @@ function Dashboard({
       <section className="local-summary" aria-label="Finance totals">
         <article>
           <span>Project value</span>
-          <strong title={money(totals.value)}>{compactMoney(totals.value)}</strong>
-          <small>{rows.length} projects in this workspace</small>
+          <strong title={money(totals.value)}>
+            {compactCurrency(usdFromLkr(totals.value, usdRate), 'USD')}
+          </strong>
+          <small>
+            {compactMoney(totals.value)} · {rows.length} projects
+          </small>
           <WalletCards size={18} />
         </article>
         <article className="income">
           <span>Income received</span>
-          <strong title={money(totals.received)}>{compactMoney(totals.received)}</strong>
-          <small>{collectionRate}% of project value collected</small>
+          <strong title={money(totals.received)}>
+            {compactCurrency(usdFromLkr(totals.received, usdRate), 'USD')}
+          </strong>
+          <small>
+            {compactMoney(totals.received)} · {collectionRate}% collected
+          </small>
           <ArrowUpRight size={18} />
         </article>
         <article className="outcome">
           <span>Total outcome</span>
-          <strong title={money(totalOutcome)}>{compactMoney(totalOutcome)}</strong>
-          <small>
-            {compactMoney(totals.work)} work · {compactMoney(totals.expenses)} expenses
-          </small>
+          <strong title={money(totalOutcome)}>
+            {compactCurrency(usdFromLkr(totalOutcome, usdRate), 'USD')}
+          </strong>
+          <small>{compactMoney(totalOutcome)} · work and expenses</small>
           <ArrowDownRight size={18} />
         </article>
         <article className="highlight">
           <span>Estimated profit</span>
-          <strong title={money(totals.net)}>{compactMoney(totals.net)}</strong>
-          <small>After all recorded costs</small>
+          <strong title={money(totals.net)}>
+            {compactCurrency(usdFromLkr(totals.net, usdRate), 'USD')}
+          </strong>
+          <small>{compactMoney(totals.net)} · after recorded costs</small>
           <TrendingUp size={18} />
         </article>
       </section>
@@ -2960,6 +2988,7 @@ function Dashboard({
               const value = localValue(row.value, row.exchangeRate);
               const received = row.receivedLkr ?? localValue(row.advance, row.exchangeRate);
               const profit = value - localValue(row.workDue + row.workPaid, row.exchangeRate);
+              const projectRate = row.exchangeRate || rates[row.currency] || 1;
               return (
                 <button key={row.id} onClick={() => onSection('projects')}>
                   <span>{String(index + 1).padStart(2, '0')}</span>
@@ -2967,12 +2996,17 @@ function Dashboard({
                     <strong>{row.project}</strong>
                     <small>{clientNames.get(row.clientId) ?? 'No client'}</small>
                   </span>
-                  <b title={money(value)}>{compactMoney(value)}</b>
+                  <b title={money(value)}>
+                    <span>{compactCurrency(row.value, row.currency)}</span>
+                    <small>{compactMoney(value)}</small>
+                  </b>
                   <b className="positive" title={money(received)}>
-                    {compactMoney(received)}
+                    <span>{compactCurrency(received / projectRate, row.currency)}</span>
+                    <small>{compactMoney(received)}</small>
                   </b>
                   <b className={profit < 0 ? 'negative' : 'positive'} title={money(profit)}>
-                    {compactMoney(profit)}
+                    <span>{compactCurrency(profit / projectRate, row.currency)}</span>
+                    <small>{compactMoney(profit)}</small>
                   </b>
                   <em className={row.status.toLowerCase()}>{row.status}</em>
                 </button>
@@ -3217,6 +3251,7 @@ function ProjectTable({
     },
     { value: 0, advance: 0, workDue: 0, workPaid: 0, mine: 0 },
   );
+  const usdRate = rates.USD ?? rows.find((row) => row.currency === 'USD')?.exchangeRate ?? 1;
   if (!rows.length)
     return (
       <div className="local-empty-table">
@@ -3507,12 +3542,23 @@ function ProjectTable({
                       <div className="local-project-edit-summary" aria-label="Project balance">
                         <span>Current balance</span>
                         <strong>
+                          {compactCurrency(
+                            row.value -
+                              (row.receivedLkr
+                                ? row.receivedLkr / (row.exchangeRate || 1)
+                                : row.advance) -
+                              row.workDue -
+                              row.workPaid,
+                            row.currency,
+                          )}
+                        </strong>
+                        <small>
                           {money(
                             localValue(row.value, row.exchangeRate) -
                               (row.receivedLkr ?? localValue(row.advance, row.exchangeRate)) -
                               localValue(row.workDue + row.workPaid, row.exchangeRate),
                           )}
-                        </strong>
+                        </small>
                       </div>
                       <div className="local-modal-actions">
                         <button
@@ -3557,21 +3603,31 @@ function ProjectTable({
       <footer className="local-project-totals">
         <div>
           <span>Total value</span>
-          <strong title={money(totals.value)}>{compactMoney(totals.value)}</strong>
+          <strong title={money(totals.value)}>
+            {compactCurrency(usdFromLkr(totals.value, usdRate), 'USD')}
+          </strong>
+          <small>{compactMoney(totals.value)}</small>
         </div>
         <div className="positive">
           <span>Received</span>
-          <strong title={money(totals.advance)}>{compactMoney(totals.advance)}</strong>
+          <strong title={money(totals.advance)}>
+            {compactCurrency(usdFromLkr(totals.advance, usdRate), 'USD')}
+          </strong>
+          <small>{compactMoney(totals.advance)}</small>
         </div>
         <div className="negative">
           <span>Work cost</span>
           <strong title={money(totals.workDue + totals.workPaid)}>
-            {compactMoney(totals.workDue + totals.workPaid)}
+            {compactCurrency(usdFromLkr(totals.workDue + totals.workPaid, usdRate), 'USD')}
           </strong>
+          <small>{compactMoney(totals.workDue + totals.workPaid)}</small>
         </div>
         <div>
           <span>Balance</span>
-          <strong title={money(totals.mine)}>{compactMoney(totals.mine)}</strong>
+          <strong title={money(totals.mine)}>
+            {compactCurrency(usdFromLkr(totals.mine, usdRate), 'USD')}
+          </strong>
+          <small>{compactMoney(totals.mine)}</small>
         </div>
       </footer>
     </section>
@@ -3669,6 +3725,7 @@ function ClientForm({
 function ClientList({
   clients,
   rows,
+  rates,
   office,
   onAdd,
   onUpdate,
@@ -3676,6 +3733,7 @@ function ClientList({
 }: {
   clients: LocalClient[];
   rows: LocalRow[];
+  rates: Record<string, number>;
   office: OfficeOverview;
   onAdd: () => void;
   onUpdate: (id: string, patch: Partial<LocalClient>) => void;
@@ -3710,6 +3768,7 @@ function ClientList({
           !selectedPayments.some((payment) => payment.invoiceId === document.id),
       )
       .reduce((sum, document) => sum + localValue(document.amount, document.exchangeRate), 0);
+  const usdRate = rates.USD ?? rows.find((row) => row.currency === 'USD')?.exchangeRate ?? 1;
   if (!clients.length)
     return (
       <section className="local-empty-clients">
@@ -3760,7 +3819,10 @@ function ClientList({
                 </span>
                 <span>
                   <small>Total value</small>
-                  <strong title={money(value)}>{compactMoney(value)}</strong>
+                  <strong title={money(value)}>
+                    {compactCurrency(usdFromLkr(value, usdRate), 'USD')}
+                    <small>{compactMoney(value)}</small>
+                  </strong>
                 </span>
               </div>
               <div className="local-client-actions">
@@ -3995,7 +4057,10 @@ function ClientList({
                               <b>{row.project}</b>
                               <small>{row.status}</small>
                             </span>
-                            <strong>{money(localValue(row.value, row.exchangeRate))}</strong>
+                            <strong>
+                              {compactCurrency(row.value, row.currency)}
+                              <small>{compactMoney(localValue(row.value, row.exchangeRate))}</small>
+                            </strong>
                           </button>
                         ))
                       ) : (

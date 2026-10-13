@@ -18506,3 +18506,44 @@ summary:focus-visible {
     padding-inline: 0;
   }
 }
+
+/* Project money always leads with the working/original currency. Converted
+   LKR stays directly underneath as the accounting reference. */
+.local-project-preview-list b > span,
+.local-project-preview-list b > small,
+.local-project-totals small,
+.local-detail-stats article > small,
+.local-client-stats strong > small,
+.local-client-profile-projects button strong > small,
+.local-project-edit-summary > small {
+  display: block;
+}
+.local-project-preview-list b > small,
+.local-project-totals small,
+.local-detail-stats article > small,
+.local-client-stats strong > small,
+.local-client-profile-projects button strong > small,
+.local-project-edit-summary > small {
+  margin-top: 2px;
+  color: #8795a8;
+  font-size: 9.5px;
+  font-weight: 500;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.local-project-preview-list b > span {
+  color: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.local-detail-stats .highlight > small {
+  color: rgba(255, 255, 255, 0.78);
+}
+.local-client-stats strong > small,
+.local-client-profile-projects button strong > small {
+  text-align: right;
+}
+.local-project-totals small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
