@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 @theme inline {
-  --font-sans: 'Poppins', sans-serif;
+  --font-sans: var(--font-poppins), 'Poppins', sans-serif;
   --color-background: #f8fafc;
   --color-foreground: #19263b;
   --color-primary: #1769ff;
@@ -345,40 +345,34 @@
 }
 
 /* Status colors are consistent in cards, selects, filters and dashboard lists. */
-.office-status.pending,
 .office-status-button.pending,
 .invoice-state.pending {
-  background: #e7f1ff !important;
-  color: #1769bd !important;
+  background: #e7f1ff;
+  color: #1769bd;
 }
-.office-status.sent,
 .office-status-button.sent,
 .invoice-state.sent {
-  background: #e5f7ef !important;
-  color: #087957 !important;
+  background: #e5f7ef;
+  color: #087957;
 }
-.office-status.paid,
 .office-status-button.paid,
 .invoice-state.paid {
-  background: #d8f4e8 !important;
-  color: #066a4a !important;
+  background: #d8f4e8;
+  color: #066a4a;
 }
-.office-status.overdue,
 .office-status-button.overdue,
 .invoice-state.overdue,
-.office-status.declined {
-  background: #ffe7e8 !important;
-  color: #c23840 !important;
+.invoice-state.declined {
+  background: #ffe7e8;
+  color: #c23840;
 }
-.office-status.draft,
 .invoice-state.draft {
-  background: #eef1f5 !important;
-  color: #65758a !important;
+  background: #eef1f5;
+  color: #65758a;
 }
-.office-status.accepted,
 .invoice-state.accepted {
-  background: #eee9ff !important;
-  color: #6547c2 !important;
+  background: #eee9ff;
+  color: #6547c2;
 }
 .invoice-kpis article.red {
   border-color: #bcd8fb !important;
@@ -1617,10 +1611,9 @@
   border-top: 1px solid #e5ebf1;
   background: #fafbfd;
 }
-.office-status.partial,
 .invoice-state.partial {
-  background-color: #e8f0ff !important;
-  color: #285fb0 !important;
+  background-color: #e8f0ff;
+  color: #285fb0;
 }
 .attention-summary {
   display: grid;
@@ -2027,11 +2020,10 @@
   color: #fff;
 }
 
-.office-status,
 .local-project-status select {
   min-width: 94px;
-  padding-right: 30px !important;
-  background-position: right 10px center !important;
+  padding-right: 30px;
+  background-position: right 10px center;
 }
 .local-project-status select.waiting {
   background-color: #fff3cf;
@@ -4717,7 +4709,8 @@
     grid-template-columns: auto auto auto auto;
   }
 }
-:root {
+:root,
+.local-app {
   --blue: #1769ff;
   --navy: #073f69;
   --text: #202d42;
@@ -12682,9 +12675,8 @@ tfoot td {
 .local-client-editor {
   grid-column: 1 / -1;
 }
-.office-status,
 .local-project-status select {
-  padding-right: 32px !important;
+  padding-right: 32px;
 }
 
 @media (max-width: 720px) {
@@ -14556,7 +14548,7 @@ tfoot td {
   }
   .sales-document-panel .office-status {
     min-height: 36px;
-    font-size: 16px !important;
+    font-size: 16px;
   }
 
   /* Responsive document preview replaces the oversized fixed A4 canvas. */
@@ -15348,7 +15340,7 @@ tfoot td {
     padding: 4px 22px 4px 9px;
     border: 0;
     border-radius: 999px;
-    font-size: 10.5px !important;
+    font-size: 10.5px;
   }
   .sales-document-panel .office-table tr.sales-document-row td[data-label='Total'] {
     display: grid;
@@ -15540,7 +15532,7 @@ tfoot td {
     width: 104px;
     min-height: 28px;
     padding: 3px 15px 3px 8px;
-    font-size: 9px !important;
+    font-size: 9px;
   }
 
   .sales-document-panel .office-table tr.sales-document-row td[data-label='Total'] {
@@ -16611,7 +16603,7 @@ tfoot td {
     height: 30px;
     min-height: 30px;
     padding: 0 21px 0 9px;
-    font-size: 10px !important;
+    font-size: 10px;
     line-height: 28px;
   }
 
@@ -16666,5 +16658,372 @@ tfoot td {
 
   .settings-control-center {
     align-items: flex-start;
+  }
+}
+
+/* Global responsive design system — Balanced sizing preset.
+   This final layer maps both reusable UI primitives and legacy screens to one token source. */
+:root,
+.local-app {
+  --ui-font-page-title: 26px;
+  --ui-font-section-title: 17px;
+  --ui-font-body: 14px;
+  --ui-font-control: 14px;
+  --ui-font-label: 12px;
+  --ui-font-status: 13px;
+  --ui-control-height: 40px;
+  --ui-status-height: 38px;
+  --ui-status-control-width: 124px;
+  --ui-control-radius: 9px;
+  --ui-focus-color: #1769ff;
+  --ui-focus-ring: rgba(23, 105, 255, 0.2);
+}
+
+html,
+body {
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+}
+
+body,
+.ui-body {
+  font-size: var(--ui-font-body);
+  line-height: 1.55;
+}
+
+h1,
+.ui-page-title,
+.page-heading h1,
+.local-titlebar h1,
+.office-titlebar h1 {
+  font-size: var(--ui-font-page-title) !important;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+}
+
+h2,
+.ui-section-title,
+.section-heading h2,
+.workspace-settings-card h2,
+.office-panel h2 {
+  font-size: var(--ui-font-section-title) !important;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.012em;
+}
+
+.page-heading p,
+.local-titlebar p,
+.office-titlebar p,
+.section-heading p,
+.dialog-heading p,
+.workspace-settings-card header p {
+  font-size: var(--ui-font-body);
+  line-height: 1.55;
+}
+
+.ui-label,
+.field > span,
+.office-form label > span:first-child,
+.local-entry-form label > span:first-child,
+.workspace-settings-card label > span:first-child,
+.settings-two-column label > span:first-child {
+  font-size: var(--ui-font-label);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ui-input,
+.ui-select,
+input:not([type='checkbox']):not([type='radio']):not([type='file']):not(.auth-pin-grid input),
+select:not(.ui-status-native):not(.ui-status-select):not(.office-status):not(
+    .agent-lead-status
+  ):not(.local-invoice-status) {
+  min-height: var(--ui-control-height);
+  height: var(--ui-control-height);
+  padding-block: 0;
+  border-radius: var(--ui-control-radius);
+  font-size: var(--ui-font-control) !important;
+  line-height: 1.35;
+}
+
+textarea {
+  min-height: calc(var(--ui-control-height) * 2.25);
+  border-radius: var(--ui-control-radius);
+  font-size: var(--ui-font-control) !important;
+  line-height: 1.55;
+}
+
+.button:not(.button-icon),
+.ui-button:not(.button-icon) {
+  min-height: var(--ui-control-height);
+  height: var(--ui-control-height);
+  padding: 0 15px;
+  border-radius: var(--ui-control-radius);
+  font-size: var(--ui-font-control) !important;
+  line-height: 1;
+}
+
+.button.button-sm:not(.button-icon) {
+  min-height: calc(var(--ui-control-height) - 6px);
+  height: calc(var(--ui-control-height) - 6px);
+  padding-inline: 12px;
+  font-size: var(--ui-font-label) !important;
+}
+
+.button-icon,
+.icon-button {
+  min-width: var(--ui-control-height);
+  width: var(--ui-control-height);
+  min-height: var(--ui-control-height);
+  height: var(--ui-control-height);
+}
+
+.office-status-button {
+  min-height: var(--ui-status-height);
+  height: var(--ui-status-height);
+  padding-block: 0;
+  border-radius: 999px;
+  font-size: var(--ui-font-status);
+  font-weight: 600;
+  line-height: calc(var(--ui-status-height) - 2px);
+}
+
+/* One rendered status control everywhere. The native select remains on top for
+   keyboard/touch behavior while the label and chevron own the visual layout. */
+.ui-status-select {
+  --ui-status-control-width: 124px;
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: minmax(max-content, 1fr) 16px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  width: var(--ui-status-control-width);
+  min-width: var(--ui-status-control-width);
+  max-width: 100%;
+  min-height: var(--ui-status-height);
+  height: var(--ui-status-height);
+  box-sizing: border-box;
+  padding: 0 12px 0 14px;
+  overflow: visible;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: var(--ui-font-status);
+  font-weight: 600;
+  line-height: 1;
+  text-align: left;
+}
+
+.ui-status-label {
+  display: block;
+  min-width: max-content;
+  overflow: visible;
+  line-height: 1;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.ui-status-chevron {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  justify-self: end;
+  pointer-events: none;
+}
+
+.ui-status-native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+  opacity: 0;
+  appearance: none;
+}
+
+.ui-status-select:has(.ui-status-native:focus-visible) {
+  outline: 2px solid var(--ui-focus-color);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--ui-focus-ring);
+}
+
+.ui-status-select[data-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.ui-form-modal {
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(820px, calc(100dvh - 32px));
+  overflow: auto;
+}
+
+.ui-form-modal > .office-form,
+.ui-form-modal > .local-client-form,
+.ui-form-modal > .local-entry-form {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.project-recurring-switch {
+  align-self: stretch;
+}
+
+.project-carry-note {
+  align-self: center;
+  margin: 0;
+  color: #667890;
+  font-size: var(--ui-font-label);
+  line-height: 1.45;
+}
+
+.local-project-edit-modal {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(820px, calc(100dvh - 32px));
+  overflow: auto;
+}
+
+.local-project-edit-modal .local-project-editor {
+  position: static;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.ui-status-select.paid,
+.ui-status-select.qualified,
+.ui-status-select.accepted {
+  background: #ddf7eb;
+  color: #117c53;
+}
+
+.ui-status-select.pending,
+.ui-status-select.sent,
+.ui-status-select.new {
+  background: #e8f2ff;
+  color: #176bcf;
+}
+
+.ui-status-select.waiting,
+.ui-status-select.partial,
+.ui-status-select.contacted {
+  background: #fff1dc;
+  color: #a86700;
+}
+
+.ui-status-select.overdue,
+.ui-status-select.declined {
+  background: #ffe7e9;
+  color: #c93642;
+}
+
+.ui-status-select.draft,
+.ui-status-select.closed {
+  background: #eef1f5;
+  color: #66758a;
+}
+
+.ui-status-select.active {
+  background: #ddf7eb;
+  color: #117c53;
+}
+
+.ui-status-select.inactive {
+  background: #eef1f5;
+  color: #66758a;
+}
+
+.ui-status-select.local-invoice-status,
+.ui-status-select.agent-lead-status,
+.ui-status-select.local-project-status-select,
+.sales-document-panel .office-table .ui-status-select.office-status {
+  width: var(--ui-status-control-width);
+  min-width: var(--ui-status-control-width);
+  height: var(--ui-status-height);
+  min-height: var(--ui-status-height);
+  padding: 0 12px 0 14px;
+  overflow: visible;
+  font-size: var(--ui-font-status);
+  line-height: 1;
+}
+
+.local-invoice-preview-row {
+  grid-template-columns: minmax(0, 1fr) var(--ui-status-control-width, 124px) 76px 96px;
+}
+
+.sales-document-panel .office-table tr.sales-document-row td[data-label='Status'] {
+  width: var(--ui-status-control-width, 124px);
+}
+
+.search-field,
+.office-search,
+.period-controls > select,
+.period-input {
+  min-height: var(--ui-control-height);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--ui-focus-color);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--ui-focus-ring);
+}
+
+@media (max-width: 1100px) and (min-width: 721px) {
+  :root,
+  .local-app {
+    --ui-font-page-title: 24px;
+    --ui-font-section-title: 16.5px;
+    --ui-font-body: 13.5px;
+    --ui-font-control: 13.5px;
+    --ui-font-label: 11.5px;
+    --ui-font-status: 13px;
+    --ui-control-height: 42px;
+    --ui-status-height: 39px;
+    --ui-status-control-width: 122px;
+  }
+}
+
+@media (max-width: 720px) {
+  :root,
+  .local-app {
+    --ui-font-page-title: 22px;
+    --ui-font-section-title: 16px;
+    --ui-font-body: 13px;
+    --ui-font-control: 13px;
+    --ui-font-label: 11px;
+    --ui-font-status: 13px;
+    --ui-control-height: 44px;
+    --ui-status-height: 40px;
+    --ui-status-control-width: 118px;
+  }
+
+  .button.button-sm:not(.button-icon) {
+    min-height: 40px;
+    height: 40px;
+    font-size: var(--ui-font-control) !important;
+  }
+
+  .ui-status-select {
+    --ui-status-control-width: 118px;
+    font-size: var(--ui-font-status);
+  }
+
+  .local-invoice-preview-row {
+    grid-template-columns: minmax(0, 1fr) var(--ui-status-control-width);
+  }
+
+  .sales-document-panel .office-table tr.sales-document-row td[data-label='Status'] {
+    right: 12px;
+    width: var(--ui-status-control-width);
   }
 }

@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { Plus, LoaderCircle, Info } from 'lucide-react';
 import { Dialog } from './ui/dialog';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Select } from './ui/select';
 import { currencies, type TableName, validateRecord } from '@/lib/schemas';
 import { convert, today, d } from '@/lib/finance';
 import type { Ledger, Row } from '@/lib/types';
@@ -88,7 +90,7 @@ export function RecordForm({
   const input = (key: string, label: string, type = 'text', hint?: string) => (
     <label className="field" key={key}>
       <span>{label}</span>
-      <input
+      <Input
         {...register(key)}
         type={type}
         step={type === 'number' ? 'any' : undefined}
@@ -102,7 +104,7 @@ export function RecordForm({
   const select = (key: string, label: string, options: { value: string; label: string }[]) => (
     <label className="field" key={key}>
       <span>{label}</span>
-      <select
+      <Select
         {...register(key, {
           onChange: (event) => {
             if (key === 'currency') {
@@ -121,7 +123,7 @@ export function RecordForm({
             {o.label}
           </option>
         ))}
-      </select>
+      </Select>
       {errors[key] && <small className="field-error">{String(errors[key]?.message)}</small>}
     </label>
   );

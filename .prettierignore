@@ -3,5 +3,6 @@ node_modules
 .vercel
 package-lock.json
 public
+wordpress-plugin
 *.tsbuildinfo
 next-env.d.ts

@@ -47,6 +47,9 @@ import { AgentLeads } from './agent-leads';
 import { InfonitsAssistant, type AssistantAction } from './infonits-assistant';
 import { browserClient } from '@/lib/supabase/browser';
 import { buildMobilePreviewData, mobilePreviewSeedVersion } from '@/lib/mobile-preview-data';
+import { StatusSelect } from './ui/status-select';
+import { PageTitle } from './ui/typography';
+import { FormModal } from './ui/form-modal';
 
 type Section =
   | 'dashboard'
@@ -94,6 +97,9 @@ type LocalRow = {
   workPaid: number;
   status: 'Waiting' | 'Partial' | 'Paid' | 'Overdue';
   createdAt: string;
+  startMonth: string;
+  completedMonth?: string;
+  recurring: boolean;
 };
 type LocalExpense = {
   id: string;
@@ -219,7 +225,14 @@ const addDays = (date: string, days: number) => {
   return value.toISOString().slice(0, 10);
 };
 const emptyClient = { name: '', company: '', email: '', phone: '', country: 'Sri Lanka' };
-const emptyProject = { project: '', clientId: '', value: '', currency: 'LKR', note: '' };
+const emptyProject = {
+  project: '',
+  clientId: '',
+  value: '',
+  currency: 'LKR',
+  note: '',
+  recurring: false,
+};
 const emptyExpense = {
   description: '',
   category: 'Office',
@@ -300,7 +313,7 @@ export function LocalFinance() {
   const [expenses, setExpenses] = useState<LocalExpense[]>([]);
   const [fxRates, setFxRates] = useState<Record<string, number>>({ LKR: 1 });
   const [fxDate, setFxDate] = useState('');
-  const [fxStatus, setFxStatus] = useState<'loading' | 'live' | 'saved'>('loading');
+  const [, setFxStatus] = useState<'loading' | 'live' | 'saved'>('loading');
   const [section, setSection] = useState<Section>('dashboard');
   const [menuOpen, setMenuOpen] = useState(false);
   const [projectFormOpen, setProjectFormOpen] = useState(false);
@@ -380,6 +393,9 @@ export function LocalFinance() {
             workPaid: Number(row.workPaid) || 0,
             status: row.status ?? 'Waiting',
             createdAt: row.createdAt ?? today(),
+            startMonth: row.startMonth ?? (row.createdAt ?? today()).slice(0, 7),
+            completedMonth: row.completedMonth,
+            recurring: row.recurring ?? false,
           }))
           .filter(
             (row) => row.project.trim() || row.value || row.advance || row.workDue || row.workPaid,
@@ -450,7 +466,7 @@ export function LocalFinance() {
       (item) => item.active && item.nextRun <= today() && item.lastGenerated !== item.nextRun,
     );
     if (!due.length) return;
-    let documents = [...office.documents];
+    const documents = [...office.documents];
     const recurringInvoices = office.recurringInvoices.map((schedule) => {
       if (!due.some((item) => item.id === schedule.id)) return schedule;
       const sequence =
@@ -552,6 +568,16 @@ export function LocalFinance() {
         };
       }),
     [paidInvoiceTotals, rows],
+  );
+
+  const monthRows = useMemo(
+    () =>
+      effectiveRows.filter((row) => {
+        if (row.startMonth > month) return false;
+        if (row.recurring) return true;
+        return !row.completedMonth || month <= row.completedMonth;
+      }),
+    [effectiveRows, month],
   );
 
   const totals = useMemo(() => {
@@ -752,6 +778,8 @@ export function LocalFinance() {
         workPaid: 0,
         status: 'Waiting',
         createdAt: today(),
+        startMonth: month,
+        recurring: projectDraft.recurring,
       },
       ...current,
     ]);
@@ -761,7 +789,15 @@ export function LocalFinance() {
   }
 
   function updateProject(id: string, patch: Partial<LocalRow>) {
-    setRows((current) => current.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    setRows((current) =>
+      current.map((row) => {
+        if (row.id !== id) return row;
+        const next = { ...row, ...patch };
+        if (patch.status === 'Paid' && row.status !== 'Paid') next.completedMonth = month;
+        if (patch.status && patch.status !== 'Paid') next.completedMonth = undefined;
+        return next;
+      }),
+    );
   }
 
   function addClient(event: React.FormEvent) {
@@ -868,6 +904,8 @@ export function LocalFinance() {
           workPaid: 0,
           status: 'Waiting',
           createdAt: today(),
+          startMonth: month,
+          recurring: false,
         },
         ...current,
       ]);
@@ -1514,7 +1552,7 @@ export function LocalFinance() {
                         year: 'numeric',
                       })}
                     </strong>
-                    <small>{rows.length} projects · all totals in LKR</small>
+                    <small>{monthRows.length} projects · all totals in LKR</small>
                   </div>
                   <input
                     aria-label="Finance month"
@@ -1524,7 +1562,7 @@ export function LocalFinance() {
                   />
                 </div>
                 <ProjectTable
-                  rows={effectiveRows}
+                  rows={monthRows}
                   clients={clients}
                   rates={fxRates}
                   onUpdate={updateProject}
@@ -1552,7 +1590,14 @@ export function LocalFinance() {
                 </button>
               </PageHeading>
               {clientFormOpen && (
-                <ClientForm draft={clientDraft} setDraft={setClientDraft} onSubmit={addClient} />
+                <FormModal
+                  title="Add client"
+                  subtitle="Create a client profile and connect it to future projects."
+                  icon={<UserPlus size={19} />}
+                  onClose={() => setClientFormOpen(false)}
+                >
+                  <ClientForm draft={clientDraft} setDraft={setClientDraft} onSubmit={addClient} />
+                </FormModal>
               )}
               <ClientList
                 clients={clients}
@@ -1592,12 +1637,19 @@ export function LocalFinance() {
                 </button>
               </PageHeading>
               {expenseFormOpen && (
-                <ExpenseForm
-                  draft={expenseDraft}
-                  setDraft={setExpenseDraft}
-                  rates={fxRates}
-                  onSubmit={addExpense}
-                />
+                <FormModal
+                  title="Add expense"
+                  subtitle="Record an operating cost in its original currency."
+                  icon={<ReceiptText size={19} />}
+                  onClose={() => setExpenseFormOpen(false)}
+                >
+                  <ExpenseForm
+                    draft={expenseDraft}
+                    setDraft={setExpenseDraft}
+                    rates={fxRates}
+                    onSubmit={addExpense}
+                  />
+                </FormModal>
               )}
               <ExpenseList
                 expenses={expenses}
@@ -1991,7 +2043,7 @@ function PageHeading({
     <section className="local-titlebar">
       <div>
         <span className="local-eyebrow">{eyebrow}</span>
-        <h1>{title}</h1>
+        <PageTitle>{title}</PageTitle>
         <p>{subtitle}</p>
       </div>
       <div className="local-actions">{children}</div>
@@ -2618,7 +2670,7 @@ function Dashboard({
                       </small>
                     </span>
                   </button>
-                  <select
+                  <StatusSelect
                     className={`office-status local-invoice-status ${invoice.status.toLowerCase()}`}
                     aria-label={`Status for ${invoice.number}`}
                     value={invoice.status}
@@ -2627,7 +2679,7 @@ function Dashboard({
                     {['Pending', 'Sent', 'Partial', 'Paid', 'Overdue'].map((status) => (
                       <option key={status}>{status}</option>
                     ))}
-                  </select>
+                  </StatusSelect>
                   <b>
                     {invoice.currency} {compactNumber(invoice.amount)}
                   </b>
@@ -2879,6 +2931,17 @@ function ProjectForm({
           placeholder="Scope, deliverables and important project details"
         />
       </label>
+      <label className="settings-switch project-recurring-switch">
+        <input
+          type="checkbox"
+          checked={draft.recurring}
+          onChange={(event) => setDraft({ ...draft, recurring: event.target.checked })}
+        />
+        <span>Repeat this project every month</span>
+      </label>
+      <p className="project-carry-note">
+        Incomplete projects automatically remain visible in the next month.
+      </p>
       <div className="local-rate-preview">
         <small>Rate to LKR</small>
         <strong>
@@ -2966,6 +3029,7 @@ function ProjectTable({
                 <strong>{row.project}</strong>
                 <small>
                   {clientName || 'No client'} · {shortDate(row.createdAt)}
+                  {row.recurring ? ' · Monthly recurring' : ''}
                 </small>
               </div>
               <div className="local-project-metrics">
@@ -2989,9 +3053,10 @@ function ProjectTable({
                 </strong>
               </div>
               <div className="local-project-status">
-                <select
+                <StatusSelect
                   aria-label="Payment status"
-                  className={row.status.toLowerCase()}
+                  className="local-project-status-select"
+                  tone={row.status.toLowerCase()}
                   value={row.status}
                   onChange={(event) =>
                     onUpdate(row.id, { status: event.target.value as LocalRow['status'] })
@@ -3001,7 +3066,7 @@ function ProjectTable({
                   <option>Partial</option>
                   <option>Paid</option>
                   <option>Overdue</option>
-                </select>
+                </StatusSelect>
               </div>
               <div className="local-card-actions">
                 <button
@@ -3041,114 +3106,156 @@ function ProjectTable({
                 </button>
               </div>
               {isEditing && (
-                <div className="local-project-editor">
-                  <label>
-                    <span>Project</span>
-                    <input
-                      aria-label="Project name"
-                      value={row.project}
-                      onChange={(event) => onUpdate(row.id, { project: event.target.value })}
-                    />
-                  </label>
-                  <label>
-                    <span>Client</span>
-                    <select
-                      aria-label="Client"
-                      value={row.clientId}
-                      onChange={(event) => onUpdate(row.id, { clientId: event.target.value })}
-                    >
-                      <option value="">No client</option>
-                      {clients.map((client) => (
-                        <option key={client.id} value={client.id}>
-                          {clientLabel(client)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="local-project-editor-amount">
-                    <span>Amount</span>
-                    <div>
-                      <select
-                        aria-label="Currency"
-                        value={row.currency}
-                        onChange={(event) =>
-                          onUpdate(row.id, {
-                            currency: event.target.value,
-                            exchangeRate:
-                              event.target.value === 'LKR'
-                                ? 1
-                                : (rates[event.target.value] ?? row.exchangeRate),
-                          })
-                        }
-                      >
-                        {currencies.map((currency) => (
-                          <option key={currency}>{currency}</option>
-                        ))}
-                      </select>
-                      <input
-                        aria-label="Project amount"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={row.value || ''}
-                        onChange={(event) =>
-                          onUpdate(row.id, { value: Number(event.target.value) })
-                        }
-                      />
-                    </div>
-                  </label>
-                  <label>
-                    <span>Rate to LKR</span>
-                    <input
-                      aria-label="Exchange rate to LKR"
-                      type="number"
-                      min="0"
-                      step="0.0001"
-                      value={row.exchangeRate}
-                      onChange={(event) =>
-                        onUpdate(row.id, { exchangeRate: Number(event.target.value) })
-                      }
-                    />
-                  </label>
-                  <label className="wide">
-                    <span>Description</span>
-                    <textarea
-                      aria-label="Project description"
-                      rows={3}
-                      value={row.note}
-                      onChange={(event) => onUpdate(row.id, { note: event.target.value })}
-                      placeholder="Scope, deliverables and project details"
-                    />
-                  </label>
-                  {(
-                    [
-                      ['advance', 'Received'],
-                      ['workDue', 'To pay'],
-                      ['workPaid', 'Paid'],
-                    ] as const
-                  ).map(([field, label]) => (
-                    <label key={field}>
-                      <span>{label}</span>
-                      <input
-                        aria-label={label}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={row[field] || ''}
-                        placeholder="0.00"
-                        onChange={(event) =>
-                          onUpdate(row.id, { [field]: Number(event.target.value) })
-                        }
-                      />
-                    </label>
-                  ))}
-                  <button
-                    className="button button-primary"
-                    type="button"
-                    onClick={() => setEditingId(null)}
+                <div
+                  className="local-modal-layer"
+                  role="presentation"
+                  onMouseDown={() => setEditingId(null)}
+                >
+                  <section
+                    className="local-modal local-project-edit-modal"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby={`edit-project-${row.id}`}
+                    onMouseDown={(event) => event.stopPropagation()}
                   >
-                    Done
-                  </button>
+                    <header>
+                      <div>
+                        <span className="local-modal-icon">
+                          <Pencil size={18} />
+                        </span>
+                        <div>
+                          <h2 id={`edit-project-${row.id}`}>Edit project</h2>
+                          <p>Update project details, recurrence and financial progress.</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label="Close project editor"
+                        onClick={() => setEditingId(null)}
+                      >
+                        <X size={19} />
+                      </button>
+                    </header>
+                    <div className="local-project-editor">
+                      <label>
+                        <span>Project</span>
+                        <input
+                          aria-label="Project name"
+                          value={row.project}
+                          onChange={(event) => onUpdate(row.id, { project: event.target.value })}
+                        />
+                      </label>
+                      <label>
+                        <span>Client</span>
+                        <select
+                          aria-label="Client"
+                          value={row.clientId}
+                          onChange={(event) => onUpdate(row.id, { clientId: event.target.value })}
+                        >
+                          <option value="">No client</option>
+                          {clients.map((client) => (
+                            <option key={client.id} value={client.id}>
+                              {clientLabel(client)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="local-project-editor-amount">
+                        <span>Amount</span>
+                        <div>
+                          <select
+                            aria-label="Currency"
+                            value={row.currency}
+                            onChange={(event) =>
+                              onUpdate(row.id, {
+                                currency: event.target.value,
+                                exchangeRate:
+                                  event.target.value === 'LKR'
+                                    ? 1
+                                    : (rates[event.target.value] ?? row.exchangeRate),
+                              })
+                            }
+                          >
+                            {currencies.map((currency) => (
+                              <option key={currency}>{currency}</option>
+                            ))}
+                          </select>
+                          <input
+                            aria-label="Project amount"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={row.value || ''}
+                            onChange={(event) =>
+                              onUpdate(row.id, { value: Number(event.target.value) })
+                            }
+                          />
+                        </div>
+                      </label>
+                      <label>
+                        <span>Rate to LKR</span>
+                        <input
+                          aria-label="Exchange rate to LKR"
+                          type="number"
+                          min="0"
+                          step="0.0001"
+                          value={row.exchangeRate}
+                          onChange={(event) =>
+                            onUpdate(row.id, { exchangeRate: Number(event.target.value) })
+                          }
+                        />
+                      </label>
+                      <label className="wide">
+                        <span>Description</span>
+                        <textarea
+                          aria-label="Project description"
+                          rows={3}
+                          value={row.note}
+                          onChange={(event) => onUpdate(row.id, { note: event.target.value })}
+                          placeholder="Scope, deliverables and project details"
+                        />
+                      </label>
+                      <label className="settings-switch project-recurring-switch">
+                        <input
+                          type="checkbox"
+                          checked={row.recurring}
+                          onChange={(event) =>
+                            onUpdate(row.id, { recurring: event.target.checked })
+                          }
+                        />
+                        <span>Repeat every month</span>
+                      </label>
+                      {(
+                        [
+                          ['advance', 'Received'],
+                          ['workDue', 'To pay'],
+                          ['workPaid', 'Paid'],
+                        ] as const
+                      ).map(([field, label]) => (
+                        <label key={field}>
+                          <span>{label}</span>
+                          <input
+                            aria-label={label}
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={row[field] || ''}
+                            placeholder="0.00"
+                            onChange={(event) =>
+                              onUpdate(row.id, { [field]: Number(event.target.value) })
+                            }
+                          />
+                        </label>
+                      ))}
+                      <button
+                        className="button button-primary"
+                        type="button"
+                        onClick={() => setEditingId(null)}
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </section>
                 </div>
               )}
             </article>
@@ -3756,66 +3863,73 @@ function ExpenseList({
             <Trash2 size={15} />
           </button>
           {editingId === expense.id && (
-            <div className="local-expense-editor">
-              <label>
-                <span>Description</span>
-                <input
-                  value={expense.description}
-                  onChange={(event) => onUpdate(expense.id, { description: event.target.value })}
-                />
-              </label>
-              <label>
-                <span>Category</span>
-                <input
-                  value={expense.category}
-                  onChange={(event) => onUpdate(expense.id, { category: event.target.value })}
-                />
-              </label>
-              <label>
-                <span>Amount</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={expense.amount}
-                  onChange={(event) =>
-                    onUpdate(expense.id, { amount: Number(event.target.value) || 0 })
-                  }
-                />
-              </label>
-              <label>
-                <span>Currency</span>
-                <select
-                  value={expense.currency}
-                  onChange={(event) =>
-                    onUpdate(expense.id, {
-                      currency: event.target.value,
-                      exchangeRate:
-                        event.target.value === 'LKR' ? 1 : (rates[event.target.value] ?? 1),
-                    })
-                  }
+            <FormModal
+              title="Edit expense"
+              subtitle="Update the cost, currency, category or transaction date."
+              icon={<Pencil size={18} />}
+              onClose={() => setEditingId('')}
+            >
+              <div className="local-expense-editor modal-editor">
+                <label>
+                  <span>Description</span>
+                  <input
+                    value={expense.description}
+                    onChange={(event) => onUpdate(expense.id, { description: event.target.value })}
+                  />
+                </label>
+                <label>
+                  <span>Category</span>
+                  <input
+                    value={expense.category}
+                    onChange={(event) => onUpdate(expense.id, { category: event.target.value })}
+                  />
+                </label>
+                <label>
+                  <span>Amount</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={expense.amount}
+                    onChange={(event) =>
+                      onUpdate(expense.id, { amount: Number(event.target.value) || 0 })
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Currency</span>
+                  <select
+                    value={expense.currency}
+                    onChange={(event) =>
+                      onUpdate(expense.id, {
+                        currency: event.target.value,
+                        exchangeRate:
+                          event.target.value === 'LKR' ? 1 : (rates[event.target.value] ?? 1),
+                      })
+                    }
+                  >
+                    {currencies.map((currency) => (
+                      <option key={currency}>{currency}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>Date</span>
+                  <input
+                    type="date"
+                    value={expense.date}
+                    onChange={(event) => onUpdate(expense.id, { date: event.target.value })}
+                  />
+                </label>
+                <button
+                  className="button button-primary"
+                  type="button"
+                  onClick={() => setEditingId('')}
                 >
-                  {currencies.map((currency) => (
-                    <option key={currency}>{currency}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Date</span>
-                <input
-                  type="date"
-                  value={expense.date}
-                  onChange={(event) => onUpdate(expense.id, { date: event.target.value })}
-                />
-              </label>
-              <button
-                className="button button-primary"
-                type="button"
-                onClick={() => setEditingId('')}
-              >
-                Done
-              </button>
-            </div>
+                  Done
+                </button>
+              </div>
+            </FormModal>
           )}
         </article>
       ))}

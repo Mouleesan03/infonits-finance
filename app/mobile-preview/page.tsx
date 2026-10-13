@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { MonitorSmartphone, RotateCcw, Smartphone } from 'lucide-react';
+import { Select } from '@/components/ui/select';
 
 const devices = [
   { label: 'iPhone SE', width: 375, height: 667 },
@@ -32,7 +33,7 @@ export default function MobilePreviewPage() {
         <div className="mobile-preview-controls">
           <label>
             <span>Device</span>
-            <select
+            <Select
               value={deviceIndex}
               onChange={(event) => setDeviceIndex(Number(event.target.value))}
             >
@@ -41,7 +42,7 @@ export default function MobilePreviewPage() {
                   {item.label} · {item.width}px
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <button type="button" onClick={() => setPortrait((value) => !value)}>
             <Smartphone size={16} /> {portrait ? 'Landscape' : 'Portrait'}

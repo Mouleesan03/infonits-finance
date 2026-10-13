@@ -13,6 +13,9 @@ import {
   UserRound,
 } from 'lucide-react';
 import { browserClient } from '@/lib/supabase/browser';
+import { Input } from './ui/input';
+import { StatusSelect } from './ui/status-select';
+import { PageTitle } from './ui/typography';
 
 type LeadStatus = 'New' | 'Contacted' | 'Qualified' | 'Closed';
 
@@ -94,29 +97,32 @@ export function AgentLeads({ preview = false }: { preview?: boolean }) {
   const [refreshing, setRefreshing] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
 
-  const load = useCallback(async (quiet = false) => {
-    if (!quiet) setRefreshing(true);
-    if (preview) {
-      setLeads(previewLeads());
-      setUnavailable(false);
+  const load = useCallback(
+    async (quiet = false) => {
+      if (!quiet) setRefreshing(true);
+      if (preview) {
+        setLeads(previewLeads());
+        setUnavailable(false);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+      const { data, error } = await browserClient()
+        .from('agent_leads')
+        .select('id,name,email,phone,message,source,page_url,status,created_at,updated_at')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (error) {
+        setUnavailable(true);
+      } else {
+        setUnavailable(false);
+        setLeads((data ?? []) as AgentLead[]);
+      }
       setLoading(false);
       setRefreshing(false);
-      return;
-    }
-    const { data, error } = await browserClient()
-      .from('agent_leads')
-      .select('id,name,email,phone,message,source,page_url,status,created_at,updated_at')
-      .order('created_at', { ascending: false })
-      .limit(200);
-    if (error) {
-      setUnavailable(true);
-    } else {
-      setUnavailable(false);
-      setLeads((data ?? []) as AgentLead[]);
-    }
-    setLoading(false);
-    setRefreshing(false);
-  }, [preview]);
+    },
+    [preview],
+  );
 
   useEffect(() => {
     void load(true);
@@ -159,7 +165,7 @@ export function AgentLeads({ preview = false }: { preview?: boolean }) {
       <section className="local-titlebar agent-leads-titlebar">
         <div>
           <span className="local-eyebrow">SALES INBOX</span>
-          <h1>Agent leads</h1>
+          <PageTitle>Agent leads</PageTitle>
           <p>Monitor enquiries captured by the infonits.io agent plugin.</p>
         </div>
         <div className="local-actions">
@@ -207,7 +213,7 @@ export function AgentLeads({ preview = false }: { preview?: boolean }) {
         <div className="office-toolbar agent-leads-toolbar">
           <label className="office-search">
             <Search size={17} />
-            <input
+            <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search leads"
@@ -255,7 +261,7 @@ export function AgentLeads({ preview = false }: { preview?: boolean }) {
                     {lead.source || 'infonits.io agent'} · {relativeTime(lead.created_at)}
                   </small>
                 </div>
-                <select
+                <StatusSelect
                   className={`agent-lead-status ${lead.status.toLowerCase()}`}
                   aria-label={`Status for ${lead.name || 'website visitor'}`}
                   value={lead.status}
@@ -264,7 +270,7 @@ export function AgentLeads({ preview = false }: { preview?: boolean }) {
                   {statuses.map((status) => (
                     <option key={status}>{status}</option>
                   ))}
-                </select>
+                </StatusSelect>
                 {lead.message ? <p>{lead.message}</p> : null}
                 <div className="agent-lead-contact">
                   {lead.email ? (

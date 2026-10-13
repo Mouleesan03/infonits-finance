@@ -26,6 +26,9 @@ import { RecordForm, type FormTarget } from './record-form';
 import { CsvImport } from './csv-import';
 import { Button } from './ui/button';
 import { Dialog } from './ui/dialog';
+import { Input } from './ui/input';
+import { Select } from './ui/select';
+import { PageTitle } from './ui/typography';
 import { browserClient } from '@/lib/supabase/browser';
 import type { WorkspaceData, Row } from '@/lib/types';
 import type { TableName } from '@/lib/schemas';
@@ -240,28 +243,28 @@ export function Workspace({
         <main className="main-content">
           <div className="page-heading">
             <div>
-              <h1>
+              <PageTitle>
                 {detailId
                   ? (selectedProject?.name ?? String(selectedClient?.name ?? copy.title))
                   : copy.title}
-              </h1>
+              </PageTitle>
               <p>{copy.subtitle}</p>
             </div>
             <div className="heading-actions">
               {showPeriod && (
                 <div className="period-controls">
-                  <select
+                  <Select
                     aria-label="Reporting view"
                     value={yearly ? 'year' : 'month'}
                     onChange={(e) => setYearly(e.target.value === 'year')}
                   >
                     <option value="month">Monthly</option>
                     <option value="year">Yearly</option>
-                  </select>
+                  </Select>
                   <div className="period-input">
                     <CalendarDays size={15} />
                     {yearly ? (
-                      <input
+                      <Input
                         aria-label="Reporting year"
                         type="number"
                         min="1900"
@@ -277,7 +280,7 @@ export function Workspace({
                         }}
                       />
                     ) : (
-                      <input
+                      <Input
                         aria-label="Reporting month"
                         type="month"
                         value={period}

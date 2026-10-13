@@ -1,6 +1,7 @@
 import { ArrowUpRight, FolderOpen, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from './button';
+import { BodyText, SectionTitle } from './typography';
 export function Badge({ children, tone = 'neutral' }: { children: ReactNode; tone?: string }) {
   return (
     <span className={`badge badge-${tone}`}>
@@ -48,8 +49,8 @@ export function SectionHeading({
   return (
     <div className="section-heading">
       <div>
-        <h2>{title}</h2>
-        {description && <p>{description}</p>}
+        <SectionTitle>{title}</SectionTitle>
+        {description && <BodyText>{description}</BodyText>}
       </div>
       {children}
     </div>

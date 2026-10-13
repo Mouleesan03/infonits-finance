@@ -41,6 +41,11 @@ import {
 } from 'lucide-react';
 import { isSixDigitPin, pinCredential } from '@/lib/auth';
 import { browserClient } from '@/lib/supabase/browser';
+import { Input } from './ui/input';
+import { Select } from './ui/select';
+import { StatusSelect } from './ui/status-select';
+import { PageTitle } from './ui/typography';
+import { FormModal } from './ui/form-modal';
 
 export type OfficeSection =
   | 'calendar'
@@ -568,7 +573,7 @@ function ModuleHeader({
       <section className="local-titlebar office-titlebar">
         <div>
           <span className="local-eyebrow">{eyebrow}</span>
-          <h1>{title}</h1>
+          <PageTitle>{title}</PageTitle>
           <p>{subtitle}</p>
         </div>
         <div className="local-actions">
@@ -596,7 +601,7 @@ function SearchBox({
   return (
     <label className="office-search">
       <Search size={17} />
-      <input
+      <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
@@ -1511,158 +1516,165 @@ function SalesDocuments({
         </>
       )}
       {formOpen && (
-        <form className="office-form" onSubmit={submit}>
-          <label>
-            <span>Client *</span>
-            <select
-              required
-              value={draft.clientId}
-              onChange={(e) => setDraft({ ...draft, clientId: e.target.value })}
-            >
-              <option value="">Choose client</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {clientLabel(c)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Project</span>
-            <select
-              value={draft.projectId}
-              onChange={(e) => setDraft({ ...draft, projectId: e.target.value })}
-            >
-              <option value="">No project</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.project}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Issue date</span>
-            <input
-              type="date"
-              value={draft.issueDate}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  issueDate: e.target.value,
-                  dueDate: addDays(e.target.value, 10),
-                })
-              }
-            />
-          </label>
-          <label>
-            <span>Due date</span>
-            <input
-              type="date"
-              value={draft.dueDate}
-              readOnly={kind === 'Invoice'}
-              onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })}
-            />
-            {kind === 'Invoice' ? <small>Automatically set to 10 days after issue.</small> : null}
-          </label>
-          <label>
-            <span>Currency</span>
-            <select
-              value={draft.currency}
-              onChange={(e) => setDraft({ ...draft, currency: e.target.value })}
-            >
-              {currencies.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Amount *</span>
-            <input
-              required
-              type="number"
-              min="0"
-              step="0.01"
-              value={draft.amount}
-              onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
-            />
-          </label>
-          <label className="wide">
-            <span>{kind} description</span>
-            <textarea
-              rows={3}
-              value={draft.description}
-              onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-              placeholder="Describe the services, deliverables or items included"
-            />
-          </label>
-          {kind === 'Invoice' && (
-            <>
-              <label>
-                <span>Tax %</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={draft.taxRate}
-                  onChange={(e) => setDraft({ ...draft, taxRate: e.target.value })}
-                />
-              </label>
-              <label>
-                <span>Discount</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={draft.discount}
-                  onChange={(e) => setDraft({ ...draft, discount: e.target.value })}
-                />
-              </label>
-              <label>
-                <span>Advance paid</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={draft.advance}
-                  onChange={(e) => setDraft({ ...draft, advance: e.target.value })}
-                />
-              </label>
-              <label className="wide">
-                <span>Notes</span>
-                <textarea
-                  rows={2}
-                  value={draft.notes}
-                  onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
-                />
-              </label>
-              <label className="wide invoice-bank-toggle">
-                <input
-                  type="checkbox"
-                  checked={draft.includeBankDetails}
-                  onChange={(e) => setDraft({ ...draft, includeBankDetails: e.target.checked })}
-                />
-                <span>Include bank details on this invoice</span>
-              </label>
-              {draft.includeBankDetails && (
-                <label className="wide">
-                  <span>Bank details</span>
-                  <textarea
-                    required
-                    rows={3}
-                    value={draft.bankDetails}
-                    onChange={(e) => setDraft({ ...draft, bankDetails: e.target.value })}
-                    placeholder={'Bank name\nAccount name\nAccount number / SWIFT'}
+        <FormModal
+          title={`${editingId ? 'Edit' : 'New'} ${kind.toLowerCase()}`}
+          subtitle={`Enter the ${kind.toLowerCase()} details and save when ready.`}
+          icon={<FileText size={19} />}
+          onClose={() => setFormOpen(false)}
+        >
+          <form className="office-form" onSubmit={submit}>
+            <label>
+              <span>Client *</span>
+              <select
+                required
+                value={draft.clientId}
+                onChange={(e) => setDraft({ ...draft, clientId: e.target.value })}
+              >
+                <option value="">Choose client</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {clientLabel(c)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Project</span>
+              <select
+                value={draft.projectId}
+                onChange={(e) => setDraft({ ...draft, projectId: e.target.value })}
+              >
+                <option value="">No project</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.project}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Issue date</span>
+              <input
+                type="date"
+                value={draft.issueDate}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    issueDate: e.target.value,
+                    dueDate: addDays(e.target.value, 10),
+                  })
+                }
+              />
+            </label>
+            <label>
+              <span>Due date</span>
+              <input
+                type="date"
+                value={draft.dueDate}
+                readOnly={kind === 'Invoice'}
+                onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })}
+              />
+              {kind === 'Invoice' ? <small>Automatically set to 10 days after issue.</small> : null}
+            </label>
+            <label>
+              <span>Currency</span>
+              <select
+                value={draft.currency}
+                onChange={(e) => setDraft({ ...draft, currency: e.target.value })}
+              >
+                {currencies.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Amount *</span>
+              <input
+                required
+                type="number"
+                min="0"
+                step="0.01"
+                value={draft.amount}
+                onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
+              />
+            </label>
+            <label className="wide">
+              <span>{kind} description</span>
+              <textarea
+                rows={3}
+                value={draft.description}
+                onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                placeholder="Describe the services, deliverables or items included"
+              />
+            </label>
+            {kind === 'Invoice' && (
+              <>
+                <label>
+                  <span>Tax %</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={draft.taxRate}
+                    onChange={(e) => setDraft({ ...draft, taxRate: e.target.value })}
                   />
                 </label>
-              )}
-            </>
-          )}
-          <button className="button button-primary" type="submit">
-            <Check size={16} />
-            {editingId ? 'Update' : 'Save'} {kind.toLowerCase()}
-          </button>
-        </form>
+                <label>
+                  <span>Discount</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={draft.discount}
+                    onChange={(e) => setDraft({ ...draft, discount: e.target.value })}
+                  />
+                </label>
+                <label>
+                  <span>Advance paid</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={draft.advance}
+                    onChange={(e) => setDraft({ ...draft, advance: e.target.value })}
+                  />
+                </label>
+                <label className="wide">
+                  <span>Notes</span>
+                  <textarea
+                    rows={2}
+                    value={draft.notes}
+                    onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+                  />
+                </label>
+                <label className="wide invoice-bank-toggle">
+                  <input
+                    type="checkbox"
+                    checked={draft.includeBankDetails}
+                    onChange={(e) => setDraft({ ...draft, includeBankDetails: e.target.checked })}
+                  />
+                  <span>Include bank details on this invoice</span>
+                </label>
+                {draft.includeBankDetails && (
+                  <label className="wide">
+                    <span>Bank details</span>
+                    <textarea
+                      required
+                      rows={3}
+                      value={draft.bankDetails}
+                      onChange={(e) => setDraft({ ...draft, bankDetails: e.target.value })}
+                      placeholder={'Bank name\nAccount name\nAccount number / SWIFT'}
+                    />
+                  </label>
+                )}
+              </>
+            )}
+            <button className="button button-primary" type="submit">
+              <Check size={16} />
+              {editingId ? 'Update' : 'Save'} {kind.toLowerCase()}
+            </button>
+          </form>
+        </FormModal>
       )}
       <section className="office-panel sales-document-panel">
         <div className="office-toolbar">
@@ -1748,7 +1760,7 @@ function SalesDocuments({
                       </span>
                     </td>
                     <td data-label="Status">
-                      <select
+                      <StatusSelect
                         className={`office-status ${item.status.toLowerCase()}`}
                         value={item.status}
                         onChange={(e) =>
@@ -1765,7 +1777,7 @@ function SalesDocuments({
                         ).map((s) => (
                           <option key={s}>{s}</option>
                         ))}
-                      </select>
+                      </StatusSelect>
                     </td>
                     <td data-label="Total">
                       <strong>
@@ -2539,78 +2551,88 @@ function PaymentsModule({
         </div>
       </section>
       {formOpen && (
-        <form className="office-form" onSubmit={submit}>
-          <label>
-            <span>Type</span>
-            <select
-              value={draft.type}
-              onChange={(e) => setDraft({ ...draft, type: e.target.value as Payment['type'] })}
-            >
-              {['Income', 'Expense', 'Saving', 'Gold', 'Loan'].map((x) => (
-                <option key={x}>{x}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Category</span>
-            <input
-              value={draft.category}
-              onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-            />
-          </label>
-          <label className="wide">
-            <span>Note *</span>
-            <input
-              required
-              value={draft.note}
-              onChange={(e) => setDraft({ ...draft, note: e.target.value })}
-            />
-          </label>
-          <label>
-            <span>Currency</span>
-            <select
-              value={draft.currency}
-              onChange={(e) => setDraft({ ...draft, currency: e.target.value })}
-            >
-              {currencies.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Amount *</span>
-            <input
-              required
-              type="number"
-              min="0"
-              step="0.01"
-              value={draft.amount}
-              onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
-            />
-          </label>
-          <label>
-            <span>Date</span>
-            <input
-              type="date"
-              value={draft.date}
-              onChange={(e) => setDraft({ ...draft, date: e.target.value })}
-            />
-          </label>
-          <label>
-            <span>Status</span>
-            <select
-              value={draft.status}
-              onChange={(e) => setDraft({ ...draft, status: e.target.value as Payment['status'] })}
-            >
-              <option>Paid</option>
-              <option>Pending</option>
-            </select>
-          </label>
-          <button className="button button-primary" type="submit">
-            <Check size={16} />
-            Save record
-          </button>
-        </form>
+        <FormModal
+          title="Add finance record"
+          subtitle="Record income, expenses, savings, gold or loans."
+          icon={<CircleDollarSign size={19} />}
+          onClose={() => setFormOpen(false)}
+        >
+          <form className="office-form" onSubmit={submit}>
+            <label>
+              <span>Type</span>
+              <select
+                value={draft.type}
+                onChange={(e) => setDraft({ ...draft, type: e.target.value as Payment['type'] })}
+              >
+                {['Income', 'Expense', 'Saving', 'Gold', 'Loan'].map((x) => (
+                  <option key={x}>{x}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Category</span>
+              <input
+                value={draft.category}
+                onChange={(e) => setDraft({ ...draft, category: e.target.value })}
+              />
+            </label>
+            <label className="wide">
+              <span>Note *</span>
+              <input
+                required
+                value={draft.note}
+                onChange={(e) => setDraft({ ...draft, note: e.target.value })}
+              />
+            </label>
+            <label>
+              <span>Currency</span>
+              <select
+                value={draft.currency}
+                onChange={(e) => setDraft({ ...draft, currency: e.target.value })}
+              >
+                {currencies.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Amount *</span>
+              <input
+                required
+                type="number"
+                min="0"
+                step="0.01"
+                value={draft.amount}
+                onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
+              />
+            </label>
+            <label>
+              <span>Date</span>
+              <input
+                type="date"
+                value={draft.date}
+                onChange={(e) => setDraft({ ...draft, date: e.target.value })}
+              />
+            </label>
+            <label>
+              <span>Status</span>
+              <StatusSelect
+                tone={draft.status.toLowerCase()}
+                value={draft.status}
+                onChange={(e) =>
+                  setDraft({ ...draft, status: e.target.value as Payment['status'] })
+                }
+              >
+                <option>Paid</option>
+                <option>Pending</option>
+              </StatusSelect>
+            </label>
+            <button className="button button-primary" type="submit">
+              <Check size={16} />
+              Save record
+            </button>
+          </form>
+        </FormModal>
       )}
       <section className="office-panel finance-ledger-panel">
         {!ledgerRows.length ? (
@@ -2746,37 +2768,44 @@ function TeamModule({
         onAction={() => setFormOpen(!formOpen)}
       />
       {formOpen && (
-        <form className="office-form" onSubmit={submit}>
-          {(['name', 'role', 'email', 'phone'] as const).map((k) => (
-            <label key={k}>
-              <span>
-                {k[0].toUpperCase() + k.slice(1)}
-                {k === 'name' || k === 'role' ? ' *' : ''}
-              </span>
-              <input
-                required={k === 'name' || k === 'role'}
-                type={k === 'email' ? 'email' : 'text'}
-                value={draft[k]}
-                onChange={(e) => setDraft({ ...draft, [k]: e.target.value })}
-              />
+        <FormModal
+          title="Add team member"
+          subtitle="Add contact, role and employment details."
+          icon={<UsersRound size={19} />}
+          onClose={() => setFormOpen(false)}
+        >
+          <form className="office-form" onSubmit={submit}>
+            {(['name', 'role', 'email', 'phone'] as const).map((k) => (
+              <label key={k}>
+                <span>
+                  {k[0].toUpperCase() + k.slice(1)}
+                  {k === 'name' || k === 'role' ? ' *' : ''}
+                </span>
+                <input
+                  required={k === 'name' || k === 'role'}
+                  type={k === 'email' ? 'email' : 'text'}
+                  value={draft[k]}
+                  onChange={(e) => setDraft({ ...draft, [k]: e.target.value })}
+                />
+              </label>
+            ))}
+            <label>
+              <span>Employment</span>
+              <select
+                value={draft.employment}
+                onChange={(e) => setDraft({ ...draft, employment: e.target.value })}
+              >
+                <option>Full-time</option>
+                <option>Part-time</option>
+                <option>Freelance</option>
+              </select>
             </label>
-          ))}
-          <label>
-            <span>Employment</span>
-            <select
-              value={draft.employment}
-              onChange={(e) => setDraft({ ...draft, employment: e.target.value })}
-            >
-              <option>Full-time</option>
-              <option>Part-time</option>
-              <option>Freelance</option>
-            </select>
-          </label>
-          <button className="button button-primary" type="submit">
-            <Check size={16} />
-            Save member
-          </button>
-        </form>
+            <button className="button button-primary" type="submit">
+              <Check size={16} />
+              Save member
+            </button>
+          </form>
+        </FormModal>
       )}
       <section className="office-panel office-team-panel">
         <div className="office-toolbar">
@@ -2923,7 +2952,8 @@ function TeamModule({
                 </label>
                 <label>
                   <span>Status</span>
-                  <select
+                  <StatusSelect
+                    tone={selected.status.toLowerCase()}
                     value={selected.status}
                     onChange={(event) =>
                       onChange(
@@ -2937,7 +2967,7 @@ function TeamModule({
                   >
                     <option>Active</option>
                     <option>Inactive</option>
-                  </select>
+                  </StatusSelect>
                 </label>
                 <button className="button button-primary" type="submit">
                   <Check size={16} /> Save changes
@@ -3016,7 +3046,6 @@ function PostsModule({
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const names = new Map(clients.map((client) => [client.id, clientLabel(client)]));
   const projectNames = new Map(projects.map((project) => [project.id, project.project]));
-  const members = new Map(team.map((member) => [member.id, member.name]));
   const monthPlans = items.filter((item) => item.month === calendarMonth);
   const postEvents = events.filter(
     (event) => event.type === 'Post' && event.date.startsWith(calendarMonth),
@@ -3133,82 +3162,89 @@ function PostsModule({
       </section>
 
       {formOpen && (
-        <form className="office-form office-plan-form" onSubmit={submit}>
-          <label>
-            <span>Client *</span>
-            <select
-              required
-              value={draft.clientId}
-              onChange={(event) => setDraft({ ...draft, clientId: event.target.value })}
-            >
-              <option value="">Choose client</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {clientLabel(client)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Project</span>
-            <select
-              value={draft.projectId}
-              onChange={(event) => setDraft({ ...draft, projectId: event.target.value })}
-            >
-              <option value="">No project</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.project}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Platform</span>
-            <select
-              value={draft.platform}
-              onChange={(event) => setDraft({ ...draft, platform: event.target.value })}
-            >
-              <option>Instagram</option>
-              <option>Facebook</option>
-              <option>TikTok</option>
-            </select>
-          </label>
-          <label>
-            <span>Month</span>
-            <input
-              type="month"
-              value={draft.month}
-              onChange={(event) => setDraft({ ...draft, month: event.target.value })}
-            />
-          </label>
-          <label>
-            <span>Required posts</span>
-            <input
-              type="number"
-              min="1"
-              value={draft.required}
-              onChange={(event) => setDraft({ ...draft, required: event.target.value })}
-            />
-          </label>
-          <label>
-            <span>Assign to</span>
-            <select
-              value={draft.memberId}
-              onChange={(event) => setDraft({ ...draft, memberId: event.target.value })}
-            >
-              <option value="">Unassigned</option>
-              {team.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="button button-primary" type="submit">
-            <Check size={16} /> Save plan
-          </button>
-        </form>
+        <FormModal
+          title="Add post plan"
+          subtitle="Set a client, channel, owner and monthly target."
+          icon={<Send size={19} />}
+          onClose={() => setFormOpen(false)}
+        >
+          <form className="office-form office-plan-form" onSubmit={submit}>
+            <label>
+              <span>Client *</span>
+              <select
+                required
+                value={draft.clientId}
+                onChange={(event) => setDraft({ ...draft, clientId: event.target.value })}
+              >
+                <option value="">Choose client</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {clientLabel(client)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Project</span>
+              <select
+                value={draft.projectId}
+                onChange={(event) => setDraft({ ...draft, projectId: event.target.value })}
+              >
+                <option value="">No project</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.project}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Platform</span>
+              <select
+                value={draft.platform}
+                onChange={(event) => setDraft({ ...draft, platform: event.target.value })}
+              >
+                <option>Instagram</option>
+                <option>Facebook</option>
+                <option>TikTok</option>
+              </select>
+            </label>
+            <label>
+              <span>Month</span>
+              <input
+                type="month"
+                value={draft.month}
+                onChange={(event) => setDraft({ ...draft, month: event.target.value })}
+              />
+            </label>
+            <label>
+              <span>Required posts</span>
+              <input
+                type="number"
+                min="1"
+                value={draft.required}
+                onChange={(event) => setDraft({ ...draft, required: event.target.value })}
+              />
+            </label>
+            <label>
+              <span>Assign to</span>
+              <select
+                value={draft.memberId}
+                onChange={(event) => setDraft({ ...draft, memberId: event.target.value })}
+              >
+                <option value="">Unassigned</option>
+                {team.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="button button-primary" type="submit">
+              <Check size={16} /> Save plan
+            </button>
+          </form>
+        </FormModal>
       )}
 
       <section className="office-post-workspace">
@@ -3264,7 +3300,7 @@ function PostsModule({
                           </span>
                         </td>
                         <td data-label="Team">
-                          <select
+                          <Select
                             className="office-inline-select"
                             value={item.memberId}
                             onChange={(event) =>
@@ -3283,7 +3319,7 @@ function PostsModule({
                                 {member.name}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </td>
                         <td data-label="Posts" className="office-post-progress">
                           {tracked ? (
@@ -3521,69 +3557,76 @@ function RenewalsModule({
         <span className="office-due-chip">{soon} due soon</span>
       </ModuleHeader>
       {formOpen && (
-        <form className="office-form" onSubmit={submit}>
-          <label>
-            <span>Website *</span>
-            <input
-              required
-              value={draft.website}
-              onChange={(e) => setDraft({ ...draft, website: e.target.value })}
-            />
-          </label>
-          <label>
-            <span>Username</span>
-            <input
-              value={draft.username}
-              onChange={(e) => setDraft({ ...draft, username: e.target.value })}
-            />
-          </label>
-          <label className="wide">
-            <span>Website URL</span>
-            <input
-              type="url"
-              value={draft.websiteUrl}
-              onChange={(e) => setDraft({ ...draft, websiteUrl: e.target.value })}
-            />
-          </label>
-          <label>
-            <span>Domain login ID</span>
-            <input
-              autoComplete="off"
-              placeholder="Username or account email"
-              value={draft.domainLogin}
-              onChange={(e) => setDraft({ ...draft, domainLogin: e.target.value })}
-            />
-          </label>
-          <label>
-            <span>Server login ID</span>
-            <input
-              autoComplete="off"
-              placeholder="Username only — no password"
-              value={draft.serverLogin}
-              onChange={(e) => setDraft({ ...draft, serverLogin: e.target.value })}
-            />
-          </label>
-          <label>
-            <span>Domain renewal</span>
-            <input
-              type="date"
-              value={draft.domainDue}
-              onChange={(e) => setDraft({ ...draft, domainDue: e.target.value })}
-            />
-          </label>
-          <label>
-            <span>Hosting renewal</span>
-            <input
-              type="date"
-              value={draft.hostingDue}
-              onChange={(e) => setDraft({ ...draft, hostingDue: e.target.value })}
-            />
-          </label>
-          <button className="button button-primary" type="submit">
-            <Check size={16} />
-            {editingId ? 'Update' : 'Save'} renewal
-          </button>
-        </form>
+        <FormModal
+          title={`${editingId ? 'Edit' : 'Add'} renewal`}
+          subtitle="Track domain and hosting renewal details."
+          icon={<Globe2 size={19} />}
+          onClose={() => setFormOpen(false)}
+        >
+          <form className="office-form" onSubmit={submit}>
+            <label>
+              <span>Website *</span>
+              <input
+                required
+                value={draft.website}
+                onChange={(e) => setDraft({ ...draft, website: e.target.value })}
+              />
+            </label>
+            <label>
+              <span>Username</span>
+              <input
+                value={draft.username}
+                onChange={(e) => setDraft({ ...draft, username: e.target.value })}
+              />
+            </label>
+            <label className="wide">
+              <span>Website URL</span>
+              <input
+                type="url"
+                value={draft.websiteUrl}
+                onChange={(e) => setDraft({ ...draft, websiteUrl: e.target.value })}
+              />
+            </label>
+            <label>
+              <span>Domain login ID</span>
+              <input
+                autoComplete="off"
+                placeholder="Username or account email"
+                value={draft.domainLogin}
+                onChange={(e) => setDraft({ ...draft, domainLogin: e.target.value })}
+              />
+            </label>
+            <label>
+              <span>Server login ID</span>
+              <input
+                autoComplete="off"
+                placeholder="Username only — no password"
+                value={draft.serverLogin}
+                onChange={(e) => setDraft({ ...draft, serverLogin: e.target.value })}
+              />
+            </label>
+            <label>
+              <span>Domain renewal</span>
+              <input
+                type="date"
+                value={draft.domainDue}
+                onChange={(e) => setDraft({ ...draft, domainDue: e.target.value })}
+              />
+            </label>
+            <label>
+              <span>Hosting renewal</span>
+              <input
+                type="date"
+                value={draft.hostingDue}
+                onChange={(e) => setDraft({ ...draft, hostingDue: e.target.value })}
+              />
+            </label>
+            <button className="button button-primary" type="submit">
+              <Check size={16} />
+              {editingId ? 'Update' : 'Save'} renewal
+            </button>
+          </form>
+        </FormModal>
       )}
       <section className="office-panel office-renewal-panel">
         {!items.length ? (
@@ -3796,51 +3839,58 @@ function LettersModule({
         }}
       />
       {formOpen && (
-        <form className="office-form letter-form" onSubmit={submit}>
-          <label>
-            <span>Date</span>
-            <input
-              type="date"
-              value={draft.date}
-              onChange={(e) => setDraft({ ...draft, date: e.target.value })}
-            />
-          </label>
-          <label>
-            <span>Client *</span>
-            <input
-              required
-              value={draft.client}
-              onChange={(e) => setDraft({ ...draft, client: e.target.value })}
-            />
-          </label>
-          <label className="wide">
-            <span>Subject *</span>
-            <input
-              required
-              value={draft.subject}
-              onChange={(e) => setDraft({ ...draft, subject: e.target.value })}
-            />
-          </label>
-          <label className="wide">
-            <span>Letter</span>
-            <textarea
-              rows={5}
-              value={draft.body}
-              onChange={(e) => setDraft({ ...draft, body: e.target.value })}
-            />
-          </label>
-          <label>
-            <span>Prepared by</span>
-            <input
-              value={draft.preparedBy}
-              onChange={(e) => setDraft({ ...draft, preparedBy: e.target.value })}
-            />
-          </label>
-          <button className="button button-primary" type="submit">
-            <Check size={16} />
-            {editingId ? 'Update letter' : 'Save letter'}
-          </button>
-        </form>
+        <FormModal
+          title={editingId ? 'Edit service letter' : 'New service letter'}
+          subtitle="Prepare a client-ready document."
+          icon={<FileText size={19} />}
+          onClose={() => setFormOpen(false)}
+        >
+          <form className="office-form letter-form" onSubmit={submit}>
+            <label>
+              <span>Date</span>
+              <input
+                type="date"
+                value={draft.date}
+                onChange={(e) => setDraft({ ...draft, date: e.target.value })}
+              />
+            </label>
+            <label>
+              <span>Client *</span>
+              <input
+                required
+                value={draft.client}
+                onChange={(e) => setDraft({ ...draft, client: e.target.value })}
+              />
+            </label>
+            <label className="wide">
+              <span>Subject *</span>
+              <input
+                required
+                value={draft.subject}
+                onChange={(e) => setDraft({ ...draft, subject: e.target.value })}
+              />
+            </label>
+            <label className="wide">
+              <span>Letter</span>
+              <textarea
+                rows={5}
+                value={draft.body}
+                onChange={(e) => setDraft({ ...draft, body: e.target.value })}
+              />
+            </label>
+            <label>
+              <span>Prepared by</span>
+              <input
+                value={draft.preparedBy}
+                onChange={(e) => setDraft({ ...draft, preparedBy: e.target.value })}
+              />
+            </label>
+            <button className="button button-primary" type="submit">
+              <Check size={16} />
+              {editingId ? 'Update letter' : 'Save letter'}
+            </button>
+          </form>
+        </FormModal>
       )}
       <section className="office-panel office-letter-panel">
         {!items.length ? (
@@ -4167,48 +4217,55 @@ function UsersModule({
         )}
       </section>
       {formOpen && (
-        <form className="office-form" onSubmit={submit}>
-          <label>
-            <span>Name *</span>
-            <input
-              required
-              value={draft.name}
-              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-            />
-          </label>
-          <label>
-            <span>Username *</span>
-            <input
-              required
-              value={draft.username}
-              onChange={(e) => setDraft({ ...draft, username: e.target.value })}
-            />
-          </label>
-          <label>
-            <span>Role</span>
-            <select
-              value={draft.role}
-              onChange={(e) => setDraft({ ...draft, role: e.target.value })}
-            >
-              <option>Admin</option>
-              <option>Project manager</option>
-              <option>Designer</option>
-              <option>Developer</option>
-              <option>Finance</option>
-            </select>
-          </label>
-          <label className="wide">
-            <span>Access</span>
-            <input
-              value={draft.access}
-              onChange={(e) => setDraft({ ...draft, access: e.target.value })}
-            />
-          </label>
-          <button className="button button-primary" type="submit">
-            <Check size={16} />
-            Save user
-          </button>
-        </form>
+        <FormModal
+          title="Add user"
+          subtitle="Create a workspace user and assign their access."
+          icon={<UserRound size={19} />}
+          onClose={() => setFormOpen(false)}
+        >
+          <form className="office-form" onSubmit={submit}>
+            <label>
+              <span>Name *</span>
+              <input
+                required
+                value={draft.name}
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              />
+            </label>
+            <label>
+              <span>Username *</span>
+              <input
+                required
+                value={draft.username}
+                onChange={(e) => setDraft({ ...draft, username: e.target.value })}
+              />
+            </label>
+            <label>
+              <span>Role</span>
+              <select
+                value={draft.role}
+                onChange={(e) => setDraft({ ...draft, role: e.target.value })}
+              >
+                <option>Admin</option>
+                <option>Project manager</option>
+                <option>Designer</option>
+                <option>Developer</option>
+                <option>Finance</option>
+              </select>
+            </label>
+            <label className="wide">
+              <span>Access</span>
+              <input
+                value={draft.access}
+                onChange={(e) => setDraft({ ...draft, access: e.target.value })}
+              />
+            </label>
+            <button className="button button-primary" type="submit">
+              <Check size={16} />
+              Save user
+            </button>
+          </form>
+        </FormModal>
       )}
       <section className="office-panel">
         <div className="office-card-grid">
