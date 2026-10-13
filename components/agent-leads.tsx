@@ -96,6 +96,7 @@ export function AgentLeads({ preview = false }: { preview?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
+  const [page, setPage] = useState(0);
 
   const load = useCallback(
     async (quiet = false) => {
@@ -148,6 +149,9 @@ export function AgentLeads({ preview = false }: { preview?: boolean }) {
       return matchesStatus && matchesSearch;
     });
   }, [filter, leads, search]);
+  const pageCount = Math.max(1, Math.ceil(visible.length / 10));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageLeads = visible.slice(safePage * 10, safePage * 10 + 10);
 
   const newCount = leads.filter((lead) => lead.status === 'New').length;
   const qualifiedCount = leads.filter((lead) => lead.status === 'Qualified').length;
@@ -215,7 +219,10 @@ export function AgentLeads({ preview = false }: { preview?: boolean }) {
             <Search size={17} />
             <Input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(0);
+              }}
               placeholder="Search leads"
             />
           </label>
@@ -224,7 +231,10 @@ export function AgentLeads({ preview = false }: { preview?: boolean }) {
               <button
                 key={status}
                 className={filter === status ? 'active' : ''}
-                onClick={() => setFilter(status)}
+                onClick={() => {
+                  setFilter(status);
+                  setPage(0);
+                }}
               >
                 {status}
               </button>
@@ -250,7 +260,7 @@ export function AgentLeads({ preview = false }: { preview?: boolean }) {
           </div>
         ) : (
           <div className="agent-lead-grid">
-            {visible.map((lead) => (
+            {pageLeads.map((lead) => (
               <article className="agent-lead-card" key={lead.id}>
                 <div className="agent-lead-avatar">
                   <UserRound size={19} />
@@ -293,6 +303,27 @@ export function AgentLeads({ preview = false }: { preview?: boolean }) {
             ))}
           </div>
         )}
+        {pageCount > 1 ? (
+          <nav className="local-invoice-pagination standalone" aria-label="Lead pagination">
+            <button
+              type="button"
+              disabled={safePage === 0}
+              onClick={() => setPage(Math.max(0, safePage - 1))}
+            >
+              Previous
+            </button>
+            <span>
+              Page {safePage + 1} of {pageCount}
+            </span>
+            <button
+              type="button"
+              disabled={safePage >= pageCount - 1}
+              onClick={() => setPage(Math.min(pageCount - 1, safePage + 1))}
+            >
+              Next
+            </button>
+          </nav>
+        ) : null}
       </section>
     </>
   );

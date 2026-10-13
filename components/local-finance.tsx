@@ -51,6 +51,7 @@ import { buildMobilePreviewData, mobilePreviewSeedVersion } from '@/lib/mobile-p
 import { StatusSelect } from './ui/status-select';
 import { PageTitle } from './ui/typography';
 import { FormModal } from './ui/form-modal';
+import { DescriptionAssistant } from './ui/description-assistant';
 
 type Section =
   | 'dashboard'
@@ -84,6 +85,8 @@ type LocalClient = {
   email: string;
   phone: string;
   country: string;
+  followUpDate?: string;
+  notes?: string;
 };
 type LocalRow = {
   id: string;
@@ -101,6 +104,7 @@ type LocalRow = {
   startMonth: string;
   completedMonth?: string;
   recurring: boolean;
+  receivedLkr?: number;
 };
 type LocalExpense = {
   id: string;
@@ -160,6 +164,8 @@ type OfficeOverview = {
     completed?: boolean;
     priority?: 'Low' | 'Medium' | 'High';
     remarks?: string;
+    clientId?: string;
+    projectId?: string;
   }>;
   letters: Array<{ id: string; client: string; subject: string; date: string }>;
   recurringInvoices: Array<{
@@ -234,7 +240,15 @@ const addDays = (date: string, days: number) => {
   value.setUTCDate(value.getUTCDate() + days);
   return value.toISOString().slice(0, 10);
 };
-const emptyClient = { name: '', company: '', email: '', phone: '', country: 'Sri Lanka' };
+const emptyClient = {
+  name: '',
+  company: '',
+  email: '',
+  phone: '',
+  country: 'Sri Lanka',
+  followUpDate: '',
+  notes: '',
+};
 const emptyProject = {
   project: '',
   clientId: '',
@@ -345,6 +359,9 @@ export function LocalFinance() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [officeFormSignal, setOfficeFormSignal] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationTab, setNotificationTab] = useState<'notifications' | 'today'>(
+    'notifications',
+  );
   const [seenNotifications, setSeenNotifications] = useState<string[]>([]);
   const [preferences, setPreferences] = useState<WorkspacePreferences>(defaultPreferences);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -413,7 +430,12 @@ export function LocalFinance() {
           ),
       );
       setClients(
-        (parsed?.clients ?? []).map((client) => ({ ...client, country: client.country ?? '' })),
+        (parsed?.clients ?? []).map((client) => ({
+          ...client,
+          country: client.country ?? '',
+          followUpDate: client.followUpDate ?? '',
+          notes: client.notes ?? '',
+        })),
       );
       setExpenses(parsed?.expenses ?? []);
       setFxRates(parsed?.fxRates ?? { LKR: 1 });
@@ -566,14 +588,17 @@ export function LocalFinance() {
     () =>
       rows.map((row) => {
         const value = localValue(row.value, row.exchangeRate);
-        const received = Math.max(row.advance, paidInvoiceTotals.get(row.id) ?? 0);
+        const recordedReceived = localValue(row.advance, row.exchangeRate);
+        const receivedLkr = Math.max(recordedReceived, paidInvoiceTotals.get(row.id) ?? 0);
+        const receivedOriginal = row.exchangeRate ? receivedLkr / row.exchangeRate : row.advance;
         return {
           ...row,
-          advance: received,
+          advance: Math.max(row.advance, receivedOriginal),
+          receivedLkr,
           status:
-            received >= value && value > 0
+            receivedLkr >= value && value > 0
               ? ('Paid' as const)
-              : received > 0
+              : receivedLkr > 0
                 ? ('Partial' as const)
                 : row.status,
         };
@@ -595,11 +620,13 @@ export function LocalFinance() {
     const projects = effectiveRows.reduce(
       (sum, row) => {
         const valueLkr = localValue(row.value, row.exchangeRate);
+        const receivedLkr = row.receivedLkr ?? localValue(row.advance, row.exchangeRate);
+        const workLkr = localValue(row.workDue + row.workPaid, row.exchangeRate);
         return {
           value: sum.value + valueLkr,
-          received: sum.received + row.advance,
-          work: sum.work + row.workDue + row.workPaid,
-          remaining: sum.remaining + valueLkr - row.advance - row.workDue - row.workPaid,
+          received: sum.received + receivedLkr,
+          work: sum.work + workLkr,
+          remaining: sum.remaining + valueLkr - receivedLkr - workLkr,
         };
       },
       { value: 0, received: 0, work: 0, remaining: 0 },
@@ -686,9 +713,49 @@ export function LocalFinance() {
     preferences.renewalReminderDays,
   ]);
 
+  const todayNotifications = useMemo(() => {
+    const clientNames = new Map(clients.map((client) => [client.id, clientLabel(client)]));
+    return [
+      ...officeOverview.events
+        .filter((item) => item.type === 'Task' && !item.completed && item.date <= today())
+        .map((item) => ({
+          id: `today-task-${item.id}`,
+          title: item.title,
+          detail: item.date < today() ? `Overdue · ${shortDate(item.date)}` : 'Due today',
+          tone: item.date < today() ? 'urgent' : 'info',
+          section: 'todos' as Section,
+        })),
+      ...clients
+        .filter((client) => client.followUpDate && client.followUpDate <= today())
+        .map((client) => ({
+          id: `today-client-${client.id}`,
+          title: `Follow up ${clientLabel(client)}`,
+          detail: client.notes || client.email || client.phone || 'Open client profile',
+          tone: 'warning',
+          section: 'clients' as Section,
+        })),
+      ...officeOverview.documents
+        .filter(
+          (item) =>
+            item.kind === 'Invoice' &&
+            item.status !== 'Paid' &&
+            Boolean(item.dueDate) &&
+            item.dueDate < today(),
+        )
+        .map((item) => ({
+          id: `today-invoice-${item.id}`,
+          title: `${item.number} payment`,
+          detail: `${clientNames.get(item.clientId ?? '') ?? 'Unknown client'} · overdue`,
+          tone: 'urgent',
+          section: 'invoices' as Section,
+        })),
+    ].slice(0, 10);
+  }, [clients, officeOverview.documents, officeOverview.events]);
+
   const unreadNotifications = notifications.filter(
     (notification) => !seenNotifications.includes(notification.id),
   ).length;
+  const visibleNotificationItems = notificationTab === 'today' ? todayNotifications : notifications;
   const assistantContext = useMemo(
     () => ({
       today: today(),
@@ -1141,8 +1208,11 @@ export function LocalFinance() {
         'Currency',
         'Rate to LKR',
         'Value LKR',
+        'Advance',
         'Advance LKR',
+        'Work due',
         'Work due LKR',
+        'Work paid',
         'Work paid LKR',
         'Status',
         'Note',
@@ -1155,8 +1225,11 @@ export function LocalFinance() {
         row.exchangeRate,
         localValue(row.value, row.exchangeRate),
         row.advance,
+        localValue(row.advance, row.exchangeRate),
         row.workDue,
+        localValue(row.workDue, row.exchangeRate),
         row.workPaid,
+        localValue(row.workPaid, row.exchangeRate),
         row.status,
         row.note,
       ]),
@@ -1383,10 +1456,14 @@ export function LocalFinance() {
                 <section className="local-notification-panel" aria-label="Notifications panel">
                   <header>
                     <div>
-                      <strong>Notifications</strong>
-                      <small>Invoices and renewals</small>
+                      <strong>{notificationTab === 'today' ? 'Today' : 'Notifications'}</strong>
+                      <small>
+                        {notificationTab === 'today'
+                          ? 'Tasks, follow-ups and overdue invoices'
+                          : 'Invoices, events and renewals'}
+                      </small>
                     </div>
-                    {unreadNotifications > 0 && (
+                    {notificationTab === 'notifications' && unreadNotifications > 0 && (
                       <button
                         type="button"
                         onClick={() => {
@@ -1399,20 +1476,42 @@ export function LocalFinance() {
                       </button>
                     )}
                   </header>
+                  <div className="local-notification-tabs" role="tablist">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={notificationTab === 'notifications'}
+                      className={notificationTab === 'notifications' ? 'active' : ''}
+                      onClick={() => setNotificationTab('notifications')}
+                    >
+                      Notifications <b>{unreadNotifications}</b>
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={notificationTab === 'today'}
+                      className={notificationTab === 'today' ? 'active' : ''}
+                      onClick={() => setNotificationTab('today')}
+                    >
+                      Today <b>{todayNotifications.length}</b>
+                    </button>
+                  </div>
                   <div>
-                    {notifications.length ? (
-                      notifications.map((notification) => (
+                    {visibleNotificationItems.length ? (
+                      visibleNotificationItems.map((notification) => (
                         <button
                           type="button"
                           key={notification.id}
                           className={seenNotifications.includes(notification.id) ? 'seen' : ''}
                           onClick={() => {
-                            const next = [...new Set([...seenNotifications, notification.id])];
-                            setSeenNotifications(next);
-                            localStorage.setItem(
-                              'infonits-seen-notifications',
-                              JSON.stringify(next),
-                            );
+                            if (notificationTab === 'notifications') {
+                              const next = [...new Set([...seenNotifications, notification.id])];
+                              setSeenNotifications(next);
+                              localStorage.setItem(
+                                'infonits-seen-notifications',
+                                JSON.stringify(next),
+                              );
+                            }
                             setNotificationsOpen(false);
                             changeSection(notification.section);
                           }}
@@ -1464,7 +1563,7 @@ export function LocalFinance() {
           {section === 'dashboard' && (
             <Dashboard
               totals={totals}
-              rows={effectiveRows}
+              rows={monthRows}
               clients={clients}
               expenses={expenses}
               office={officeOverview}
@@ -1729,6 +1828,10 @@ export function LocalFinance() {
           row={selectedProject}
           client={selectedProjectClient}
           invoices={selectedProjectInvoices}
+          payments={officeOverview.payments}
+          tasks={officeOverview.events.filter(
+            (event) => event.type === 'Task' && event.projectId === selectedProject.id,
+          )}
           onClose={() => setSelectedProjectId('')}
           onInvoice={(row) => {
             setSelectedProjectId('');
@@ -2098,18 +2201,31 @@ function ProjectDetail({
   row,
   client,
   invoices,
+  payments,
+  tasks,
   onClose,
   onInvoice,
 }: {
   row: LocalRow;
   client?: LocalClient;
   invoices: OfficeOverview['documents'];
+  payments: OfficeOverview['payments'];
+  tasks: OfficeOverview['events'];
   onClose: () => void;
   onInvoice: (row: LocalRow) => void;
 }) {
   const value = localValue(row.value, row.exchangeRate);
-  const work = row.workDue + row.workPaid;
-  const remaining = value - row.advance - work;
+  const received = row.receivedLkr ?? localValue(row.advance, row.exchangeRate);
+  const work = localValue(row.workDue + row.workPaid, row.exchangeRate);
+  const remaining = value - received - work;
+  const invoiceIds = new Set(invoices.map((invoice) => invoice.id));
+  const projectPayments = payments
+    .filter(
+      (payment) =>
+        payment.projectId === row.id ||
+        (payment.invoiceId ? invoiceIds.has(payment.invoiceId) : false),
+    )
+    .toSorted((left, right) => right.date.localeCompare(left.date));
   return (
     <div className="local-modal-layer" role="presentation" onMouseDown={onClose}>
       <section
@@ -2136,7 +2252,7 @@ function ProjectDetail({
           </article>
           <article className="income">
             <span>Received</span>
-            <strong>{money(row.advance)}</strong>
+            <strong>{money(received)}</strong>
           </article>
           <article className="outcome">
             <span>Work cost</span>
@@ -2187,6 +2303,59 @@ function ProjectDetail({
             <p>{row.note}</p>
           </div>
         ) : null}
+        <section className="local-project-workspace">
+          <div>
+            <header>
+              <strong>Tasks</strong>
+              <span>{tasks.filter((task) => !task.completed).length} open</span>
+            </header>
+            {tasks.length ? (
+              <div className="local-project-task-list">
+                {tasks
+                  .toSorted((left, right) => left.date.localeCompare(right.date))
+                  .map((task) => (
+                    <article className={task.completed ? 'done' : ''} key={task.id}>
+                      <i>{task.completed ? <Check size={12} /> : null}</i>
+                      <span>
+                        <strong>{task.title}</strong>
+                        <small>{shortDate(task.date)}</small>
+                      </span>
+                    </article>
+                  ))}
+              </div>
+            ) : (
+              <p>No tasks linked to this project yet.</p>
+            )}
+          </div>
+          <div>
+            <header>
+              <strong>Payment timeline</strong>
+              <span>{projectPayments.length} records</span>
+            </header>
+            {projectPayments.length ? (
+              <div className="local-project-payment-list">
+                {projectPayments.map((payment) => (
+                  <article key={payment.id}>
+                    <span>
+                      <strong>{payment.note || payment.receiptNumber || payment.category}</strong>
+                      <small>
+                        {shortDate(payment.date)} · {payment.status}
+                      </small>
+                    </span>
+                    <b>
+                      {payment.currency} {payment.amount.toLocaleString()}
+                    </b>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p>
+                No itemized payments linked yet. Recorded received: {row.currency}{' '}
+                {compactNumber(row.advance)} · {money(received)}.
+              </p>
+            )}
+          </div>
+        </section>
         <footer>
           <button type="button" className="button button-outline" onClick={onClose}>
             Close
@@ -2212,6 +2381,7 @@ function AttentionCenter({
   onSection: (section: Section) => void;
 }) {
   const [filter, setFilter] = useState<'All' | 'Urgent' | 'Upcoming'>('All');
+  const [page, setPage] = useState(0);
   const now = new Date(`${today()}T00:00:00`).getTime();
   const day = 86_400_000;
   const clientNames = new Map(clients.map((client) => [client.id, clientLabel(client)]));
@@ -2309,6 +2479,9 @@ function AttentionCenter({
       })),
   ].toSorted((left, right) => left.date - right.date);
   const visible = items.filter((item) => filter === 'All' || item.priority === filter);
+  const pageCount = Math.max(1, Math.ceil(visible.length / 10));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageItems = visible.slice(safePage * 10, safePage * 10 + 10);
   const urgentCount = items.filter((item) => item.priority === 'Urgent').length;
   return (
     <>
@@ -2355,7 +2528,10 @@ function AttentionCenter({
               <button
                 key={item}
                 className={filter === item ? 'active' : ''}
-                onClick={() => setFilter(item)}
+                onClick={() => {
+                  setFilter(item);
+                  setPage(0);
+                }}
               >
                 {item}
               </button>
@@ -2364,7 +2540,7 @@ function AttentionCenter({
         </header>
         {visible.length ? (
           <div className="attention-center-list">
-            {visible.map((item) => (
+            {pageItems.map((item) => (
               <button key={item.id} onClick={() => onSection(item.section)}>
                 <i className={item.priority.toLowerCase()} />
                 <div>
@@ -2385,6 +2561,22 @@ function AttentionCenter({
             <p>Your filtered queue is clear.</p>
           </div>
         )}
+        {pageCount > 1 ? (
+          <div className="local-invoice-pagination">
+            <button disabled={safePage === 0} onClick={() => setPage((value) => value - 1)}>
+              Previous
+            </button>
+            <span>
+              {safePage + 1} / {pageCount}
+            </span>
+            <button
+              disabled={safePage + 1 >= pageCount}
+              onClick={() => setPage((value) => value + 1)}
+            >
+              Next
+            </button>
+          </div>
+        ) : null}
       </section>
     </>
   );
@@ -2748,7 +2940,7 @@ function Dashboard({
               <BriefcaseBusiness size={18} />
               <div>
                 <strong>Project finance</strong>
-                <small>Latest projects and current profitability</small>
+                <small>Current-month projects and profitability</small>
               </div>
             </div>
             <button className="local-card-link" onClick={() => onSection('projects')}>
@@ -2766,7 +2958,8 @@ function Dashboard({
           <div className="local-project-preview-list">
             {rows.slice(0, 4).map((row, index) => {
               const value = localValue(row.value, row.exchangeRate);
-              const profit = value - row.workDue - row.workPaid;
+              const received = row.receivedLkr ?? localValue(row.advance, row.exchangeRate);
+              const profit = value - localValue(row.workDue + row.workPaid, row.exchangeRate);
               return (
                 <button key={row.id} onClick={() => onSection('projects')}>
                   <span>{String(index + 1).padStart(2, '0')}</span>
@@ -2775,8 +2968,8 @@ function Dashboard({
                     <small>{clientNames.get(row.clientId) ?? 'No client'}</small>
                   </span>
                   <b title={money(value)}>{compactMoney(value)}</b>
-                  <b className="positive" title={money(row.advance)}>
-                    {compactMoney(row.advance)}
+                  <b className="positive" title={money(received)}>
+                    {compactMoney(received)}
                   </b>
                   <b className={profit < 0 ? 'negative' : 'positive'} title={money(profit)}>
                     {compactMoney(profit)}
@@ -2907,6 +3100,11 @@ function ProjectForm({
               onChange={(event) => setDraft({ ...draft, note: event.target.value })}
               placeholder="Scope, deliverables and important project details"
             />
+            <DescriptionAssistant
+              value={draft.note}
+              context="project description for an invoice"
+              onChange={(note) => setDraft({ ...draft, note })}
+            />
           </label>
         </div>
       </fieldset>
@@ -2999,19 +3197,24 @@ function ProjectTable({
   onDelete: (id: string) => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(rows.length / 10));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageRows = rows.slice(safePage * 10, safePage * 10 + 10);
   const totals = rows.reduce(
-    (sum, row) => ({
-      value: sum.value + localValue(row.value, row.exchangeRate),
-      advance: sum.advance + row.advance,
-      workDue: sum.workDue + row.workDue,
-      workPaid: sum.workPaid + row.workPaid,
-      mine:
-        sum.mine +
-        localValue(row.value, row.exchangeRate) -
-        row.advance -
-        row.workDue -
-        row.workPaid,
-    }),
+    (sum, row) => {
+      const value = localValue(row.value, row.exchangeRate);
+      const advance = row.receivedLkr ?? localValue(row.advance, row.exchangeRate);
+      const workDue = localValue(row.workDue, row.exchangeRate);
+      const workPaid = localValue(row.workPaid, row.exchangeRate);
+      return {
+        value: sum.value + value,
+        advance: sum.advance + advance,
+        workDue: sum.workDue + workDue,
+        workPaid: sum.workPaid + workPaid,
+        mine: sum.mine + value - advance - workDue - workPaid,
+      };
+    },
     { value: 0, advance: 0, workDue: 0, workPaid: 0, mine: 0 },
   );
   if (!rows.length)
@@ -3035,16 +3238,21 @@ function ProjectTable({
         <span>Actions</span>
       </div>
       <div className="local-project-records">
-        {rows.map((row, index) => {
+        {pageRows.map((row, index) => {
           const value = localValue(row.value, row.exchangeRate);
           const workCost = row.workDue + row.workPaid;
-          const mine = value - row.advance - workCost;
+          const received = row.receivedLkr ?? localValue(row.advance, row.exchangeRate);
+          const workCostLkr = localValue(workCost, row.exchangeRate);
+          const balance = row.value - row.advance - workCost;
+          const balanceLkr = value - received - workCostLkr;
           const client = clients.find((item) => item.id === row.clientId);
           const clientName = client ? clientLabel(client) : '';
           const isEditing = editingId === row.id;
           return (
             <article className="local-project-record" key={row.id}>
-              <span className="local-project-number">{String(index + 1).padStart(2, '0')}</span>
+              <span className="local-project-number">
+                {String(safePage * 10 + index + 1).padStart(2, '0')}
+              </span>
               <div className="local-project-main">
                 <strong>{row.project}</strong>
                 <small>
@@ -3054,23 +3262,29 @@ function ProjectTable({
               </div>
               <div className="local-project-metrics">
                 <div className="local-project-value">
-                  <strong title={money(value)}>{compactMoney(value)}</strong>
-                  <small>
+                  <strong>
                     {row.currency} {compactNumber(row.value)}
-                  </small>
+                  </strong>
+                  <small>{compactMoney(value)}</small>
                 </div>
-                <strong className="local-project-money income" title={money(row.advance)}>
-                  {compactMoney(row.advance)}
-                </strong>
-                <strong className="local-project-money outcome" title={money(workCost)}>
-                  {compactMoney(workCost)}
-                </strong>
-                <strong
-                  className={`local-project-money ${mine < 0 ? 'negative' : 'profit'}`}
-                  title={money(mine)}
-                >
-                  {compactMoney(mine)}
-                </strong>
+                <div className="local-project-value income">
+                  <strong>
+                    {row.currency} {compactNumber(row.advance)}
+                  </strong>
+                  <small>{compactMoney(received)}</small>
+                </div>
+                <div className="local-project-value outcome">
+                  <strong>
+                    {row.currency} {compactNumber(workCost)}
+                  </strong>
+                  <small>{compactMoney(workCostLkr)}</small>
+                </div>
+                <div className={`local-project-value ${balanceLkr < 0 ? 'negative' : 'profit'}`}>
+                  <strong>
+                    {row.currency} {compactNumber(balance)}
+                  </strong>
+                  <small>{compactMoney(balanceLkr)}</small>
+                </div>
               </div>
               <div className="local-project-status">
                 <StatusSelect
@@ -3198,6 +3412,11 @@ function ProjectTable({
                               onChange={(event) => onUpdate(row.id, { note: event.target.value })}
                               placeholder="Scope, deliverables and project details"
                             />
+                            <DescriptionAssistant
+                              value={row.note}
+                              context="project description for an invoice"
+                              onChange={(note) => onUpdate(row.id, { note })}
+                            />
                           </label>
                         </div>
                       </fieldset>
@@ -3290,9 +3509,8 @@ function ProjectTable({
                         <strong>
                           {money(
                             localValue(row.value, row.exchangeRate) -
-                              row.advance -
-                              row.workDue -
-                              row.workPaid,
+                              (row.receivedLkr ?? localValue(row.advance, row.exchangeRate)) -
+                              localValue(row.workDue + row.workPaid, row.exchangeRate),
                           )}
                         </strong>
                       </div>
@@ -3320,6 +3538,22 @@ function ProjectTable({
           );
         })}
       </div>
+      {pageCount > 1 ? (
+        <div className="local-invoice-pagination">
+          <button disabled={safePage === 0} onClick={() => setPage((value) => value - 1)}>
+            Previous
+          </button>
+          <span>
+            {safePage + 1} / {pageCount}
+          </span>
+          <button
+            disabled={safePage + 1 >= pageCount}
+            onClick={() => setPage((value) => value + 1)}
+          >
+            Next
+          </button>
+        </div>
+      ) : null}
       <footer className="local-project-totals">
         <div>
           <span>Total value</span>
@@ -3407,6 +3641,22 @@ function ClientForm({
               ))}
             </select>
           </label>
+          <label>
+            <span>Next follow-up</span>
+            <input
+              type="date"
+              value={draft.followUpDate}
+              onChange={(event) => setDraft({ ...draft, followUpDate: event.target.value })}
+            />
+          </label>
+          <label>
+            <span>Client note</span>
+            <input
+              value={draft.notes}
+              onChange={(event) => setDraft({ ...draft, notes: event.target.value })}
+              placeholder="Next step or useful context"
+            />
+          </label>
         </div>
       </fieldset>
       <button className="button button-primary" type="submit">
@@ -3433,6 +3683,10 @@ function ClientList({
 }) {
   const [editingId, setEditingId] = useState('');
   const [selectedId, setSelectedId] = useState('');
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(clients.length / 10));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageClients = clients.slice(safePage * 10, safePage * 10 + 10);
   const [workspaceTab, setWorkspaceTab] = useState<'overview' | 'billing' | 'activity'>('overview');
   const selected = clients.find((client) => client.id === selectedId);
   const selectedRows = rows.filter((row) => row.clientId === selectedId);
@@ -3472,7 +3726,7 @@ function ClientList({
   return (
     <>
       <section className="local-client-grid">
-        {clients.map((client) => {
+        {pageClients.map((client) => {
           const clientRows = rows.filter((row) => row.clientId === client.id);
           const value = clientRows.reduce(
             (sum, row) => sum + localValue(row.value, row.exchangeRate),
@@ -3489,6 +3743,14 @@ function ClientList({
                   <span className="local-client-country-display">
                     {countryFlags[client.country] ?? '🌐'} {client.country || 'Country not set'}
                   </span>
+                  {client.followUpDate ? (
+                    <span
+                      className={`local-client-follow-up ${client.followUpDate <= today() ? 'due' : ''}`}
+                    >
+                      <Clock3 size={12} /> {client.followUpDate <= today() ? 'Follow up' : 'Next'}{' '}
+                      {shortDate(client.followUpDate, false)}
+                    </span>
+                  ) : null}
                 </div>
               </div>
               <div className="local-client-stats">
@@ -3536,6 +3798,22 @@ function ClientList({
           );
         })}
       </section>
+      {pageCount > 1 ? (
+        <div className="local-invoice-pagination standalone">
+          <button disabled={safePage === 0} onClick={() => setPage((value) => value - 1)}>
+            Previous
+          </button>
+          <span>
+            {safePage + 1} / {pageCount}
+          </span>
+          <button
+            disabled={safePage + 1 >= pageCount}
+            onClick={() => setPage((value) => value + 1)}
+          >
+            Next
+          </button>
+        </div>
+      ) : null}
       {selected && (
         <div
           className="local-modal-layer"
@@ -3607,6 +3885,25 @@ function ClientList({
                     ))}
                   </select>
                 </label>
+                <label>
+                  <span>Next follow-up</span>
+                  <input
+                    type="date"
+                    value={selected.followUpDate ?? ''}
+                    onChange={(event) =>
+                      onUpdate(selected.id, { followUpDate: event.target.value })
+                    }
+                  />
+                </label>
+                <label className="wide">
+                  <span>Client note</span>
+                  <textarea
+                    rows={3}
+                    value={selected.notes ?? ''}
+                    onChange={(event) => onUpdate(selected.id, { notes: event.target.value })}
+                    placeholder="Next step or useful context"
+                  />
+                </label>
                 <button
                   className="button button-primary"
                   type="button"
@@ -3671,7 +3968,21 @@ function ClientList({
                         <small>Phone</small>
                         <strong>{selected.phone || 'Not added'}</strong>
                       </span>
+                      <span>
+                        <small>Next follow-up</small>
+                        <strong>
+                          {selected.followUpDate
+                            ? shortDate(selected.followUpDate)
+                            : 'Not scheduled'}
+                        </strong>
+                      </span>
                     </div>
+                    {selected.notes ? (
+                      <div className="local-client-follow-up-note">
+                        <small>Client note</small>
+                        <p>{selected.notes}</p>
+                      </div>
+                    ) : null}
                     <div className="local-client-profile-projects">
                       <div>
                         <strong>Projects</strong>
@@ -3813,6 +4124,12 @@ function ExpenseForm({
               onChange={(event) => setDraft({ ...draft, description: event.target.value })}
               placeholder="Software subscription"
             />
+            <DescriptionAssistant
+              value={draft.description}
+              context="expense description for finance records"
+              targetWords={18}
+              onChange={(description) => setDraft({ ...draft, description })}
+            />
           </label>
           <label>
             <span>Category</span>
@@ -3889,6 +4206,10 @@ function ExpenseList({
   onDelete: (id: string) => void;
 }) {
   const [editingId, setEditingId] = useState('');
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(expenses.length / 10));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageExpenses = expenses.slice(safePage * 10, safePage * 10 + 10);
   if (!expenses.length)
     return (
       <section className="local-empty-clients">
@@ -3909,7 +4230,7 @@ function ExpenseList({
         <span>Total operating expenses</span>
         <strong title={money(total)}>−{compactMoney(total)}</strong>
       </div>
-      {expenses.map((expense) => (
+      {pageExpenses.map((expense) => (
         <article className={editingId === expense.id ? 'is-editing' : ''} key={expense.id}>
           <span className="local-expense-icon">
             <ReceiptText size={17} />
@@ -4014,6 +4335,22 @@ function ExpenseList({
           )}
         </article>
       ))}
+      {pageCount > 1 ? (
+        <div className="local-invoice-pagination standalone">
+          <button disabled={safePage === 0} onClick={() => setPage((value) => value - 1)}>
+            Previous
+          </button>
+          <span>
+            {safePage + 1} / {pageCount}
+          </span>
+          <button
+            disabled={safePage + 1 >= pageCount}
+            onClick={() => setPage((value) => value + 1)}
+          >
+            Next
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

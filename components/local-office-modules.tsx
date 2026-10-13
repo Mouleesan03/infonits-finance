@@ -47,6 +47,7 @@ import { Select } from './ui/select';
 import { StatusSelect } from './ui/status-select';
 import { PageTitle } from './ui/typography';
 import { FormModal } from './ui/form-modal';
+import { DescriptionAssistant } from './ui/description-assistant';
 
 export type OfficeSection =
   | 'calendar'
@@ -537,6 +538,8 @@ export function LocalOfficeModule({
     return (
       <TodoModule
         items={store.events}
+        clients={clients}
+        projects={projects}
         formOpen={formOpen}
         setFormOpen={setFormOpen}
         onChange={(items) => update('events', items)}
@@ -630,6 +633,39 @@ function Empty({ icon, title, text }: { icon: React.ReactNode; title: string; te
       <strong>{title}</strong>
       <p>{text}</p>
     </div>
+  );
+}
+
+function PaginationControls({
+  page,
+  pageCount,
+  onPageChange,
+}: {
+  page: number;
+  pageCount: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (pageCount <= 1) return null;
+  return (
+    <nav className="local-invoice-pagination standalone" aria-label="List pagination">
+      <button
+        type="button"
+        disabled={page === 0}
+        onClick={() => onPageChange(Math.max(0, page - 1))}
+      >
+        Previous
+      </button>
+      <span>
+        Page {page + 1} of {pageCount}
+      </span>
+      <button
+        type="button"
+        disabled={page >= pageCount - 1}
+        onClick={() => onPageChange(Math.min(pageCount - 1, page + 1))}
+      >
+        Next
+      </button>
+    </nav>
   );
 }
 
@@ -969,6 +1005,7 @@ function SalesDocuments({
   const [preview, setPreview] = useState<SalesDocument | null>(null);
   const [editingId, setEditingId] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [page, setPage] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [paymentTarget, setPaymentTarget] = useState<SalesDocument | null>(null);
   const [paymentDraft, setPaymentDraft] = useState({ amount: '', date: today(), note: '' });
@@ -1050,6 +1087,9 @@ function SalesDocuments({
         .toLowerCase()
         .includes(search.toLowerCase()),
   );
+  const pageCount = Math.max(1, Math.ceil(visible.length / 10));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageItems = visible.slice(safePage * 10, safePage * 10 + 10);
   const invoiceSummary = normalizedItems.reduce(
     (summary, item) => {
       const total = documentTotal(item);
@@ -1349,6 +1389,11 @@ function SalesDocuments({
                 }
                 placeholder="Monthly support, hosting or retainer"
               />
+              <DescriptionAssistant
+                value={recurringDraft.description}
+                context="recurring invoice description"
+                onChange={(description) => setRecurringDraft({ ...recurringDraft, description })}
+              />
             </label>
             <button className="button button-primary" type="submit">
               <Plus size={16} /> Add schedule
@@ -1616,6 +1661,11 @@ function SalesDocuments({
                     onChange={(e) => setDraft({ ...draft, description: e.target.value })}
                     placeholder="Describe the services, deliverables or items included"
                   />
+                  <DescriptionAssistant
+                    value={draft.description}
+                    context={`${kind.toLowerCase()} line-item description`}
+                    onChange={(description) => setDraft({ ...draft, description })}
+                  />
                 </label>
               </div>
             </fieldset>
@@ -1718,7 +1768,10 @@ function SalesDocuments({
               <button
                 key={status}
                 className={`${status.toLowerCase()} ${statusFilter === status ? 'active' : ''}`}
-                onClick={() => setStatusFilter(status)}
+                onClick={() => {
+                  setStatusFilter(status);
+                  setPage(0);
+                }}
               >
                 {status}
               </button>
@@ -1750,7 +1803,7 @@ function SalesDocuments({
                 </tr>
               </thead>
               <tbody>
-                {visible.map((item) => (
+                {pageItems.map((item) => (
                   <tr className="sales-document-row" key={item.id}>
                     <td data-label="Number">
                       <span className="office-document-number-icon">
@@ -1867,6 +1920,22 @@ function SalesDocuments({
             </table>
           </div>
         )}
+        {pageCount > 1 ? (
+          <div className="local-invoice-pagination">
+            <button disabled={safePage === 0} onClick={() => setPage((value) => value - 1)}>
+              Previous
+            </button>
+            <span>
+              {safePage + 1} / {pageCount}
+            </span>
+            <button
+              disabled={safePage + 1 >= pageCount}
+              onClick={() => setPage((value) => value + 1)}
+            >
+              Next
+            </button>
+          </div>
+        ) : null}
       </section>
       {preview && (
         <InvoicePreview
@@ -2386,6 +2455,7 @@ function PaymentsModule({
   onChange: (v: Payment[]) => void;
   onDocumentsChange: (v: SalesDocument[]) => void;
 }) {
+  const [page, setPage] = useState(0);
   const [draft, setDraft] = useState({
     type: 'Income' as Payment['type'],
     category: 'Project',
@@ -2450,6 +2520,9 @@ function PaymentsModule({
       ].toSorted((left, right) => right.date.localeCompare(left.date)),
     [automaticRows, items],
   );
+  const pageCount = Math.max(1, Math.ceil(ledgerRows.length / 10));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageRows = ledgerRows.slice(safePage * 10, safePage * 10 + 10);
   const totals = useMemo(
     () =>
       ledgerRows.reduce(
@@ -2674,7 +2747,7 @@ function PaymentsModule({
                 </tr>
               </thead>
               <tbody>
-                {ledgerRows.map((item) => (
+                {pageRows.map((item) => (
                   <tr className="finance-ledger-row" key={item.id}>
                     <td data-label="Date">{item.date}</td>
                     <td data-label="Type">
@@ -2734,6 +2807,7 @@ function PaymentsModule({
                 ))}
               </tbody>
             </table>
+            <PaginationControls page={safePage} pageCount={pageCount} onPageChange={setPage} />
           </div>
         )}
       </section>
@@ -2756,6 +2830,7 @@ function TeamModule({
   setFormOpen: (v: boolean) => void;
   onChange: (v: TeamMember[]) => void;
 }) {
+  const [page, setPage] = useState(0);
   const [selectedId, setSelectedId] = useState('');
   const [editingId, setEditingId] = useState('');
   const [draft, setDraft] = useState({
@@ -2768,6 +2843,9 @@ function TeamModule({
   const visible = items.filter((x) =>
     `${x.name} ${x.role}`.toLowerCase().includes(search.toLowerCase()),
   );
+  const pageCount = Math.max(1, Math.ceil(visible.length / 10));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageItems = visible.slice(safePage * 10, safePage * 10 + 10);
   const selected = items.find((item) => item.id === selectedId);
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -2827,7 +2905,14 @@ function TeamModule({
       )}
       <section className="office-panel office-team-panel">
         <div className="office-toolbar">
-          <SearchBox value={search} onChange={setSearch} placeholder="Search team" />
+          <SearchBox
+            value={search}
+            onChange={(value) => {
+              setSearch(value);
+              setPage(0);
+            }}
+            placeholder="Search team"
+          />
           <span>{items.filter((x) => x.status === 'Active').length} active</span>
         </div>
         {!visible.length ? (
@@ -2838,7 +2923,7 @@ function TeamModule({
           />
         ) : (
           <div className="office-card-grid">
-            {visible.map((item) => (
+            {pageItems.map((item) => (
               <article className="office-person" key={item.id}>
                 <span className="office-avatar">{item.name.slice(0, 2).toUpperCase()}</span>
                 <div>
@@ -2895,6 +2980,7 @@ function TeamModule({
             ))}
           </div>
         )}
+        <PaginationControls page={safePage} pageCount={pageCount} onPageChange={setPage} />
       </section>
       {selected && (
         <div
@@ -3051,6 +3137,8 @@ function PostsModule({
   onChange: (v: PostPlan[]) => void;
   onEventsChange: (v: CalendarEvent[]) => void;
 }) {
+  const [planPage, setPlanPage] = useState(0);
+  const [recordPage, setRecordPage] = useState(0);
   const [draft, setDraft] = useState({
     clientId: '',
     projectId: '',
@@ -3107,6 +3195,12 @@ function PostsModule({
   );
   const missed = Math.max(0, expected - posted);
   const activeProjects = projects.length;
+  const planPageCount = Math.max(1, Math.ceil(items.length / 10));
+  const safePlanPage = Math.min(planPage, planPageCount - 1);
+  const pagePlans = items.slice(safePlanPage * 10, safePlanPage * 10 + 10);
+  const recordPageCount = Math.max(1, Math.ceil(postEvents.length / 10));
+  const safeRecordPage = Math.min(recordPage, recordPageCount - 1);
+  const pagePostEvents = postEvents.slice(safeRecordPage * 10, safeRecordPage * 10 + 10);
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -3132,7 +3226,10 @@ function PostsModule({
           className="office-month"
           type="month"
           value={calendarMonth}
-          onChange={(event) => setCalendarMonth(event.target.value)}
+          onChange={(event) => {
+            setCalendarMonth(event.target.value);
+            setRecordPage(0);
+          }}
           aria-label="Post tracker month"
         />
         <button className="button button-outline" onClick={() => setEventDate(defaultUpdateDate)}>
@@ -3292,7 +3389,7 @@ function PostsModule({
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item) => {
+                  {pagePlans.map((item) => {
                     const tracked = item.month === calendarMonth;
                     const eventCount = postEvents
                       .filter(
@@ -3365,6 +3462,11 @@ function PostsModule({
                   })}
                 </tbody>
               </table>
+              <PaginationControls
+                page={safePlanPage}
+                pageCount={planPageCount}
+                onPageChange={setPlanPage}
+              />
             </div>
           )}
         </article>
@@ -3428,9 +3530,9 @@ function PostsModule({
                   </td>
                 </tr>
               ) : (
-                postEvents.map((event, index) => (
+                pagePostEvents.map((event, index) => (
                   <tr key={event.id}>
-                    <td>{String(index + 1).padStart(2, '0')}</td>
+                    <td>{String(safeRecordPage * 10 + index + 1).padStart(2, '0')}</td>
                     <td>{event.date}</td>
                     <td>
                       <strong>{names.get(event.clientId || '') || '—'}</strong>
@@ -3455,6 +3557,11 @@ function PostsModule({
               )}
             </tbody>
           </table>
+          <PaginationControls
+            page={safeRecordPage}
+            pageCount={recordPageCount}
+            onPageChange={setRecordPage}
+          />
         </div>
       </section>
 
@@ -3512,6 +3619,7 @@ function RenewalsModule({
   setFormOpen: (v: boolean) => void;
   onChange: (v: Renewal[]) => void;
 }) {
+  const [page, setPage] = useState(0);
   const [draft, setDraft] = useState({
     website: '',
     username: '',
@@ -3530,6 +3638,9 @@ function RenewalsModule({
         new Date(d).getTime() >= Date.now(),
     ),
   ).length;
+  const pageCount = Math.max(1, Math.ceil(items.length / 10));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageItems = items.slice(safePage * 10, safePage * 10 + 10);
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!draft.website.trim()) return;
@@ -3667,7 +3778,7 @@ function RenewalsModule({
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
+                {pageItems.map((item) => (
                   <tr key={item.id}>
                     <td data-label="Website">
                       <strong>{item.website}</strong>
@@ -3718,6 +3829,7 @@ function RenewalsModule({
                 ))}
               </tbody>
             </table>
+            <PaginationControls page={safePage} pageCount={pageCount} onPageChange={setPage} />
           </div>
         )}
       </section>
@@ -3736,6 +3848,7 @@ function LettersModule({
   setFormOpen: (v: boolean) => void;
   onChange: (v: ServiceLetter[]) => void;
 }) {
+  const [page, setPage] = useState(0);
   const [editingId, setEditingId] = useState('');
   const [preview, setPreview] = useState<ServiceLetter | null>(null);
   const [draft, setDraft] = useState({
@@ -3745,6 +3858,9 @@ function LettersModule({
     preparedBy: '',
     body: '',
   });
+  const pageCount = Math.max(1, Math.ceil(items.length / 10));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageItems = items.slice(safePage * 10, safePage * 10 + 10);
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!draft.client.trim() || !draft.subject.trim()) return;
@@ -3895,6 +4011,12 @@ function LettersModule({
                 value={draft.body}
                 onChange={(e) => setDraft({ ...draft, body: e.target.value })}
               />
+              <DescriptionAssistant
+                value={draft.body}
+                context="professional service letter body"
+                targetWords={80}
+                onChange={(body) => setDraft({ ...draft, body })}
+              />
             </label>
             <label>
               <span>Prepared by</span>
@@ -3930,7 +4052,7 @@ function LettersModule({
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
+                {pageItems.map((item) => (
                   <tr key={item.id}>
                     <td data-label="Date">{item.date}</td>
                     <td data-label="Client">{item.client}</td>
@@ -3975,6 +4097,7 @@ function LettersModule({
                 ))}
               </tbody>
             </table>
+            <PaginationControls page={safePage} pageCount={pageCount} onPageChange={setPage} />
           </div>
         )}
       </section>
@@ -4045,6 +4168,7 @@ function UsersModule({
   onChange: (v: WorkspaceUser[]) => void;
   preview: boolean;
 }) {
+  const [page, setPage] = useState(0);
   const [accountEmail, setAccountEmail] = useState('');
   const [pinOpen, setPinOpen] = useState(false);
   const [newPin, setNewPin] = useState('');
@@ -4058,6 +4182,9 @@ function UsersModule({
     role: 'Project manager',
     access: 'Projects, clients and sales',
   });
+  const pageCount = Math.max(1, Math.ceil(items.length / 10));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageItems = items.slice(safePage * 10, safePage * 10 + 10);
 
   useEffect(() => {
     if (preview) {
@@ -4287,7 +4414,7 @@ function UsersModule({
       )}
       <section className="office-panel">
         <div className="office-card-grid">
-          {items.map((item) => (
+          {pageItems.map((item) => (
             <article className="office-person" key={item.id}>
               <span className="office-avatar">
                 <UserRound size={18} />
@@ -4325,6 +4452,7 @@ function UsersModule({
             </article>
           ))}
         </div>
+        <PaginationControls page={safePage} pageCount={pageCount} onPageChange={setPage} />
         <p className="office-security-note">
           <ShieldCheck size={16} /> Passwords and authentication remain in Supabase. This page
           stores role planning only.
@@ -4336,11 +4464,15 @@ function UsersModule({
 
 function TodoModule({
   items,
+  clients,
+  projects,
   formOpen,
   setFormOpen,
   onChange,
 }: {
   items: CalendarEvent[];
+  clients: ClientRef[];
+  projects: ProjectRef[];
   formOpen: boolean;
   setFormOpen: (value: boolean) => void;
   onChange: (items: CalendarEvent[]) => void;
@@ -4352,22 +4484,37 @@ function TodoModule({
         Number(Boolean(a.completed)) - Number(Boolean(b.completed)) || a.date.localeCompare(b.date),
     );
   const [filter, setFilter] = useState<'Open' | 'All' | 'Done'>('Open');
+  const [page, setPage] = useState(0);
   const [editingId, setEditingId] = useState('');
   const [draft, setDraft] = useState({
     title: '',
     date: today(),
     priority: 'Medium' as NonNullable<CalendarEvent['priority']>,
     remarks: '',
+    clientId: '',
+    projectId: '',
   });
   const visibleTasks = tasks.filter((task) =>
     filter === 'All' ? true : filter === 'Done' ? task.completed : !task.completed,
   );
+  const pageCount = Math.max(1, Math.ceil(visibleTasks.length / 10));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageTasks = visibleTasks.slice(safePage * 10, safePage * 10 + 10);
+  const clientNames = new Map(clients.map((client) => [client.id, client.company || client.name]));
+  const projectNames = new Map(projects.map((project) => [project.id, project.project]));
   const openCount = tasks.filter((task) => !task.completed).length;
   const dueToday = tasks.filter((task) => !task.completed && task.date === today()).length;
 
   function resetDraft() {
     setEditingId('');
-    setDraft({ title: '', date: today(), priority: 'Medium', remarks: '' });
+    setDraft({
+      title: '',
+      date: today(),
+      priority: 'Medium',
+      remarks: '',
+      clientId: '',
+      projectId: '',
+    });
   }
 
   function closeForm() {
@@ -4387,6 +4534,8 @@ function TodoModule({
       type: 'Task',
       priority: draft.priority,
       remarks: draft.remarks.trim() || undefined,
+      clientId: draft.clientId || undefined,
+      projectId: draft.projectId || undefined,
       completed: existing?.completed ?? false,
     };
     onChange(
@@ -4404,6 +4553,8 @@ function TodoModule({
       date: task.date,
       priority: task.priority ?? 'Medium',
       remarks: task.remarks ?? '',
+      clientId: task.clientId ?? '',
+      projectId: task.projectId ?? '',
     });
     setFormOpen(true);
   }
@@ -4459,7 +4610,10 @@ function TodoModule({
                 type="button"
                 key={option}
                 className={filter === option ? 'active' : ''}
-                onClick={() => setFilter(option)}
+                onClick={() => {
+                  setFilter(option);
+                  setPage(0);
+                }}
               >
                 {option}
               </button>
@@ -4469,7 +4623,7 @@ function TodoModule({
         </div>
         {visibleTasks.length ? (
           <div className="office-todo-list">
-            {visibleTasks.map((task) => (
+            {pageTasks.map((task) => (
               <article className={task.completed ? 'is-complete' : ''} key={task.id}>
                 <button
                   type="button"
@@ -4487,7 +4641,15 @@ function TodoModule({
                 </button>
                 <div>
                   <strong>{task.title}</strong>
-                  <small>{task.remarks || 'No extra details'}</small>
+                  <small>
+                    {[
+                      projectNames.get(task.projectId ?? ''),
+                      clientNames.get(task.clientId ?? ''),
+                      task.remarks,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ') || 'No extra details'}
+                  </small>
                 </div>
                 <span
                   className={`office-todo-priority ${(task.priority ?? 'Medium').toLowerCase()}`}
@@ -4521,6 +4683,22 @@ function TodoModule({
             text="Add a task and it will also appear on the calendar."
           />
         )}
+        {pageCount > 1 ? (
+          <div className="local-invoice-pagination">
+            <button disabled={safePage === 0} onClick={() => setPage((value) => value - 1)}>
+              Previous
+            </button>
+            <span>
+              {safePage + 1} / {pageCount}
+            </span>
+            <button
+              disabled={safePage + 1 >= pageCount}
+              onClick={() => setPage((value) => value + 1)}
+            >
+              Next
+            </button>
+          </div>
+        ) : null}
       </section>
 
       {formOpen ? (
@@ -4567,16 +4745,67 @@ function TodoModule({
               </select>
             </label>
             <details className="form-optional-fields wide">
-              <summary>+ Add details</summary>
-              <label>
-                <span>Notes</span>
-                <textarea
-                  rows={3}
-                  value={draft.remarks}
-                  onChange={(event) => setDraft({ ...draft, remarks: event.target.value })}
-                  placeholder="Optional context, link or reminder"
-                />
-              </label>
+              <summary>+ Link client, project or notes</summary>
+              <div className="form-section-grid">
+                <label>
+                  <span>Client</span>
+                  <select
+                    value={draft.clientId}
+                    onChange={(event) => {
+                      const clientId = event.target.value;
+                      const projectMatchesClient = projects.some(
+                        (project) =>
+                          project.id === draft.projectId && project.clientId === clientId,
+                      );
+                      setDraft({
+                        ...draft,
+                        clientId,
+                        projectId: projectMatchesClient ? draft.projectId : '',
+                      });
+                    }}
+                  >
+                    <option value="">No client</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.company || client.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>Project</span>
+                  <select
+                    value={draft.projectId}
+                    onChange={(event) => {
+                      const projectId = event.target.value;
+                      const project = projects.find((item) => item.id === projectId);
+                      setDraft({
+                        ...draft,
+                        projectId,
+                        clientId: project?.clientId || draft.clientId,
+                      });
+                    }}
+                  >
+                    <option value="">No project</option>
+                    {projects
+                      .filter((project) => !draft.clientId || project.clientId === draft.clientId)
+                      .map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.project}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label className="wide">
+                  <span>Notes</span>
+                  <textarea
+                    rows={3}
+                    value={draft.remarks}
+                    onChange={(event) => setDraft({ ...draft, remarks: event.target.value })}
+                    placeholder="Optional context, link or reminder"
+                  />
+                </label>
+              </div>
             </details>
             <button className="button button-primary" type="submit">
               <Check size={16} /> {editingId ? 'Update task' : 'Add task'}
