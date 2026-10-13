@@ -16858,7 +16858,9 @@ textarea {
 
 .ui-form-modal {
   position: fixed;
-  z-index: 101;
+  /* Radix renders the overlay and content as portal siblings. Keep the content
+     above the global modal overlay so backdrop blur only affects the app. */
+  z-index: 1001;
   top: 50%;
   left: 50%;
   width: min(720px, calc(100vw - 32px));
