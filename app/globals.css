@@ -17904,3 +17904,60 @@ summary:focus-visible {
     min-height: 50px;
   }
 }
+
+/* Account actions live together in the profile menu; the sidebar is now
+   reserved for workspace navigation only. */
+.local-profile-menu button + button {
+  margin-top: 6px;
+}
+
+.local-profile-menu button.logout {
+  border: 1px solid #f2d8dc;
+  background: #fff4f5;
+  color: #c43d49;
+}
+
+.local-profile-menu button.logout:hover {
+  border-color: #edc2c8;
+  background: #ffe9ec;
+}
+
+/* Safari gives month inputs an intrinsic minimum width. Constrain both the
+   input and its action/grid parents so the native control cannot widen an
+   iPhone layout. */
+@media (max-width: 720px) {
+  .office-titlebar,
+  .office-titlebar .local-actions,
+  .local-sheet-toolbar,
+  .local-sheet-toolbar > div,
+  .office-form label,
+  .local-entry-form label {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .office-titlebar .local-actions {
+    width: 100%;
+  }
+
+  .office-titlebar input[type='month'],
+  .local-sheet-toolbar input[type='month'],
+  .office-form input[type='month'],
+  .local-entry-form input[type='month'] {
+    inline-size: 100%;
+    width: 100%;
+    min-inline-size: 0;
+    min-width: 0;
+    max-inline-size: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  input[type='month']::-webkit-date-and-time-value {
+    min-width: 0;
+    margin: 0;
+    text-align: left;
+  }
+}

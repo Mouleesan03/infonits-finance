@@ -1347,19 +1347,6 @@ export function LocalFinance() {
             </button>
           </SidebarGroup>
         </nav>
-        <div className="local-sidebar-footer">
-          <button
-            className={section === 'settings' ? 'active' : ''}
-            onClick={() => changeSection('settings')}
-          >
-            <Settings2 size={19} />
-            <span>Settings</span>
-          </button>
-          <button className="logout" onClick={() => void logOut()}>
-            <LogOut size={19} />
-            <span>Log out</span>
-          </button>
-        </div>
       </aside>
 
       <div className="local-content">
@@ -1463,6 +1450,9 @@ export function LocalFinance() {
                   <small>Workspace administrator</small>
                   <button type="button" onClick={() => changeSection('settings')}>
                     <Settings2 size={15} /> Profile & settings
+                  </button>
+                  <button type="button" className="logout" onClick={() => void logOut()}>
+                    <LogOut size={15} /> Log out
                   </button>
                 </section>
               )}
