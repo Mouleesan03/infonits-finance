@@ -20,6 +20,7 @@ import {
   Globe2,
   Download,
   LayoutDashboard,
+  ListTodo,
   RadioTower,
   LogOut,
   Menu,
@@ -151,7 +152,15 @@ type OfficeOverview = {
     domainDue: string;
     hostingDue: string;
   }>;
-  events: Array<{ id: string; title: string; date: string; type: string }>;
+  events: Array<{
+    id: string;
+    title: string;
+    date: string;
+    type: string;
+    completed?: boolean;
+    priority?: 'Low' | 'Medium' | 'High';
+    remarks?: string;
+  }>;
   letters: Array<{ id: string; client: string; subject: string; date: string }>;
   recurringInvoices: Array<{
     id: string;
@@ -176,6 +185,7 @@ const previewSections: Section[] = [
   'attention',
   'assistant',
   'calendar',
+  'todos',
   'leads',
   'clients',
   'invoices',
@@ -229,6 +239,7 @@ const emptyProject = {
   project: '',
   clientId: '',
   value: '',
+  advance: '',
   currency: 'LKR',
   note: '',
   recurring: false,
@@ -664,7 +675,7 @@ export function LocalFinance() {
         title: item.title,
         detail: `${item.type} · ${shortDate(item.date)}`,
         tone: 'info',
-        section: 'calendar' as Section,
+        section: (item.type === 'Task' ? 'todos' : 'calendar') as Section,
       }));
     return [...invoiceItems, ...renewalItems, ...eventItems].slice(0, 12);
   }, [
@@ -763,7 +774,15 @@ export function LocalFinance() {
     event.preventDefault();
     const project = projectDraft.project.trim();
     const value = Number(projectDraft.value);
-    if (!project || !Number.isFinite(value) || value < 0) return;
+    const advance = Number(projectDraft.advance || 0);
+    if (
+      !project ||
+      !Number.isFinite(value) ||
+      value < 0 ||
+      !Number.isFinite(advance) ||
+      advance < 0
+    )
+      return;
     setRows((current) => [
       {
         id: crypto.randomUUID(),
@@ -773,7 +792,7 @@ export function LocalFinance() {
         currency: projectDraft.currency,
         exchangeRate: rateFor(projectDraft.currency),
         note: projectDraft.note.trim(),
-        advance: 0,
+        advance,
         workDue: 0,
         workPaid: 0,
         status: 'Waiting',
@@ -836,7 +855,7 @@ export function LocalFinance() {
     setMenuOpen(false);
   }
 
-  function quickAdd(type: 'project' | 'client' | 'expense' | 'invoice') {
+  function quickAdd(type: 'project' | 'client' | 'expense' | 'invoice' | 'task') {
     setQuickAddOpen(false);
     if (type === 'project') {
       openProjectForm();
@@ -850,6 +869,11 @@ export function LocalFinance() {
     if (type === 'expense') {
       setSection('expenses');
       setExpenseFormOpen(true);
+      return;
+    }
+    if (type === 'task') {
+      setSection('todos');
+      setOfficeFormSignal((current) => current + 1);
       return;
     }
     setSection('invoices');
@@ -1212,6 +1236,19 @@ export function LocalFinance() {
             >
               <CalendarDays size={19} />
               <span>Calendar</span>
+            </button>
+            <button
+              className={section === 'todos' ? 'active' : ''}
+              onClick={() => changeSection('todos')}
+            >
+              <ListTodo size={19} />
+              <span>To-do</span>
+              <b>
+                {
+                  officeOverview.events.filter((event) => event.type === 'Task' && !event.completed)
+                    .length
+                }
+              </b>
             </button>
           </SidebarGroup>
           <SidebarGroup label="Sales">
@@ -2021,13 +2058,14 @@ function QuickAddMenu({
   onAdd,
 }: {
   onClose: () => void;
-  onAdd: (type: 'project' | 'client' | 'expense' | 'invoice') => void;
+  onAdd: (type: 'project' | 'client' | 'expense' | 'invoice' | 'task') => void;
 }) {
   const actions = [
     { id: 'project' as const, label: 'Project', hint: 'Start new work', icon: BriefcaseBusiness },
     { id: 'client' as const, label: 'Client', hint: 'Add contact', icon: Users },
     { id: 'expense' as const, label: 'Expense', hint: 'Record a cost', icon: ReceiptText },
     { id: 'invoice' as const, label: 'Invoice', hint: 'Create a bill', icon: CreditCard },
+    { id: 'task' as const, label: 'Task', hint: 'Add to calendar', icon: ListTodo },
   ];
   return (
     <div className="local-modal-layer" role="presentation" onMouseDown={onClose}>
@@ -2838,82 +2876,109 @@ function ProjectForm({
   onCancel: () => void;
 }) {
   const rate = draft.currency === 'LKR' ? 1 : (rates[draft.currency] ?? 1);
+  const projectValue = Number(draft.value || 0) * rate;
+  const advanceValue = Number(draft.advance || 0) * rate;
   return (
     <form className="local-entry-form modal-project-form" onSubmit={onSubmit}>
-      <label>
-        <span>Project name *</span>
-        <input
-          autoFocus
-          required
-          value={draft.project}
-          onChange={(event) => setDraft({ ...draft, project: event.target.value })}
-          placeholder="Website redesign"
-        />
-      </label>
-      <label>
-        <span>Client</span>
-        <select
-          value={draft.clientId}
-          onChange={(event) => setDraft({ ...draft, clientId: event.target.value })}
-        >
-          <option value="">No client</option>
-          {clients.map((client) => (
-            <option key={client.id} value={client.id}>
-              {clientLabel(client)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        <span>Currency *</span>
-        <select
-          value={draft.currency}
-          onChange={(event) => setDraft({ ...draft, currency: event.target.value })}
-        >
-          {currencies.map((currency) => (
-            <option key={currency}>{currency}</option>
-          ))}
-        </select>
-      </label>
-      <label>
-        <span>Project amount *</span>
-        <input
-          required
-          type="number"
-          min="0"
-          step="0.01"
-          value={draft.value}
-          onChange={(event) => setDraft({ ...draft, value: event.target.value })}
-          placeholder="0.00"
-        />
-      </label>
-      <label className="wide">
-        <span>Project description</span>
-        <textarea
-          rows={3}
-          value={draft.note}
-          onChange={(event) => setDraft({ ...draft, note: event.target.value })}
-          placeholder="Scope, deliverables and important project details"
-        />
-      </label>
-      <label className="settings-switch project-recurring-switch">
-        <input
-          type="checkbox"
-          checked={draft.recurring}
-          onChange={(event) => setDraft({ ...draft, recurring: event.target.checked })}
-        />
-        <span>Repeat this project every month</span>
-      </label>
-      <p className="project-carry-note">
-        Incomplete projects automatically remain visible in the next month.
-      </p>
-      <div className="local-rate-preview">
-        <small>Rate to LKR</small>
-        <strong>
-          1 {draft.currency} = {rate.toFixed(4)} LKR
-        </strong>
-        <span>{draft.value ? money(Number(draft.value) * rate) : money(0)}</span>
-      </div>
+      <fieldset className="form-section">
+        <legend>
+          <span>1</span> Project details
+        </legend>
+        <div className="form-section-grid">
+          <label>
+            <span>Project name *</span>
+            <input
+              autoFocus
+              required
+              value={draft.project}
+              onChange={(event) => setDraft({ ...draft, project: event.target.value })}
+              placeholder="Website redesign"
+            />
+          </label>
+          <label>
+            <span>Client</span>
+            <select
+              value={draft.clientId}
+              onChange={(event) => setDraft({ ...draft, clientId: event.target.value })}
+            >
+              <option value="">No client</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {clientLabel(client)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="wide">
+            <span>Project description</span>
+            <textarea
+              rows={3}
+              value={draft.note}
+              onChange={(event) => setDraft({ ...draft, note: event.target.value })}
+              placeholder="Scope, deliverables and important project details"
+            />
+          </label>
+        </div>
+      </fieldset>
+      <fieldset className="form-section">
+        <legend>
+          <span>2</span> Finance &amp; schedule
+        </legend>
+        <div className="form-section-grid">
+          <label>
+            <span>Currency *</span>
+            <select
+              value={draft.currency}
+              onChange={(event) => setDraft({ ...draft, currency: event.target.value })}
+            >
+              {currencies.map((currency) => (
+                <option key={currency}>{currency}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Project amount *</span>
+            <input
+              required
+              type="number"
+              min="0"
+              step="0.01"
+              value={draft.value}
+              onChange={(event) => setDraft({ ...draft, value: event.target.value })}
+              placeholder="0.00"
+            />
+          </label>
+          <label className="form-feature-field">
+            <span>Advance payment</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={draft.advance}
+              onChange={(event) => setDraft({ ...draft, advance: event.target.value })}
+              placeholder="0.00"
+            />
+          </label>
+          <div className="local-rate-preview compact">
+            <small>Converted project value</small>
+            <strong>{money(projectValue)}</strong>
+            <span>
+              Advance {money(advanceValue)} · 1 {draft.currency} = {rate.toFixed(4)} LKR
+            </span>
+          </div>
+          <label className="settings-switch project-recurring-switch wide">
+            <input
+              type="checkbox"
+              checked={draft.recurring}
+              onChange={(event) => setDraft({ ...draft, recurring: event.target.checked })}
+            />
+            <span>Repeat this project every month</span>
+          </label>
+          <p className="project-carry-note wide">
+            Incomplete projects automatically remain visible in the next month.
+          </p>
+        </div>
+      </fieldset>
       <div className="local-modal-actions">
         <button className="button button-outline" type="button" onClick={onCancel}>
           Cancel
@@ -3102,123 +3167,161 @@ function ProjectTable({
                       </button>
                     </header>
                     <div className="local-project-editor">
-                      <label>
-                        <span>Project</span>
-                        <input
-                          aria-label="Project name"
-                          value={row.project}
-                          onChange={(event) => onUpdate(row.id, { project: event.target.value })}
-                        />
-                      </label>
-                      <label>
-                        <span>Client</span>
-                        <select
-                          aria-label="Client"
-                          value={row.clientId}
-                          onChange={(event) => onUpdate(row.id, { clientId: event.target.value })}
-                        >
-                          <option value="">No client</option>
-                          {clients.map((client) => (
-                            <option key={client.id} value={client.id}>
-                              {clientLabel(client)}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="local-project-editor-amount">
-                        <span>Amount</span>
-                        <div>
-                          <select
-                            aria-label="Currency"
-                            value={row.currency}
-                            onChange={(event) =>
-                              onUpdate(row.id, {
-                                currency: event.target.value,
-                                exchangeRate:
-                                  event.target.value === 'LKR'
-                                    ? 1
-                                    : (rates[event.target.value] ?? row.exchangeRate),
-                              })
-                            }
-                          >
-                            {currencies.map((currency) => (
-                              <option key={currency}>{currency}</option>
-                            ))}
-                          </select>
-                          <input
-                            aria-label="Project amount"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={row.value || ''}
-                            onChange={(event) =>
-                              onUpdate(row.id, { value: Number(event.target.value) })
-                            }
-                          />
+                      <fieldset className="form-section">
+                        <legend>
+                          <span>1</span> Project details
+                        </legend>
+                        <div className="form-section-grid">
+                          <label>
+                            <span>Project name</span>
+                            <input
+                              aria-label="Project name"
+                              value={row.project}
+                              onChange={(event) =>
+                                onUpdate(row.id, { project: event.target.value })
+                              }
+                            />
+                          </label>
+                          <label>
+                            <span>Client</span>
+                            <select
+                              aria-label="Client"
+                              value={row.clientId}
+                              onChange={(event) =>
+                                onUpdate(row.id, { clientId: event.target.value })
+                              }
+                            >
+                              <option value="">No client</option>
+                              {clients.map((client) => (
+                                <option key={client.id} value={client.id}>
+                                  {clientLabel(client)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="wide">
+                            <span>Description</span>
+                            <textarea
+                              aria-label="Project description"
+                              rows={3}
+                              value={row.note}
+                              onChange={(event) => onUpdate(row.id, { note: event.target.value })}
+                              placeholder="Scope, deliverables and project details"
+                            />
+                          </label>
                         </div>
-                      </label>
-                      <label>
-                        <span>Rate to LKR</span>
-                        <input
-                          aria-label="Exchange rate to LKR"
-                          type="number"
-                          min="0"
-                          step="0.0001"
-                          value={row.exchangeRate}
-                          onChange={(event) =>
-                            onUpdate(row.id, { exchangeRate: Number(event.target.value) })
-                          }
-                        />
-                      </label>
-                      <label className="wide">
-                        <span>Description</span>
-                        <textarea
-                          aria-label="Project description"
-                          rows={3}
-                          value={row.note}
-                          onChange={(event) => onUpdate(row.id, { note: event.target.value })}
-                          placeholder="Scope, deliverables and project details"
-                        />
-                      </label>
-                      <label className="settings-switch project-recurring-switch">
-                        <input
-                          type="checkbox"
-                          checked={row.recurring}
-                          onChange={(event) =>
-                            onUpdate(row.id, { recurring: event.target.checked })
-                          }
-                        />
-                        <span>Repeat every month</span>
-                      </label>
-                      {(
-                        [
-                          ['advance', 'Received'],
-                          ['workDue', 'To pay'],
-                          ['workPaid', 'Paid'],
-                        ] as const
-                      ).map(([field, label]) => (
-                        <label key={field}>
-                          <span>{label}</span>
-                          <input
-                            aria-label={label}
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={row[field] || ''}
-                            placeholder="0.00"
-                            onChange={(event) =>
-                              onUpdate(row.id, { [field]: Number(event.target.value) })
-                            }
-                          />
-                        </label>
-                      ))}
-                      <button
-                        className="button button-primary"
-                        type="button"
-                        onClick={() => setEditingId(null)}
-                      >
-                        Done
-                      </button>
+                      </fieldset>
+                      <fieldset className="form-section">
+                        <legend>
+                          <span>2</span> Project finance
+                        </legend>
+                        <div className="form-section-grid project-finance-grid">
+                          <label className="local-project-editor-amount">
+                            <span>Project amount</span>
+                            <div>
+                              <select
+                                aria-label="Currency"
+                                value={row.currency}
+                                onChange={(event) =>
+                                  onUpdate(row.id, {
+                                    currency: event.target.value,
+                                    exchangeRate:
+                                      event.target.value === 'LKR'
+                                        ? 1
+                                        : (rates[event.target.value] ?? row.exchangeRate),
+                                  })
+                                }
+                              >
+                                {currencies.map((currency) => (
+                                  <option key={currency}>{currency}</option>
+                                ))}
+                              </select>
+                              <input
+                                aria-label="Project amount"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={row.value || ''}
+                                onChange={(event) =>
+                                  onUpdate(row.id, { value: Number(event.target.value) })
+                                }
+                              />
+                            </div>
+                          </label>
+                          <label>
+                            <span>Rate to LKR</span>
+                            <input
+                              aria-label="Exchange rate to LKR"
+                              type="number"
+                              min="0"
+                              step="0.0001"
+                              value={row.exchangeRate}
+                              onChange={(event) =>
+                                onUpdate(row.id, { exchangeRate: Number(event.target.value) })
+                              }
+                            />
+                          </label>
+                          {(
+                            [
+                              ['advance', 'Advance received'],
+                              ['workDue', 'Work cost to pay'],
+                              ['workPaid', 'Work cost paid'],
+                            ] as const
+                          ).map(([field, label]) => (
+                            <label key={field}>
+                              <span>{label}</span>
+                              <input
+                                aria-label={label}
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={row[field] || ''}
+                                placeholder="0.00"
+                                onChange={(event) =>
+                                  onUpdate(row.id, { [field]: Number(event.target.value) })
+                                }
+                              />
+                            </label>
+                          ))}
+                          <label className="settings-switch project-recurring-switch wide">
+                            <input
+                              type="checkbox"
+                              checked={row.recurring}
+                              onChange={(event) =>
+                                onUpdate(row.id, { recurring: event.target.checked })
+                              }
+                            />
+                            <span>Repeat this project every month</span>
+                          </label>
+                        </div>
+                      </fieldset>
+                      <div className="local-project-edit-summary" aria-label="Project balance">
+                        <span>Current balance</span>
+                        <strong>
+                          {money(
+                            localValue(row.value, row.exchangeRate) -
+                              row.advance -
+                              row.workDue -
+                              row.workPaid,
+                          )}
+                        </strong>
+                      </div>
+                      <div className="local-modal-actions">
+                        <button
+                          className="button button-outline"
+                          type="button"
+                          onClick={() => setEditingId(null)}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          className="button button-primary"
+                          type="button"
+                          onClick={() => setEditingId(null)}
+                        >
+                          Done
+                        </button>
+                      </div>
                     </div>
                   </section>
                 </div>
@@ -3262,52 +3365,60 @@ function ClientForm({
 }) {
   return (
     <form className="local-client-form" onSubmit={onSubmit}>
-      {(['name', 'company', 'email', 'phone'] as const).map((field) => (
-        <label key={field}>
-          <span>
-            {field === 'name' ? 'Client name *' : field[0].toUpperCase() + field.slice(1)}
-          </span>
-          <input
-            required={field === 'name'}
-            type={field === 'email' ? 'email' : field === 'phone' ? 'tel' : 'text'}
-            autoComplete={
-              field === 'name'
-                ? 'name'
-                : field === 'company'
-                  ? 'organization'
-                  : field === 'email'
-                    ? 'email'
-                    : 'tel'
-            }
-            inputMode={field === 'email' ? 'email' : field === 'phone' ? 'tel' : undefined}
-            value={draft[field]}
-            onChange={(event) => setDraft({ ...draft, [field]: event.target.value })}
-            placeholder={
-              field === 'name'
-                ? 'Full name'
-                : field === 'company'
-                  ? 'Company name'
-                  : field === 'email'
-                    ? 'client@example.com'
-                    : 'Phone number'
-            }
-          />
-        </label>
-      ))}
-      <label>
-        <span>Country</span>
-        <select
-          autoComplete="country-name"
-          value={draft.country}
-          onChange={(event) => setDraft({ ...draft, country: event.target.value })}
-        >
-          {countries.map((country) => (
-            <option key={country} value={country}>
-              {countryFlags[country]} {country}
-            </option>
+      <fieldset className="form-section client-details-section">
+        <legend>
+          <span>1</span> Client details
+        </legend>
+        <div className="form-section-grid">
+          {(['name', 'company', 'email', 'phone'] as const).map((field) => (
+            <label key={field}>
+              <span>
+                {field === 'name' ? 'Client name *' : field[0].toUpperCase() + field.slice(1)}
+              </span>
+              <input
+                autoFocus={field === 'name'}
+                required={field === 'name'}
+                type={field === 'email' ? 'email' : field === 'phone' ? 'tel' : 'text'}
+                autoComplete={
+                  field === 'name'
+                    ? 'name'
+                    : field === 'company'
+                      ? 'organization'
+                      : field === 'email'
+                        ? 'email'
+                        : 'tel'
+                }
+                inputMode={field === 'email' ? 'email' : field === 'phone' ? 'tel' : undefined}
+                value={draft[field]}
+                onChange={(event) => setDraft({ ...draft, [field]: event.target.value })}
+                placeholder={
+                  field === 'name'
+                    ? 'Full name'
+                    : field === 'company'
+                      ? 'Company name'
+                      : field === 'email'
+                        ? 'client@example.com'
+                        : 'Phone number'
+                }
+              />
+            </label>
           ))}
-        </select>
-      </label>
+          <label className="wide">
+            <span>Country</span>
+            <select
+              autoComplete="country-name"
+              value={draft.country}
+              onChange={(event) => setDraft({ ...draft, country: event.target.value })}
+            >
+              {countries.map((country) => (
+                <option key={country} value={country}>
+                  {countryFlags[country]} {country}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </fieldset>
       <button className="button button-primary" type="submit">
         <Plus size={16} /> Save client
       </button>
@@ -3695,74 +3806,78 @@ function ExpenseForm({
   const rate = draft.currency === 'LKR' ? 1 : (rates[draft.currency] ?? 1);
   return (
     <form className="local-entry-form expense-form" onSubmit={onSubmit}>
-      <div className="local-form-title">
-        <ReceiptText size={18} />
-        <div>
-          <strong>New expense</strong>
-          <small>Operating cost</small>
+      <fieldset className="form-section expense-details-section">
+        <legend>
+          <span>
+            <ReceiptText size={13} />
+          </span>
+          Expense details
+        </legend>
+        <div className="form-section-grid">
+          <label>
+            <span>Description *</span>
+            <input
+              autoFocus
+              required
+              value={draft.description}
+              onChange={(event) => setDraft({ ...draft, description: event.target.value })}
+              placeholder="Software subscription"
+            />
+          </label>
+          <label>
+            <span>Category</span>
+            <select
+              value={draft.category}
+              onChange={(event) => setDraft({ ...draft, category: event.target.value })}
+            >
+              <option>Office</option>
+              <option>Software</option>
+              <option>Marketing</option>
+              <option>Travel</option>
+              <option>Utilities</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label>
+            <span>Currency</span>
+            <select
+              value={draft.currency}
+              onChange={(event) => setDraft({ ...draft, currency: event.target.value })}
+            >
+              {currencies.map((currency) => (
+                <option key={currency}>{currency}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Amount *</span>
+            <input
+              required
+              type="number"
+              min="0"
+              step="0.01"
+              value={draft.amount}
+              onChange={(event) => setDraft({ ...draft, amount: event.target.value })}
+              placeholder="0.00"
+            />
+          </label>
+          <label>
+            <span>Date</span>
+            <input
+              type="date"
+              value={draft.date}
+              onChange={(event) => setDraft({ ...draft, date: event.target.value })}
+            />
+          </label>
+          <div className="local-rate-preview compact">
+            <small>Converted value</small>
+            <strong>{money(Number(draft.amount || 0) * rate)}</strong>
+            <span>
+              1 {draft.currency} = {rate.toFixed(4)} LKR
+            </span>
+          </div>
         </div>
-      </div>
-      <label>
-        <span>Description *</span>
-        <input
-          autoFocus
-          required
-          value={draft.description}
-          onChange={(event) => setDraft({ ...draft, description: event.target.value })}
-          placeholder="Software subscription"
-        />
-      </label>
-      <label>
-        <span>Category</span>
-        <select
-          value={draft.category}
-          onChange={(event) => setDraft({ ...draft, category: event.target.value })}
-        >
-          <option>Office</option>
-          <option>Software</option>
-          <option>Marketing</option>
-          <option>Travel</option>
-          <option>Utilities</option>
-          <option>Other</option>
-        </select>
-      </label>
-      <label>
-        <span>Currency</span>
-        <select
-          value={draft.currency}
-          onChange={(event) => setDraft({ ...draft, currency: event.target.value })}
-        >
-          {currencies.map((currency) => (
-            <option key={currency}>{currency}</option>
-          ))}
-        </select>
-      </label>
-      <label>
-        <span>Amount *</span>
-        <input
-          required
-          type="number"
-          min="0"
-          step="0.01"
-          value={draft.amount}
-          onChange={(event) => setDraft({ ...draft, amount: event.target.value })}
-        />
-      </label>
-      <label>
-        <span>Date</span>
-        <input
-          type="date"
-          value={draft.date}
-          onChange={(event) => setDraft({ ...draft, date: event.target.value })}
-        />
-      </label>
-      <div className="local-rate-preview">
-        <small>Converted value</small>
-        <strong>{money(Number(draft.amount || 0) * rate)}</strong>
-        <span>
-          1 {draft.currency} = {rate.toFixed(4)} LKR
-        </span>
-      </div>
+      </fieldset>
       <button className="button button-primary" type="submit">
         <Plus size={16} /> Save expense
       </button>

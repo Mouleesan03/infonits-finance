@@ -20,6 +20,7 @@ import {
   Folder,
   Globe2,
   KeyRound,
+  ListTodo,
   LogOut,
   Mail,
   MoreVertical,
@@ -49,6 +50,7 @@ import { FormModal } from './ui/form-modal';
 
 export type OfficeSection =
   | 'calendar'
+  | 'todos'
   | 'invoices'
   | 'quotations'
   | 'payments'
@@ -177,6 +179,8 @@ type CalendarEvent = {
   platform?: string;
   count?: number;
   remarks?: string;
+  completed?: boolean;
+  priority?: 'Low' | 'Medium' | 'High';
 };
 type RecurringInvoice = {
   id: string;
@@ -529,6 +533,15 @@ export function LocalOfficeModule({
         preview={preview}
       />
     );
+  if (section === 'todos')
+    return (
+      <TodoModule
+        items={store.events}
+        formOpen={formOpen}
+        setFormOpen={setFormOpen}
+        onChange={(items) => update('events', items)}
+      />
+    );
   if (section === 'calendar')
     return (
       <CalendarModule
@@ -741,179 +754,161 @@ function CalendarEventModal({
     });
   };
   return (
-    <div className="local-modal-layer" role="presentation" onMouseDown={onClose}>
-      <section
-        className="local-modal office-event-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="office-event-modal-title"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header>
-          <div>
-            <span className="local-modal-icon">
-              <CalendarDays size={19} />
-            </span>
-            <div>
-              <h2 id="office-event-modal-title">
-                {initialEvent ? 'Event details' : postMode ? 'Add posted update' : 'Add event'}
-              </h2>
-              <p>
-                {readOnly
-                  ? 'This item is managed from its original invoice or renewal record.'
-                  : postMode
-                    ? 'Record content for the selected date.'
-                    : 'Add a reminder to your calendar.'}
-              </p>
-            </div>
-          </div>
-          <button type="button" aria-label="Close event form" onClick={onClose}>
-            <X size={19} />
-          </button>
-        </header>
-        <form className="office-event-form" onSubmit={submit}>
-          <label className="wide">
-            <span>{postMode ? 'Update title' : 'Event'} *</span>
-            <input
-              autoFocus
-              disabled={readOnly}
-              required
-              placeholder={postMode ? 'e.g. Published campaign reel' : 'e.g. Client review meeting'}
-              value={draft.title}
-              onChange={(event) => setDraft({ ...draft, title: event.target.value })}
-            />
-          </label>
-          <label>
-            <span>Date</span>
-            <input
-              type="date"
-              disabled={readOnly}
-              value={draft.date}
-              onChange={(event) => setDraft({ ...draft, date: event.target.value })}
-            />
-          </label>
-          {postMode ? (
-            <>
-              <label>
-                <span>Client</span>
-                <select
-                  disabled={readOnly}
-                  value={draft.clientId}
-                  onChange={(event) => setDraft({ ...draft, clientId: event.target.value })}
-                >
-                  <option value="">Select client</option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {clientLabel(client)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Project</span>
-                <select
-                  disabled={readOnly}
-                  value={draft.projectId}
-                  onChange={(event) => setDraft({ ...draft, projectId: event.target.value })}
-                >
-                  <option value="">Select project</option>
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.project}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Platform</span>
-                <select
-                  disabled={readOnly}
-                  value={draft.platform}
-                  onChange={(event) => setDraft({ ...draft, platform: event.target.value })}
-                >
-                  <option>Instagram</option>
-                  <option>Facebook</option>
-                  <option>TikTok</option>
-                  <option>Other</option>
-                </select>
-              </label>
-              <label>
-                <span>Post count</span>
-                <input
-                  disabled={readOnly}
-                  type="number"
-                  min="1"
-                  value={draft.count}
-                  onChange={(event) => setDraft({ ...draft, count: event.target.value })}
-                />
-              </label>
-            </>
-          ) : (
+    <FormModal
+      title={initialEvent ? 'Event details' : postMode ? 'Add posted update' : 'Add event'}
+      subtitle={
+        readOnly
+          ? 'This item is managed from its original invoice or renewal record.'
+          : postMode
+            ? 'Record content for the selected date.'
+            : 'Add a reminder to your calendar.'
+      }
+      icon={<CalendarDays size={19} />}
+      className="office-event-modal"
+      onClose={onClose}
+    >
+      <form className="office-event-form" onSubmit={submit}>
+        <label className="wide">
+          <span>{postMode ? 'Update title' : 'Event'} *</span>
+          <input
+            autoFocus
+            disabled={readOnly}
+            required
+            placeholder={postMode ? 'e.g. Published campaign reel' : 'e.g. Client review meeting'}
+            value={draft.title}
+            onChange={(event) => setDraft({ ...draft, title: event.target.value })}
+          />
+        </label>
+        <label>
+          <span>Date</span>
+          <input
+            type="date"
+            disabled={readOnly}
+            value={draft.date}
+            onChange={(event) => setDraft({ ...draft, date: event.target.value })}
+          />
+        </label>
+        {postMode ? (
+          <>
             <label>
-              <span>Type</span>
+              <span>Client</span>
               <select
                 disabled={readOnly}
-                value={draft.type}
-                onChange={(event) => setDraft({ ...draft, type: event.target.value })}
+                value={draft.clientId}
+                onChange={(event) => setDraft({ ...draft, clientId: event.target.value })}
               >
-                <option>Task</option>
-                <option>Meeting</option>
-                <option>Reminder</option>
-                <option>Holiday</option>
-                <option>Post</option>
+                <option value="">Select client</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {clientLabel(client)}
+                  </option>
+                ))}
               </select>
             </label>
-          )}
-          <label className="wide">
-            <span>Notes</span>
-            <textarea
-              disabled={readOnly}
-              rows={3}
-              value={draft.remarks}
-              onChange={(event) => setDraft({ ...draft, remarks: event.target.value })}
-              placeholder="Optional details"
-            />
-          </label>
-          {dateEvents.length > 0 && (
-            <section className="office-event-day-list" aria-label={`Events on ${draft.date}`}>
-              <div>
-                <strong>Events on {draft.date}</strong>
-                <small>{dateEvents.length} scheduled</small>
-              </div>
-              <div>
-                {dateEvents.map((event) => (
-                  <button
-                    type="button"
-                    key={event.id}
-                    className={event.id === initialEvent?.id ? 'active' : ''}
-                    onClick={() => onSelectEvent?.(event)}
-                  >
-                    <span className={event.type.toLowerCase()} />
-                    <b>{event.title}</b>
-                    <small>{event.type}</small>
-                  </button>
+            <label>
+              <span>Project</span>
+              <select
+                disabled={readOnly}
+                value={draft.projectId}
+                onChange={(event) => setDraft({ ...draft, projectId: event.target.value })}
+              >
+                <option value="">Select project</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.project}
+                  </option>
                 ))}
-              </div>
-            </section>
-          )}
-          <footer>
-            {onDelete && !readOnly && (
-              <button className="button office-danger-button" type="button" onClick={onDelete}>
-                <Trash2 size={16} /> Delete
-              </button>
-            )}
-            <button className="button button-outline" type="button" onClick={onClose}>
-              Cancel
+              </select>
+            </label>
+            <label>
+              <span>Platform</span>
+              <select
+                disabled={readOnly}
+                value={draft.platform}
+                onChange={(event) => setDraft({ ...draft, platform: event.target.value })}
+              >
+                <option>Instagram</option>
+                <option>Facebook</option>
+                <option>TikTok</option>
+                <option>Other</option>
+              </select>
+            </label>
+            <label>
+              <span>Post count</span>
+              <input
+                disabled={readOnly}
+                type="number"
+                min="1"
+                value={draft.count}
+                onChange={(event) => setDraft({ ...draft, count: event.target.value })}
+              />
+            </label>
+          </>
+        ) : (
+          <label>
+            <span>Type</span>
+            <select
+              disabled={readOnly}
+              value={draft.type}
+              onChange={(event) => setDraft({ ...draft, type: event.target.value })}
+            >
+              <option>Task</option>
+              <option>Meeting</option>
+              <option>Reminder</option>
+              <option>Holiday</option>
+              <option>Post</option>
+            </select>
+          </label>
+        )}
+        <label className="wide">
+          <span>Notes</span>
+          <textarea
+            disabled={readOnly}
+            rows={3}
+            value={draft.remarks}
+            onChange={(event) => setDraft({ ...draft, remarks: event.target.value })}
+            placeholder="Optional details"
+          />
+        </label>
+        {dateEvents.length > 0 && (
+          <section className="office-event-day-list" aria-label={`Events on ${draft.date}`}>
+            <div>
+              <strong>Events on {draft.date}</strong>
+              <small>{dateEvents.length} scheduled</small>
+            </div>
+            <div>
+              {dateEvents.map((event) => (
+                <button
+                  type="button"
+                  key={event.id}
+                  className={event.id === initialEvent?.id ? 'active' : ''}
+                  onClick={() => onSelectEvent?.(event)}
+                >
+                  <span className={event.type.toLowerCase()} />
+                  <b>{event.title}</b>
+                  <small>{event.type}</small>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+        <footer>
+          {onDelete && !readOnly && (
+            <button className="button office-danger-button" type="button" onClick={onDelete}>
+              <Trash2 size={16} /> Delete
             </button>
-            {!readOnly && (
-              <button className="button button-primary" type="submit">
-                <Check size={16} /> {initialEvent ? 'Save changes' : 'Save'}
-              </button>
-            )}
-          </footer>
-        </form>
-      </section>
-    </div>
+          )}
+          <button className="button button-outline" type="button" onClick={onClose}>
+            Cancel
+          </button>
+          {!readOnly && (
+            <button className="button button-primary" type="submit">
+              <Check size={16} /> {initialEvent ? 'Save changes' : 'Save'}
+            </button>
+          )}
+        </footer>
+      </form>
+    </FormModal>
   );
 }
 
@@ -1520,154 +1515,177 @@ function SalesDocuments({
           title={`${editingId ? 'Edit' : 'New'} ${kind.toLowerCase()}`}
           subtitle={`Enter the ${kind.toLowerCase()} details and save when ready.`}
           icon={<FileText size={19} />}
+          className="sales-document-form-modal"
           onClose={() => setFormOpen(false)}
         >
-          <form className="office-form" onSubmit={submit}>
-            <label>
-              <span>Client *</span>
-              <select
-                required
-                value={draft.clientId}
-                onChange={(e) => setDraft({ ...draft, clientId: e.target.value })}
-              >
-                <option value="">Choose client</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {clientLabel(c)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Project</span>
-              <select
-                value={draft.projectId}
-                onChange={(e) => setDraft({ ...draft, projectId: e.target.value })}
-              >
-                <option value="">No project</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.project}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Issue date</span>
-              <input
-                type="date"
-                value={draft.issueDate}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    issueDate: e.target.value,
-                    dueDate: addDays(e.target.value, 10),
-                  })
-                }
-              />
-            </label>
-            <label>
-              <span>Due date</span>
-              <input
-                type="date"
-                value={draft.dueDate}
-                readOnly={kind === 'Invoice'}
-                onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })}
-              />
-              {kind === 'Invoice' ? <small>Automatically set to 10 days after issue.</small> : null}
-            </label>
-            <label>
-              <span>Currency</span>
-              <select
-                value={draft.currency}
-                onChange={(e) => setDraft({ ...draft, currency: e.target.value })}
-              >
-                {currencies.map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Amount *</span>
-              <input
-                required
-                type="number"
-                min="0"
-                step="0.01"
-                value={draft.amount}
-                onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
-              />
-            </label>
-            <label className="wide">
-              <span>{kind} description</span>
-              <textarea
-                rows={3}
-                value={draft.description}
-                onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-                placeholder="Describe the services, deliverables or items included"
-              />
-            </label>
-            {kind === 'Invoice' && (
-              <>
+          <form className="office-form office-form-modern sales-document-form" onSubmit={submit}>
+            <fieldset className="form-section">
+              <legend>
+                <span>1</span> Essentials
+              </legend>
+              <div className="form-section-grid">
+                <label className="form-feature-field">
+                  <span>Client *</span>
+                  <select
+                    required
+                    value={draft.clientId}
+                    onChange={(e) => setDraft({ ...draft, clientId: e.target.value })}
+                  >
+                    <option value="">Choose client</option>
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {clientLabel(c)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label>
-                  <span>Tax %</span>
+                  <span>Project</span>
+                  <select
+                    value={draft.projectId}
+                    onChange={(e) => setDraft({ ...draft, projectId: e.target.value })}
+                  >
+                    <option value="">No project</option>
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.project}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>Issue date</span>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={draft.taxRate}
-                    onChange={(e) => setDraft({ ...draft, taxRate: e.target.value })}
+                    type="date"
+                    value={draft.issueDate}
+                    onChange={(e) =>
+                      setDraft({
+                        ...draft,
+                        issueDate: e.target.value,
+                        dueDate: addDays(e.target.value, 10),
+                      })
+                    }
                   />
                 </label>
                 <label>
-                  <span>Discount</span>
+                  <span>Due date</span>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={draft.discount}
-                    onChange={(e) => setDraft({ ...draft, discount: e.target.value })}
+                    type="date"
+                    value={draft.dueDate}
+                    readOnly={kind === 'Invoice'}
+                    onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })}
                   />
+                  {kind === 'Invoice' ? (
+                    <small>Automatically set to 10 days after issue.</small>
+                  ) : null}
+                </label>
+              </div>
+            </fieldset>
+            <fieldset className="form-section">
+              <legend>
+                <span>2</span> Amount &amp; description
+              </legend>
+              <div className="form-section-grid">
+                <label>
+                  <span>Currency</span>
+                  <select
+                    value={draft.currency}
+                    onChange={(e) => setDraft({ ...draft, currency: e.target.value })}
+                  >
+                    {currencies.map((c) => (
+                      <option key={c}>{c}</option>
+                    ))}
+                  </select>
                 </label>
                 <label>
-                  <span>Advance paid</span>
+                  <span>Amount *</span>
                   <input
+                    required
                     type="number"
                     min="0"
                     step="0.01"
-                    value={draft.advance}
-                    onChange={(e) => setDraft({ ...draft, advance: e.target.value })}
+                    value={draft.amount}
+                    onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
                   />
                 </label>
                 <label className="wide">
-                  <span>Notes</span>
+                  <span>{kind} description</span>
                   <textarea
-                    rows={2}
-                    value={draft.notes}
-                    onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+                    rows={3}
+                    value={draft.description}
+                    onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                    placeholder="Describe the services, deliverables or items included"
                   />
                 </label>
-                <label className="wide invoice-bank-toggle">
-                  <input
-                    type="checkbox"
-                    checked={draft.includeBankDetails}
-                    onChange={(e) => setDraft({ ...draft, includeBankDetails: e.target.checked })}
-                  />
-                  <span>Include bank details on this invoice</span>
-                </label>
-                {draft.includeBankDetails && (
-                  <label className="wide">
-                    <span>Bank details</span>
-                    <textarea
-                      required
-                      rows={3}
-                      value={draft.bankDetails}
-                      onChange={(e) => setDraft({ ...draft, bankDetails: e.target.value })}
-                      placeholder={'Bank name\nAccount name\nAccount number / SWIFT'}
+              </div>
+            </fieldset>
+            {kind === 'Invoice' && (
+              <details className="form-optional-fields">
+                <summary>
+                  <span>Optional details</span>
+                  <small>Tax, discount, advance, notes and bank information</small>
+                </summary>
+                <div className="form-section-grid">
+                  <label>
+                    <span>Tax %</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={draft.taxRate}
+                      onChange={(e) => setDraft({ ...draft, taxRate: e.target.value })}
                     />
                   </label>
-                )}
-              </>
+                  <label>
+                    <span>Discount</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={draft.discount}
+                      onChange={(e) => setDraft({ ...draft, discount: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    <span>Advance paid</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={draft.advance}
+                      onChange={(e) => setDraft({ ...draft, advance: e.target.value })}
+                    />
+                  </label>
+                  <label className="wide">
+                    <span>Notes</span>
+                    <textarea
+                      rows={2}
+                      value={draft.notes}
+                      onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+                    />
+                  </label>
+                  <label className="wide invoice-bank-toggle">
+                    <input
+                      type="checkbox"
+                      checked={draft.includeBankDetails}
+                      onChange={(e) => setDraft({ ...draft, includeBankDetails: e.target.checked })}
+                    />
+                    <span>Include bank details on this invoice</span>
+                  </label>
+                  {draft.includeBankDetails && (
+                    <label className="wide">
+                      <span>Bank details</span>
+                      <textarea
+                        required
+                        rows={3}
+                        value={draft.bankDetails}
+                        onChange={(e) => setDraft({ ...draft, bankDetails: e.target.value })}
+                        placeholder={'Bank name\nAccount name\nAccount number / SWIFT'}
+                      />
+                    </label>
+                  )}
+                </div>
+              </details>
             )}
             <button className="button button-primary" type="submit">
               <Check size={16} />
@@ -4312,6 +4330,260 @@ function UsersModule({
           stores role planning only.
         </p>
       </section>
+    </>
+  );
+}
+
+function TodoModule({
+  items,
+  formOpen,
+  setFormOpen,
+  onChange,
+}: {
+  items: CalendarEvent[];
+  formOpen: boolean;
+  setFormOpen: (value: boolean) => void;
+  onChange: (items: CalendarEvent[]) => void;
+}) {
+  const tasks = items
+    .filter((item) => item.type === 'Task')
+    .toSorted(
+      (a, b) =>
+        Number(Boolean(a.completed)) - Number(Boolean(b.completed)) || a.date.localeCompare(b.date),
+    );
+  const [filter, setFilter] = useState<'Open' | 'All' | 'Done'>('Open');
+  const [editingId, setEditingId] = useState('');
+  const [draft, setDraft] = useState({
+    title: '',
+    date: today(),
+    priority: 'Medium' as NonNullable<CalendarEvent['priority']>,
+    remarks: '',
+  });
+  const visibleTasks = tasks.filter((task) =>
+    filter === 'All' ? true : filter === 'Done' ? task.completed : !task.completed,
+  );
+  const openCount = tasks.filter((task) => !task.completed).length;
+  const dueToday = tasks.filter((task) => !task.completed && task.date === today()).length;
+
+  function resetDraft() {
+    setEditingId('');
+    setDraft({ title: '', date: today(), priority: 'Medium', remarks: '' });
+  }
+
+  function closeForm() {
+    setFormOpen(false);
+    resetDraft();
+  }
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    const title = draft.title.trim();
+    if (!title) return;
+    const existing = items.find((item) => item.id === editingId);
+    const nextTask: CalendarEvent = {
+      id: editingId || crypto.randomUUID(),
+      title,
+      date: draft.date,
+      type: 'Task',
+      priority: draft.priority,
+      remarks: draft.remarks.trim() || undefined,
+      completed: existing?.completed ?? false,
+    };
+    onChange(
+      editingId
+        ? items.map((item) => (item.id === editingId ? nextTask : item))
+        : [nextTask, ...items],
+    );
+    closeForm();
+  }
+
+  function editTask(task: CalendarEvent) {
+    setEditingId(task.id);
+    setDraft({
+      title: task.title,
+      date: task.date,
+      priority: task.priority ?? 'Medium',
+      remarks: task.remarks ?? '',
+    });
+    setFormOpen(true);
+  }
+
+  return (
+    <>
+      <ModuleHeader
+        eyebrow="WORK"
+        title="To-do"
+        subtitle="Plan simple tasks here and see every due date on your calendar."
+        action="Add task"
+        onAction={() => {
+          resetDraft();
+          setFormOpen(true);
+        }}
+      />
+
+      <section className="office-todo-summary" aria-label="To-do summary">
+        <article>
+          <span className="blue">
+            <ListTodo size={19} />
+          </span>
+          <div>
+            <small>Open tasks</small>
+            <strong>{openCount}</strong>
+          </div>
+        </article>
+        <article>
+          <span className="amber">
+            <Clock3 size={19} />
+          </span>
+          <div>
+            <small>Due today</small>
+            <strong>{dueToday}</strong>
+          </div>
+        </article>
+        <article>
+          <span className="green">
+            <CheckCircle2 size={19} />
+          </span>
+          <div>
+            <small>Completed</small>
+            <strong>{tasks.length - openCount}</strong>
+          </div>
+        </article>
+      </section>
+
+      <section className="office-panel office-todo-panel">
+        <div className="office-toolbar office-todo-toolbar">
+          <div className="office-filter-pills" aria-label="Filter tasks">
+            {(['Open', 'All', 'Done'] as const).map((option) => (
+              <button
+                type="button"
+                key={option}
+                className={filter === option ? 'active' : ''}
+                onClick={() => setFilter(option)}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+          <span>{visibleTasks.length} tasks</span>
+        </div>
+        {visibleTasks.length ? (
+          <div className="office-todo-list">
+            {visibleTasks.map((task) => (
+              <article className={task.completed ? 'is-complete' : ''} key={task.id}>
+                <button
+                  type="button"
+                  className="office-todo-check"
+                  aria-label={task.completed ? `Mark ${task.title} open` : `Complete ${task.title}`}
+                  onClick={() =>
+                    onChange(
+                      items.map((item) =>
+                        item.id === task.id ? { ...item, completed: !item.completed } : item,
+                      ),
+                    )
+                  }
+                >
+                  {task.completed ? <Check size={17} /> : null}
+                </button>
+                <div>
+                  <strong>{task.title}</strong>
+                  <small>{task.remarks || 'No extra details'}</small>
+                </div>
+                <span
+                  className={`office-todo-priority ${(task.priority ?? 'Medium').toLowerCase()}`}
+                >
+                  {task.priority ?? 'Medium'}
+                </span>
+                <time dateTime={task.date}>{task.date === today() ? 'Today' : task.date}</time>
+                <button
+                  type="button"
+                  className="local-row-action"
+                  aria-label={`Edit ${task.title}`}
+                  onClick={() => editTask(task)}
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  type="button"
+                  className="local-delete"
+                  aria-label={`Delete ${task.title}`}
+                  onClick={() => onChange(items.filter((item) => item.id !== task.id))}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <Empty
+            icon={<CheckCircle2 size={25} />}
+            title={filter === 'Done' ? 'No completed tasks' : 'You are all caught up'}
+            text="Add a task and it will also appear on the calendar."
+          />
+        )}
+      </section>
+
+      {formOpen ? (
+        <FormModal
+          title={editingId ? 'Edit task' : 'Add task'}
+          subtitle="Keep it short. You can add more detail only when needed."
+          icon={<ListTodo size={19} />}
+          className="todo-form-modal"
+          onClose={closeForm}
+        >
+          <form className="office-form office-form-modern todo-form" onSubmit={submit}>
+            <label className="wide form-feature-field">
+              <span>What needs to be done? *</span>
+              <input
+                autoFocus
+                required
+                value={draft.title}
+                onChange={(event) => setDraft({ ...draft, title: event.target.value })}
+                placeholder="e.g. Send final proposal"
+              />
+            </label>
+            <label>
+              <span>Due date</span>
+              <input
+                type="date"
+                value={draft.date}
+                onChange={(event) => setDraft({ ...draft, date: event.target.value })}
+              />
+            </label>
+            <label>
+              <span>Priority</span>
+              <select
+                value={draft.priority}
+                onChange={(event) =>
+                  setDraft({
+                    ...draft,
+                    priority: event.target.value as NonNullable<CalendarEvent['priority']>,
+                  })
+                }
+              >
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
+              </select>
+            </label>
+            <details className="form-optional-fields wide">
+              <summary>+ Add details</summary>
+              <label>
+                <span>Notes</span>
+                <textarea
+                  rows={3}
+                  value={draft.remarks}
+                  onChange={(event) => setDraft({ ...draft, remarks: event.target.value })}
+                  placeholder="Optional context, link or reminder"
+                />
+              </label>
+            </details>
+            <button className="button button-primary" type="submit">
+              <Check size={16} /> {editingId ? 'Update task' : 'Add task'}
+            </button>
+          </form>
+        </FormModal>
+      ) : null}
     </>
   );
 }

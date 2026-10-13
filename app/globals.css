@@ -17158,3 +17158,749 @@ summary:focus-visible {
     width: var(--ui-status-control-width);
   }
 }
+
+/* Unified record forms: compact SaaS layout on desktop and native-style sheets on mobile. */
+.ui-form-modal > .office-form,
+.ui-form-modal > .office-event-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px 20px 20px;
+  background: #fff;
+}
+
+.ui-form-modal > header {
+  min-height: 76px;
+  padding: 16px 20px;
+}
+
+.ui-form-modal > header h2 {
+  color: #203650;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+.ui-form-modal > header p {
+  margin-top: 3px;
+  color: #75859a;
+  font-size: 11px;
+}
+
+.office-form-modern {
+  gap: 12px !important;
+}
+
+.form-section,
+.form-optional-fields {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #e2e9f1;
+  border-radius: 14px;
+  background: #fbfcfe;
+}
+
+.form-section legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px;
+  color: #2d4561;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.form-section legend > span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #e8f2ff;
+  color: #176bc5;
+  font-size: 10px;
+}
+
+.form-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.form-section-grid > .wide,
+.form-optional-fields.wide {
+  grid-column: 1 / -1;
+}
+
+.form-feature-field select,
+.form-feature-field input {
+  border-color: #bfd3ec !important;
+  background: #fff !important;
+}
+
+.form-optional-fields {
+  padding: 0;
+  overflow: clip;
+  background: #fff;
+}
+
+.form-optional-fields > summary {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  color: #2d5f91;
+  font-size: 12px;
+  font-weight: 700;
+  list-style: none;
+}
+
+.form-optional-fields > summary::-webkit-details-marker {
+  display: none;
+}
+
+.form-optional-fields > summary::after {
+  content: '+';
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  background: #edf5ff;
+  color: #176bc5;
+  font-size: 17px;
+}
+
+.form-optional-fields[open] > summary::after {
+  content: '−';
+}
+
+.form-optional-fields > summary small {
+  margin-left: auto;
+  color: #8492a4;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.form-optional-fields > .form-section-grid,
+.form-optional-fields > label {
+  margin: 0 14px 14px;
+}
+
+.form-optional-fields > .form-section-grid {
+  padding-top: 14px;
+  border-top: 1px solid #e8edf3;
+}
+
+.ui-form-modal > form > .button[type='submit']:last-child {
+  grid-column: 1 / -1;
+  justify-self: end;
+  min-width: 156px;
+}
+
+.invoice-kpi-icon {
+  align-self: center;
+  justify-self: center;
+  place-items: center;
+  line-height: 0;
+}
+
+.invoice-kpi-icon svg {
+  display: block;
+  margin: auto;
+}
+
+.office-todo-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.office-todo-summary article {
+  min-height: 82px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #e0e8f1;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 7px 20px rgba(22, 47, 82, 0.05);
+}
+
+.office-todo-summary article > span {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+}
+
+.office-todo-summary span.blue {
+  background: #eaf3ff;
+  color: #176bc5;
+}
+.office-todo-summary span.amber {
+  background: #fff2dc;
+  color: #d47b00;
+}
+.office-todo-summary span.green {
+  background: #e7f7ef;
+  color: #12805c;
+}
+.office-todo-summary small,
+.office-todo-summary strong {
+  display: block;
+}
+.office-todo-summary small {
+  color: #718096;
+  font-size: 10.5px;
+}
+.office-todo-summary strong {
+  margin-top: 3px;
+  color: #203650;
+  font-size: 20px;
+}
+
+.office-todo-toolbar {
+  border-bottom: 1px solid #e7edf4;
+}
+
+.office-filter-pills {
+  display: flex;
+  gap: 6px;
+}
+
+.office-filter-pills button {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 999px;
+  background: #eff3f8;
+  color: #63748a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.office-filter-pills button.active {
+  background: #153f73;
+  color: #fff;
+}
+
+.office-todo-list {
+  padding: 6px 16px 14px;
+}
+
+.office-todo-list article {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto 92px 36px 36px;
+  align-items: center;
+  gap: 11px;
+  min-height: 66px;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.office-todo-list article:last-child {
+  border-bottom: 0;
+}
+.office-todo-list article > div {
+  min-width: 0;
+}
+.office-todo-list article strong,
+.office-todo-list article small {
+  display: block;
+}
+.office-todo-list article strong {
+  color: #263b55;
+  font-size: 12.5px;
+}
+.office-todo-list article small {
+  overflow: hidden;
+  margin-top: 3px;
+  color: #8492a4;
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.office-todo-list article.is-complete strong {
+  color: #8290a1;
+  text-decoration: line-through;
+}
+.office-todo-check {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #b8c9dc;
+  border-radius: 9px;
+  background: #fff;
+  color: #fff;
+}
+.is-complete .office-todo-check {
+  border-color: #15966b;
+  background: #15966b;
+}
+.office-todo-priority {
+  min-width: 62px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-align: center;
+}
+.office-todo-priority.low {
+  background: #eef3f8;
+  color: #60738a;
+}
+.office-todo-priority.medium {
+  background: #fff2d9;
+  color: #a56400;
+}
+.office-todo-priority.high {
+  background: #ffe8e9;
+  color: #c53c43;
+}
+.office-todo-list time {
+  color: #687a90;
+  font-size: 10.5px;
+}
+
+@keyframes ui-sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0.85;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 720px) {
+  .local-modal-layer {
+    align-items: end;
+    padding: 0;
+  }
+
+  .ui-form-modal,
+  .ui-form-modal.local-project-modal,
+  .ui-form-modal.office-event-modal {
+    inset: auto 0 0;
+    width: 100%;
+    max-width: none;
+    height: auto;
+    max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top) - 12px));
+    padding-top: 0;
+    border-radius: 24px 24px 0 0;
+    transform: none;
+    animation: ui-sheet-up 180ms ease-out;
+  }
+
+  .local-project-edit-modal {
+    width: 100%;
+    height: auto;
+    max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top) - 12px));
+    padding-top: 0;
+    border-radius: 24px 24px 0 0;
+    animation: ui-sheet-up 180ms ease-out;
+  }
+
+  .ui-form-modal > header {
+    min-height: 70px;
+    padding: 20px 16px 12px;
+  }
+
+  .ui-form-modal > header::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 38px;
+    height: 4px;
+    border-radius: 999px;
+    background: #d7dee7;
+    transform: translateX(-50%);
+  }
+
+  .local-project-edit-modal > header::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 38px;
+    height: 4px;
+    border-radius: 999px;
+    background: #d7dee7;
+    transform: translateX(-50%);
+  }
+
+  .ui-form-modal > header p {
+    display: none;
+  }
+
+  .ui-form-modal > .office-form,
+  .ui-form-modal > .office-event-form,
+  .ui-form-modal > .local-client-form,
+  .ui-form-modal > .local-entry-form {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px 16px max(92px, calc(78px + env(safe-area-inset-bottom)));
+    scroll-padding-block: 12px 90px;
+  }
+
+  .form-section-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-section-grid > .wide,
+  .form-optional-fields.wide {
+    grid-column: 1;
+  }
+
+  .form-section,
+  .form-optional-fields {
+    grid-column: 1;
+    padding: 12px;
+    border-radius: 13px;
+  }
+
+  .form-optional-fields {
+    padding: 0;
+  }
+
+  .form-optional-fields > summary small {
+    display: none;
+  }
+
+  .ui-form-modal > form > .button[type='submit']:last-child {
+    position: absolute;
+    z-index: 5;
+    right: 16px;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: 16px;
+    width: auto;
+    min-height: 50px;
+    justify-self: stretch;
+    margin: 0;
+    box-shadow:
+      0 -12px 0 12px #fff,
+      0 8px 22px rgba(20, 65, 120, 0.18);
+  }
+
+  .ui-form-modal > .office-event-form > footer {
+    position: absolute;
+    z-index: 5;
+    right: 16px;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: 16px;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    box-shadow: 0 -12px 0 12px #fff;
+  }
+
+  .ui-form-modal input,
+  .ui-form-modal select,
+  .ui-form-modal textarea {
+    scroll-margin-block: 90px;
+  }
+
+  .office-todo-summary {
+    gap: 7px;
+  }
+
+  .office-todo-summary article {
+    min-height: 86px;
+    display: grid;
+    gap: 7px;
+    padding: 10px;
+  }
+
+  .office-todo-summary article > span {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .office-todo-summary small {
+    font-size: 9px;
+  }
+  .office-todo-summary strong {
+    font-size: 16px;
+  }
+  .office-todo-toolbar {
+    align-items: flex-start;
+  }
+  .office-todo-list {
+    padding: 2px 12px 12px;
+  }
+  .office-todo-list article {
+    grid-template-columns: 34px minmax(0, 1fr) 36px 36px;
+    gap: 8px;
+    padding: 11px 0;
+  }
+  .office-todo-list article > div {
+    grid-column: 2 / -1;
+  }
+  .office-todo-priority {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .office-todo-list time {
+    grid-column: 2;
+  }
+  .office-todo-list .local-row-action {
+    grid-column: 3;
+    grid-row: 2 / 4;
+  }
+  .office-todo-list .local-delete {
+    grid-column: 4;
+    grid-row: 2 / 4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-form-modal {
+    animation: none !important;
+  }
+}
+
+/* Record form refinement: one readable two-column system for clients,
+   projects and expenses, with the same hierarchy in create and edit flows. */
+.ui-form-modal > .local-client-form,
+.ui-form-modal > .local-entry-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px 20px 20px;
+  background: #fff;
+}
+
+.ui-form-modal > .local-client-form > .form-section,
+.ui-form-modal > .local-entry-form > .form-section,
+.ui-form-modal > .local-entry-form > .local-modal-actions {
+  grid-column: 1 / -1;
+}
+
+.client-details-section .wide {
+  grid-column: 1 / -1;
+}
+
+.client-details-section .wide select {
+  max-width: calc(50% - 6px);
+}
+
+.local-rate-preview.compact {
+  min-height: var(--ui-control-height);
+  align-content: center;
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid #d8e7f8;
+  border-radius: var(--ui-control-radius);
+  background: #edf5ff;
+}
+
+.local-rate-preview.compact small,
+.local-rate-preview.compact strong,
+.local-rate-preview.compact span {
+  display: block;
+}
+
+.local-rate-preview.compact small {
+  color: #637890;
+  font-size: 10px;
+}
+
+.local-rate-preview.compact strong {
+  margin-top: 2px;
+  color: #173b68;
+  font-size: 13px;
+}
+
+.local-rate-preview.compact span {
+  margin-top: 2px;
+  color: #52749a;
+  font-size: 9.5px;
+}
+
+.local-project-edit-modal .local-project-editor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 14px;
+  padding: 18px 20px 20px !important;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.local-project-edit-modal .local-project-editor > .form-section,
+.local-project-edit-modal .local-project-editor > .local-modal-actions {
+  grid-column: 1 / -1;
+}
+
+.local-project-edit-modal .form-section label > span {
+  margin-bottom: 6px;
+  color: #52677f;
+  font-size: var(--ui-font-label);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.local-project-edit-modal .form-section input,
+.local-project-edit-modal .form-section select {
+  min-height: var(--ui-control-height);
+  height: var(--ui-control-height);
+  padding: 0 12px;
+  border: 1px solid #d7e1ec;
+  border-radius: var(--ui-control-radius);
+  font-size: var(--ui-font-form-control);
+}
+
+.local-project-edit-modal .form-section textarea {
+  min-height: 84px;
+  padding: 10px 12px;
+  border: 1px solid #d7e1ec;
+  border-radius: var(--ui-control-radius);
+  font-size: var(--ui-font-form-control);
+}
+
+.local-project-edit-modal .local-project-editor-amount > div {
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.local-project-edit-summary {
+  min-height: 66px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px 14px;
+  border: 1px solid #cfe0f3;
+  border-radius: 13px;
+  background: #edf5ff;
+}
+
+.local-project-edit-summary span {
+  color: #657b94;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.local-project-edit-summary strong {
+  margin-top: 2px;
+  color: #173b68;
+  font-size: 17px;
+}
+
+.local-project-edit-modal .local-modal-actions,
+.modal-project-form .local-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0;
+  padding-top: 2px;
+  background: #fff;
+}
+
+.local-project-edit-modal .project-recurring-switch {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.local-project-edit-modal .project-recurring-switch input[type='checkbox'] {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  min-height: 18px;
+  margin: 0;
+  padding: 0;
+}
+
+.local-project-edit-modal .project-recurring-switch > span {
+  margin: 0;
+  font-size: 11px;
+}
+
+.local-project-edit-modal .local-modal-actions {
+  position: sticky;
+  z-index: 4;
+  bottom: 24px;
+  margin-inline: -20px;
+  padding: 12px 20px max(16px, env(safe-area-inset-bottom));
+  border-top: 1px solid #e7edf4;
+  box-shadow: 0 -10px 22px rgba(28, 50, 80, 0.06);
+}
+
+@media (min-width: 721px) {
+  .local-nav {
+    padding-block: 6px 8px;
+  }
+
+  .local-nav-group + .local-nav-group {
+    margin-top: 3px;
+  }
+
+  .local-nav .local-nav-group-toggle {
+    min-height: 22px;
+    padding-block: 2px;
+  }
+
+  .local-nav button:not(.local-nav-group-toggle) {
+    min-height: 35px;
+    padding-block: 6px;
+  }
+}
+
+@media (max-width: 720px) {
+  .ui-form-modal > .local-client-form,
+  .ui-form-modal > .local-entry-form,
+  .local-project-edit-modal .local-project-editor {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px 16px max(92px, calc(78px + env(safe-area-inset-bottom))) !important;
+  }
+
+  .client-details-section .wide select {
+    max-width: none;
+  }
+
+  .local-project-edit-modal .local-project-editor > .form-section,
+  .local-project-edit-modal .local-project-editor > .local-project-edit-summary,
+  .local-project-edit-modal .local-project-editor > .local-modal-actions {
+    grid-column: 1;
+  }
+
+  .local-project-edit-modal .local-modal-actions,
+  .modal-project-form .local-modal-actions {
+    position: absolute;
+    z-index: 5;
+    right: 16px;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: 16px;
+    margin-inline: 0;
+    padding: 0;
+    box-shadow: 0 -12px 0 12px #fff;
+  }
+
+  .local-project-edit-modal .local-modal-actions .button-primary,
+  .modal-project-form .local-modal-actions .button-primary {
+    flex: 1 1 auto;
+    min-height: 50px;
+  }
+
+  .local-project-edit-modal .local-modal-actions .button-outline,
+  .modal-project-form .local-modal-actions .button-outline {
+    min-height: 50px;
+  }
+}
