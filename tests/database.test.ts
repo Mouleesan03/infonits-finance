@@ -31,8 +31,13 @@ beforeAll(async () => {
   await db.exec(migration);
   await db.exec(readFileSync('supabase/migrations/202610110001_foreign_key_indexes.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/202610110002_pin_only_auth.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/202610090001_local_workspace_sync.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/202610120001_agent_leads.sql', 'utf8'));
   await db.exec(
     `insert into auth.users values('${editor}'),('${admin}'),('${other}'),('${outsider}');insert into public.profiles(id,role,organization_id) values('${editor}','editor','${org}'),('${admin}','admin','${org}'),('${other}','editor','${otherOrg}');`,
+  );
+  await db.exec(
+    `insert into public.local_workspaces(user_id,data) values('${editor}','{"finance":{"rows":[]}}');insert into public.agent_leads(organization_id,email,message) values('${org}','lead@example.test','Test lead'),('${otherOrg}','other@example.test','Other tenant lead');`,
   );
   await identity(editor);
   clientId = (await one("insert into clients(name) values('Test Client') returning id")).id;
@@ -57,7 +62,7 @@ describe('PostgreSQL financial integration', () => {
     const row = await one(
       "select count(*)::text as count from pg_tables where schemaname='public' and rowsecurity",
     );
-    expect(row.count).toBe('9');
+    expect(row.count).toBe('11');
     const view = await one(
       "select reloptions::text as options from pg_class where relname='project_financials'",
     );
@@ -287,6 +292,34 @@ describe('PostgreSQL security boundaries', () => {
     await expect(
       db.query("insert into clients(name,organization_id) values('Intrusion',$1)", [org]),
     ).rejects.toThrow(/row-level security/);
+  });
+  it('isolates cloud snapshots by authenticated user', async () => {
+    await identity(editor);
+    expect((await db.query('select * from local_workspaces')).rows).toHaveLength(1);
+    await identity(other);
+    expect((await db.query('select * from local_workspaces')).rows).toHaveLength(0);
+    await expect(
+      db.query('insert into local_workspaces(user_id,data) values($1,$2)', [
+        editor,
+        JSON.stringify({ injected: true }),
+      ]),
+    ).rejects.toThrow(/row-level security/);
+  });
+  it('allows tenant-scoped lead reads and updates but no browser inserts', async () => {
+    await identity(editor);
+    const leads = await db.query<{ id: string; status: string }>(
+      'select id,status from agent_leads',
+    );
+    expect(leads.rows).toHaveLength(1);
+    expect(leads.rows[0].status).toBe('New');
+    await db.query("update agent_leads set status='Contacted' where id=$1", [leads.rows[0].id]);
+    await expect(
+      db.query("insert into agent_leads(organization_id,email) values($1,'blocked@example.test')", [
+        org,
+      ]),
+    ).rejects.toThrow(/permission denied/);
+    await identity(other);
+    expect((await db.query('select * from agent_leads')).rows).toHaveLength(1);
   });
   it('revokes access immediately when membership becomes inactive', async () => {
     await db.exec(`reset role;update profiles set active=false where id='${other}';`);

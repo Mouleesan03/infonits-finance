@@ -237,6 +237,13 @@ export async function POST(request: Request) {
       sources: sources
         .filter((source) => source.sourceType === 'url')
         .map((source) => ({ title: source.title || source.url, url: source.url }))
+        .filter((source) => {
+          try {
+            return ['http:', 'https:'].includes(new URL(source.url).protocol);
+          } catch {
+            return false;
+          }
+        })
         .filter(
           (source, index, list) => list.findIndex((item) => item.url === source.url) === index,
         )

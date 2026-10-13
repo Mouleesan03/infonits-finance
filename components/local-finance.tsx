@@ -1494,54 +1494,27 @@ export function LocalFinance() {
                 <button onClick={exportCsv} className="button button-outline">
                   <Download size={16} /> Export
                 </button>
-                <button
-                  className="button button-primary"
-                  onClick={() => setProjectFormOpen((open) => !open)}
-                >
-                  {projectFormOpen ? <X size={16} /> : <Plus size={16} />}
-                  {projectFormOpen ? 'Close' : 'Add project'}
+                <button className="button button-primary" onClick={() => setProjectFormOpen(true)}>
+                  <Plus size={16} /> Add project
                 </button>
               </PageHeading>
               {projectFormOpen && (
-                <div
-                  className="local-modal-layer"
-                  role="presentation"
-                  onMouseDown={() => setProjectFormOpen(false)}
+                <FormModal
+                  title="Add project"
+                  subtitle="Keep project value, client and currency in one clear record."
+                  icon={<BriefcaseBusiness size={19} />}
+                  className="local-project-modal"
+                  onClose={() => setProjectFormOpen(false)}
                 >
-                  <section
-                    className="local-modal local-project-modal"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="new-project-title"
-                    onMouseDown={(event) => event.stopPropagation()}
-                  >
-                    <header>
-                      <div>
-                        <span className="local-modal-icon">
-                          <BriefcaseBusiness size={19} />
-                        </span>
-                        <div>
-                          <h2 id="new-project-title">Add project</h2>
-                          <p>Keep project value, client and currency in one clear record.</p>
-                        </div>
-                      </div>
-                      <button
-                        aria-label="Close project form"
-                        onClick={() => setProjectFormOpen(false)}
-                      >
-                        <X size={19} />
-                      </button>
-                    </header>
-                    <ProjectForm
-                      draft={projectDraft}
-                      setDraft={setProjectDraft}
-                      clients={clients}
-                      rates={fxRates}
-                      onSubmit={addProject}
-                      onCancel={() => setProjectFormOpen(false)}
-                    />
-                  </section>
-                </div>
+                  <ProjectForm
+                    draft={projectDraft}
+                    setDraft={setProjectDraft}
+                    clients={clients}
+                    rates={fxRates}
+                    onSubmit={addProject}
+                    onCancel={() => setProjectFormOpen(false)}
+                  />
+                </FormModal>
               )}
               <section className="local-sheet-card">
                 <div className="local-sheet-toolbar">
@@ -1581,12 +1554,8 @@ export function LocalFinance() {
                 title="Clients"
                 subtitle="Keep client contacts connected to their projects."
               >
-                <button
-                  className="button button-primary"
-                  onClick={() => setClientFormOpen((open) => !open)}
-                >
-                  {clientFormOpen ? <X size={16} /> : <UserPlus size={16} />}
-                  {clientFormOpen ? 'Close' : 'Add client'}
+                <button className="button button-primary" onClick={() => setClientFormOpen(true)}>
+                  <UserPlus size={16} /> Add client
                 </button>
               </PageHeading>
               {clientFormOpen && (
@@ -1628,12 +1597,8 @@ export function LocalFinance() {
                 title="Expenses"
                 subtitle="Track operating costs separately from project work costs."
               >
-                <button
-                  className="button button-primary"
-                  onClick={() => setExpenseFormOpen((open) => !open)}
-                >
-                  {expenseFormOpen ? <X size={16} /> : <Plus size={16} />}
-                  {expenseFormOpen ? 'Close' : 'Add expense'}
+                <button className="button button-primary" onClick={() => setExpenseFormOpen(true)}>
+                  <Plus size={16} /> Add expense
                 </button>
               </PageHeading>
               {expenseFormOpen && (
@@ -3304,7 +3269,17 @@ function ClientForm({
           </span>
           <input
             required={field === 'name'}
-            type={field === 'email' ? 'email' : 'text'}
+            type={field === 'email' ? 'email' : field === 'phone' ? 'tel' : 'text'}
+            autoComplete={
+              field === 'name'
+                ? 'name'
+                : field === 'company'
+                  ? 'organization'
+                  : field === 'email'
+                    ? 'email'
+                    : 'tel'
+            }
+            inputMode={field === 'email' ? 'email' : field === 'phone' ? 'tel' : undefined}
             value={draft[field]}
             onChange={(event) => setDraft({ ...draft, [field]: event.target.value })}
             placeholder={
@@ -3322,6 +3297,7 @@ function ClientForm({
       <label>
         <span>Country</span>
         <select
+          autoComplete="country-name"
           value={draft.country}
           onChange={(event) => setDraft({ ...draft, country: event.target.value })}
         >

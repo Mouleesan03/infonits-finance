@@ -11,7 +11,14 @@ const leadSchema = z
     phone: z.string().trim().max(80).default(''),
     message: z.string().trim().max(5000).default(''),
     source: z.string().trim().max(160).default('infonits.io agent'),
-    pageUrl: z.union([z.url(), z.literal('')]).default(''),
+    pageUrl: z
+      .union([
+        z.url().refine((value) => ['http:', 'https:'].includes(new URL(value).protocol), {
+          message: 'Page URL must use HTTP or HTTPS.',
+        }),
+        z.literal(''),
+      ])
+      .default(''),
     metadata: z.record(z.string(), z.unknown()).default({}),
   })
   .refine((lead) => Boolean(lead.email || lead.phone), {

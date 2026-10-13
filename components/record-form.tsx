@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { useForm, type FieldValues } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import { Dialog } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Select } from './ui/select';
+import { Textarea } from './ui/textarea';
 import { currencies, type TableName, validateRecord } from '@/lib/schemas';
 import { convert, today, d } from '@/lib/finance';
 import type { Ledger, Row } from '@/lib/types';
@@ -87,17 +88,25 @@ export function RecordForm({
   const selectedCost = ledger.project_costs.find((c) => c.id === watch('cost_id'));
   const monetary = !['clients', 'exchange_rates'].includes(table);
   const payment = ['client_payments', 'project_cost_payments'].includes(table);
-  const input = (key: string, label: string, type = 'text', hint?: string) => (
-    <label className="field" key={key}>
+  const input = (
+    key: string,
+    label: string,
+    type = 'text',
+    hint?: string,
+    attributes: ComponentProps<typeof Input> = {},
+  ) => (
+    <label className={`field record-field record-field-${key}`} key={key}>
       <span>{label}</span>
       <Input
         {...register(key)}
         type={type}
         step={type === 'number' ? 'any' : undefined}
         aria-invalid={!!errors[key]}
+        aria-describedby={hint ? `${table}-${key}-hint` : undefined}
         placeholder={key.includes('amount') ? '0.00' : undefined}
+        {...attributes}
       />
-      {hint && <small>{hint}</small>}
+      {hint && <small id={`${table}-${key}-hint`}>{hint}</small>}
       {errors[key] && <small className="field-error">{String(errors[key]?.message)}</small>}
     </label>
   );
@@ -185,7 +194,7 @@ export function RecordForm({
           : 'Keep your records clear, accurate and easy to find.'
       }
     >
-      <form onSubmit={handleSubmit(save)}>
+      <form className="record-form" data-record-table={table} onSubmit={handleSubmit(save)}>
         {!configured && (
           <div className="notice">
             <Info size={16} />
@@ -195,11 +204,24 @@ export function RecordForm({
         <div className="form-grid">
           {table === 'clients' && (
             <>
-              {input('name', 'Client name')}
-              {input('company', 'Company')}
-              {input('country', 'Country')}
-              {input('email', 'Email', 'email')}
-              {input('phone', 'Phone / WhatsApp')}
+              {input('name', 'Client name', 'text', undefined, {
+                autoComplete: 'name',
+                autoFocus: true,
+              })}
+              {input('company', 'Company', 'text', undefined, {
+                autoComplete: 'organization',
+              })}
+              {input('country', 'Country', 'text', undefined, {
+                autoComplete: 'country-name',
+              })}
+              {input('email', 'Email', 'email', undefined, {
+                autoComplete: 'email',
+                inputMode: 'email',
+              })}
+              {input('phone', 'Phone / WhatsApp', 'tel', undefined, {
+                autoComplete: 'tel',
+                inputMode: 'tel',
+              })}
             </>
           )}
           {table === 'projects' && (
@@ -324,7 +346,7 @@ export function RecordForm({
             <span>
               Notes <small>Optional</small>
             </span>
-            <textarea {...register('notes')} rows={3} placeholder="Add a little context…" />
+            <Textarea {...register('notes')} rows={3} placeholder="Add a little context…" />
           </label>
         </div>
         {monetary && (

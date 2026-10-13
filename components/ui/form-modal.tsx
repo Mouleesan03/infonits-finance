@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -16,37 +17,33 @@ type FormModalProps = {
 export function FormModal({ title, subtitle, icon, className, children, onClose }: FormModalProps) {
   const titleId = React.useId();
 
-  React.useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
-
   return (
-    <div className="local-modal-layer" role="presentation" onMouseDown={onClose}>
-      <section
-        className={cn('local-modal ui-form-modal', className)}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header>
-          <div>
-            {icon ? <span className="local-modal-icon">{icon}</span> : null}
+    <DialogPrimitive.Root open onOpenChange={(open) => !open && onClose()}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="local-modal-layer" />
+        <DialogPrimitive.Content
+          className={cn('local-modal ui-form-modal', className)}
+          aria-labelledby={titleId}
+        >
+          <header>
             <div>
-              <h2 id={titleId}>{title}</h2>
-              {subtitle ? <p>{subtitle}</p> : null}
+              {icon ? <span className="local-modal-icon">{icon}</span> : null}
+              <div>
+                <DialogPrimitive.Title id={titleId}>{title}</DialogPrimitive.Title>
+                {subtitle ? (
+                  <DialogPrimitive.Description>{subtitle}</DialogPrimitive.Description>
+                ) : null}
+              </div>
             </div>
-          </div>
-          <button type="button" aria-label={`Close ${title}`} onClick={onClose}>
-            <X size={19} />
-          </button>
-        </header>
-        {children}
-      </section>
-    </div>
+            <DialogPrimitive.Close asChild>
+              <button type="button" aria-label={`Close ${title}`}>
+                <X size={19} />
+              </button>
+            </DialogPrimitive.Close>
+          </header>
+          {children}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }

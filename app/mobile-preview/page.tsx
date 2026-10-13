@@ -5,13 +5,18 @@ import { MonitorSmartphone, RotateCcw, Smartphone } from 'lucide-react';
 import { Select } from '@/components/ui/select';
 
 const devices = [
+  { label: 'Compact mobile', width: 320, height: 568 },
+  { label: 'Small Android', width: 360, height: 800 },
   { label: 'iPhone SE', width: 375, height: 667 },
   { label: 'iPhone 14', width: 390, height: 844 },
   { label: 'iPhone Pro Max', width: 430, height: 932 },
+  { label: 'Tablet portrait', width: 768, height: 1024 },
+  { label: 'Compact desktop', width: 1024, height: 768 },
+  { label: 'Desktop', width: 1440, height: 900 },
 ] as const;
 
 export default function MobilePreviewPage() {
-  const [deviceIndex, setDeviceIndex] = useState(1);
+  const [deviceIndex, setDeviceIndex] = useState(3);
   const [portrait, setPortrait] = useState(true);
   const [frameKey, setFrameKey] = useState(0);
   const device = devices[deviceIndex];
