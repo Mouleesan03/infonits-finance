@@ -1427,7 +1427,7 @@ export function LocalFinance() {
               onClick={() => changeSection('renewals')}
             >
               <Globe2 size={19} />
-              <span>Renewals</span>
+              <span>Website care</span>
             </button>
             <button
               className={section === 'documents' ? 'active' : ''}
@@ -1478,7 +1478,7 @@ export function LocalFinance() {
                       <small>
                         {notificationTab === 'today'
                           ? 'Tasks, follow-ups and overdue invoices'
-                          : 'Invoices, events and renewals'}
+                          : 'Invoices, events and website care'}
                       </small>
                     </div>
                     {notificationTab === 'notifications' && unreadNotifications > 0 && (
