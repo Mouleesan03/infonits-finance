@@ -18860,3 +18860,230 @@ summary:focus-visible {
     margin-inline: 20px;
   }
 }
+
+/* Search controls own the focus treatment so the nested input never draws a second ring. */
+.office-search {
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease;
+}
+.office-search:focus-within {
+  border-color: #3284e7;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgb(38 126 230 / 13%);
+}
+.office-search input:focus,
+.office-search input:focus-visible {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+.office-search input {
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none !important;
+}
+
+/* Keep invoice KPI symbols visible and make every symbol match its business meaning. */
+.invoice-kpis .invoice-kpi-icon {
+  display: grid;
+}
+
+/* Notification switcher: compact segmented tabs with a clear selected state. */
+.local-notification-panel {
+  width: min(400px, calc(100vw - 28px));
+  border-color: #d4dfec;
+  border-radius: 18px;
+  box-shadow: 0 24px 64px rgb(20 44 74 / 22%);
+}
+.local-notification-panel > header {
+  padding: 17px 18px 13px;
+  border-bottom: 0;
+}
+.local-notification-panel header strong {
+  font-size: 14px;
+}
+.local-notification-tabs {
+  gap: 4px;
+  margin: 0 12px 9px;
+  padding: 4px !important;
+  border: 1px solid #e0e8f1;
+  border-radius: 12px;
+  background: #f1f5fa;
+}
+.local-notification-panel > .local-notification-tabs > button {
+  width: auto;
+  min-height: 38px;
+  grid-template-columns: auto auto auto;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 0;
+  border-bottom: 0;
+  border-radius: 9px;
+  color: #60748d;
+}
+.local-notification-panel > .local-notification-tabs > button:hover {
+  background: rgb(255 255 255 / 58%);
+}
+.local-notification-panel > .local-notification-tabs > button.active {
+  color: #1768bd;
+  background: #fff;
+  box-shadow: 0 3px 10px rgb(28 61 99 / 10%);
+}
+.local-notification-tabs b {
+  min-width: 21px;
+  height: 21px;
+  padding-inline: 6px;
+  background: #dfeaf7;
+}
+.local-notification-tabs > button.active b {
+  color: #fff;
+  background: #267ee6;
+}
+.local-notification-panel > div:not(.local-notification-tabs) > button {
+  grid-template-columns: 10px minmax(0, 1fr);
+  padding: 14px 18px;
+}
+
+/* Website care combines health, access references and renewal dates without storing passwords. */
+.website-care-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.website-care-kpis article {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 70px;
+  padding: 12px 14px;
+  border: 1px solid #dfe7f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 7px 22px rgb(31 56 88 / 5%);
+}
+.website-care-kpis article > svg {
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  border-radius: 10px;
+  background: #eaf3ff;
+  color: #2779d4;
+}
+.website-care-kpis article.online > svg {
+  background: #e6f8ef;
+  color: #16855f;
+}
+.website-care-kpis article.attention > svg {
+  background: #ffe9e9;
+  color: #d3474f;
+}
+.website-care-kpis article.renewal > svg {
+  background: #fff3d9;
+  color: #b67108;
+}
+.website-care-kpis span {
+  color: #667991;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.website-care-kpis strong {
+  color: #18324f;
+  font-size: 20px;
+}
+.office-renewal-panel .office-table {
+  min-width: 980px;
+}
+.office-renewal-panel .office-table td {
+  vertical-align: top;
+}
+.office-renewal-panel .office-table td > strong,
+.office-renewal-panel .office-table td > small,
+.office-renewal-panel .office-table td > a {
+  display: block;
+}
+.office-renewal-panel .office-table td > small {
+  max-width: 240px;
+  margin-top: 4px;
+  color: #71839a;
+  line-height: 1.45;
+}
+.office-renewal-url {
+  max-width: 250px;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.office-site-status {
+  width: max-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #edf2f7;
+  color: #5c6f86;
+  font-size: 10px;
+  font-weight: 800;
+}
+.office-site-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.office-site-status.online {
+  background: #e5f8ef;
+  color: #11845c;
+}
+.office-site-status.issue {
+  background: #fff3d9;
+  color: #b66c00;
+}
+.office-site-status.offline {
+  background: #ffe8e9;
+  color: #cf3e47;
+}
+.office-site-status.maintenance {
+  background: #e9f2ff;
+  color: #246fca;
+}
+
+@media (max-width: 720px) {
+  .local-notification-panel {
+    top: calc(100% + 8px);
+    left: auto;
+    right: -44px;
+    width: min(400px, calc(100vw - 20px));
+  }
+  .office-renewal-panel td[data-label='Website'],
+  .office-renewal-panel td[data-label='Providers'] {
+    grid-column: 1 / -1 !important;
+  }
+  .office-renewal-panel td[data-label='Domain expiry'],
+  .office-renewal-panel td[data-label='Hosting expiry'] {
+    border-bottom: 0 !important;
+  }
+  .office-renewal-panel td.office-row-actions {
+    grid-column: 1 / -1 !important;
+    grid-row: auto;
+  }
+  .website-care-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .website-care-kpis article {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    min-height: 64px;
+    padding: 10px;
+  }
+  .website-care-kpis article > svg {
+    width: 32px;
+    height: 32px;
+  }
+}

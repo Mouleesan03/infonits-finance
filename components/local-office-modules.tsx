@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  AlertCircle,
   AlertTriangle,
   CalendarDays,
   Camera,
@@ -12,7 +11,6 @@ import {
   ChevronRight,
   CircleDollarSign,
   Clock3,
-  Coins,
   Download,
   Eye,
   FileDown,
@@ -29,6 +27,7 @@ import {
   PieChart,
   Plus,
   Printer,
+  ReceiptText,
   Repeat2,
   Search,
   Send,
@@ -76,6 +75,8 @@ type ProjectRef = {
   value: number;
   currency: string;
   exchangeRate: number;
+  note?: string;
+  discount?: number;
   advance: number;
   workDue: number;
   workPaid: number;
@@ -151,6 +152,12 @@ type Renewal = {
   websiteUrl: string;
   domainLogin?: string;
   serverLogin?: string;
+  domainProvider?: string;
+  hostingProvider?: string;
+  hostingPlan?: string;
+  siteStatus?: 'Unknown' | 'Online' | 'Issue' | 'Offline' | 'Maintenance';
+  lastChecked?: string;
+  notes?: string;
   domainDue: string;
   hostingDue: string;
 };
@@ -1042,6 +1049,24 @@ function SalesDocuments({
   const clientDetails = new Map(clients.map((client) => [client.id, client]));
   const projectNames = new Map(projects.map((project) => [project.id, project.project]));
 
+  function applyProject(projectId: string) {
+    const project = projects.find((item) => item.id === projectId);
+    setDraft((current) =>
+      project
+        ? {
+            ...current,
+            projectId,
+            clientId: project.clientId || current.clientId,
+            amount: String(project.value),
+            currency: project.currency,
+            description: project.note ?? '',
+            discount: String(project.discount ?? 0),
+            advance: String(project.advance ?? 0),
+          }
+        : { ...current, projectId },
+    );
+  }
+
   useEffect(() => {
     if (kind !== 'Invoice') return;
     try {
@@ -1471,7 +1496,7 @@ function SalesDocuments({
           <section className="invoice-kpis" aria-label="Invoice totals">
             <article className="blue">
               <span className="invoice-kpi-icon">
-                <FileText size={20} />
+                <ReceiptText size={20} />
               </span>
               <div className="invoice-kpi-copy">
                 <span>Total invoices</span>
@@ -1487,7 +1512,7 @@ function SalesDocuments({
             </article>
             <article className="amber">
               <span className="invoice-kpi-icon">
-                <Coins size={20} />
+                <CircleDollarSign size={20} />
               </span>
               <div className="invoice-kpi-copy">
                 <span>Total billed</span>
@@ -1535,7 +1560,7 @@ function SalesDocuments({
             </article>
             <article className="purple">
               <span className="invoice-kpi-icon">
-                <AlertCircle size={20} />
+                <AlertTriangle size={20} />
               </span>
               <div className="invoice-kpi-copy">
                 <span>Overdue</span>
@@ -1605,10 +1630,7 @@ function SalesDocuments({
                 </label>
                 <label>
                   <span>Project</span>
-                  <select
-                    value={draft.projectId}
-                    onChange={(e) => setDraft({ ...draft, projectId: e.target.value })}
-                  >
+                  <select value={draft.projectId} onChange={(e) => applyProject(e.target.value)}>
                     <option value="">No project</option>
                     {projects.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -1616,6 +1638,11 @@ function SalesDocuments({
                       </option>
                     ))}
                   </select>
+                  {draft.projectId ? (
+                    <small>
+                      Amount, description, discount and advance filled from the project.
+                    </small>
+                  ) : null}
                 </label>
                 <label>
                   <span>Issue date</span>
@@ -3690,6 +3717,12 @@ function RenewalsModule({
     websiteUrl: '',
     domainLogin: '',
     serverLogin: '',
+    domainProvider: '',
+    hostingProvider: '',
+    hostingPlan: '',
+    siteStatus: 'Unknown' as NonNullable<Renewal['siteStatus']>,
+    lastChecked: '',
+    notes: '',
     domainDue: '',
     hostingDue: '',
   });
@@ -3701,6 +3734,10 @@ function RenewalsModule({
         new Date(d).getTime() - Date.now() < 31 * 86400000 &&
         new Date(d).getTime() >= Date.now(),
     ),
+  ).length;
+  const online = items.filter((item) => item.siteStatus === 'Online').length;
+  const needsAttention = items.filter(
+    (item) => item.siteStatus === 'Issue' || item.siteStatus === 'Offline',
   ).length;
   const pageCount = Math.max(1, Math.ceil(items.length / 10));
   const safePage = Math.min(page, pageCount - 1);
@@ -3718,6 +3755,12 @@ function RenewalsModule({
       websiteUrl: '',
       domainLogin: '',
       serverLogin: '',
+      domainProvider: '',
+      hostingProvider: '',
+      hostingPlan: '',
+      siteStatus: 'Unknown',
+      lastChecked: '',
+      notes: '',
       domainDue: '',
       hostingDue: '',
     });
@@ -3731,6 +3774,12 @@ function RenewalsModule({
       websiteUrl: item.websiteUrl,
       domainLogin: item.domainLogin ?? '',
       serverLogin: item.serverLogin ?? '',
+      domainProvider: item.domainProvider ?? '',
+      hostingProvider: item.hostingProvider ?? '',
+      hostingPlan: item.hostingPlan ?? '',
+      siteStatus: item.siteStatus ?? 'Unknown',
+      lastChecked: item.lastChecked ?? '',
+      notes: item.notes ?? '',
       domainDue: item.domainDue,
       hostingDue: item.hostingDue,
     });
@@ -3742,17 +3791,39 @@ function RenewalsModule({
     <>
       <ModuleHeader
         eyebrow="ADMIN"
-        title="Renewals"
-        subtitle="Keep renewal dates and non-secret login identifiers together. Passwords are never stored here."
-        action="Add renewal"
+        title="Website care"
+        subtitle="Track WordPress sites, current health, domain and hosting renewals in one place."
+        action="Add website"
         onAction={() => setFormOpen(!formOpen)}
       >
         <span className="office-due-chip">{soon} due soon</span>
       </ModuleHeader>
+      <section className="website-care-kpis" aria-label="Website care overview">
+        <article>
+          <Globe2 size={19} />
+          <span>Total websites</span>
+          <strong>{items.length}</strong>
+        </article>
+        <article className="online">
+          <CheckCircle2 size={19} />
+          <span>Online</span>
+          <strong>{online}</strong>
+        </article>
+        <article className="attention">
+          <AlertTriangle size={19} />
+          <span>Need attention</span>
+          <strong>{needsAttention}</strong>
+        </article>
+        <article className="renewal">
+          <CalendarDays size={19} />
+          <span>Due within 30 days</span>
+          <strong>{soon}</strong>
+        </article>
+      </section>
       {formOpen && (
         <FormModal
-          title={`${editingId ? 'Edit' : 'Add'} renewal`}
-          subtitle="Track domain and hosting renewal details."
+          title={`${editingId ? 'Edit' : 'Add'} website`}
+          subtitle="Save website care and renewal details. Passwords are never stored here."
           icon={<Globe2 size={19} />}
           onClose={() => setFormOpen(false)}
         >
@@ -3799,6 +3870,56 @@ function RenewalsModule({
               />
             </label>
             <label>
+              <span>Current status</span>
+              <select
+                value={draft.siteStatus}
+                onChange={(event) =>
+                  setDraft({
+                    ...draft,
+                    siteStatus: event.target.value as NonNullable<Renewal['siteStatus']>,
+                  })
+                }
+              >
+                <option>Unknown</option>
+                <option>Online</option>
+                <option>Issue</option>
+                <option>Offline</option>
+                <option>Maintenance</option>
+              </select>
+            </label>
+            <label>
+              <span>Last checked</span>
+              <input
+                type="datetime-local"
+                value={draft.lastChecked}
+                onChange={(event) => setDraft({ ...draft, lastChecked: event.target.value })}
+              />
+            </label>
+            <label>
+              <span>Domain provider</span>
+              <input
+                placeholder="Cloudflare, Namecheap…"
+                value={draft.domainProvider}
+                onChange={(event) => setDraft({ ...draft, domainProvider: event.target.value })}
+              />
+            </label>
+            <label>
+              <span>Hosting provider</span>
+              <input
+                placeholder="Hostinger, cPanel…"
+                value={draft.hostingProvider}
+                onChange={(event) => setDraft({ ...draft, hostingProvider: event.target.value })}
+              />
+            </label>
+            <label className="wide">
+              <span>Hosting plan / server</span>
+              <input
+                placeholder="Plan, server region or account reference"
+                value={draft.hostingPlan}
+                onChange={(event) => setDraft({ ...draft, hostingPlan: event.target.value })}
+              />
+            </label>
+            <label>
               <span>Domain renewal</span>
               <input
                 type="date"
@@ -3814,9 +3935,18 @@ function RenewalsModule({
                 onChange={(e) => setDraft({ ...draft, hostingDue: e.target.value })}
               />
             </label>
+            <label className="wide">
+              <span>Care notes</span>
+              <textarea
+                rows={3}
+                placeholder="WordPress version, plugins, backup notes or known issues"
+                value={draft.notes}
+                onChange={(event) => setDraft({ ...draft, notes: event.target.value })}
+              />
+            </label>
             <button className="button button-primary" type="submit">
               <Check size={16} />
-              {editingId ? 'Update' : 'Save'} renewal
+              {editingId ? 'Update' : 'Save'} website
             </button>
           </form>
         </FormModal>
@@ -3825,8 +3955,8 @@ function RenewalsModule({
         {!items.length ? (
           <Empty
             icon={<Globe2 size={25} />}
-            title="No renewals saved"
-            text="Add domain and hosting dates to get a clear reminder."
+            title="No websites saved"
+            text="Add a WordPress site to track health, domain and hosting details."
           />
         ) : (
           <div className="office-table-wrap">
@@ -3834,10 +3964,10 @@ function RenewalsModule({
               <thead>
                 <tr>
                   <th>Website</th>
-                  <th>Access IDs</th>
+                  <th>Status</th>
+                  <th>Providers</th>
                   <th>Domain</th>
                   <th>Hosting</th>
-                  <th>Link</th>
                   <th />
                 </tr>
               </thead>
@@ -3846,9 +3976,39 @@ function RenewalsModule({
                   <tr key={item.id}>
                     <td data-label="Website">
                       <strong>{item.website}</strong>
+                      {item.websiteUrl ? (
+                        <a
+                          className="office-link office-renewal-url"
+                          href={item.websiteUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {item.websiteUrl}
+                        </a>
+                      ) : null}
+                      {item.notes ? <small>{item.notes}</small> : null}
                     </td>
-                    <td data-label="Access IDs">
-                      <strong>{item.username || '—'}</strong>
+                    <td data-label="Status">
+                      <span
+                        className={`office-site-status ${(item.siteStatus ?? 'Unknown').toLowerCase()}`}
+                      >
+                        <i /> {item.siteStatus ?? 'Unknown'}
+                      </span>
+                      <small>
+                        {item.lastChecked
+                          ? `Checked ${item.lastChecked.replace('T', ' ')}`
+                          : 'Not checked yet'}
+                      </small>
+                    </td>
+                    <td data-label="Providers">
+                      <strong>{item.hostingProvider || item.domainProvider || '—'}</strong>
+                      {(item.hostingPlan || item.domainProvider || item.username) && (
+                        <small>
+                          {[item.domainProvider, item.hostingPlan, item.username]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </small>
+                      )}
                       {(item.domainLogin || item.serverLogin) && (
                         <small>
                           {item.domainLogin ? `Domain: ${item.domainLogin}` : ''}
@@ -3857,21 +4017,13 @@ function RenewalsModule({
                         </small>
                       )}
                     </td>
-                    <td data-label="Domain">{item.domainDue || '—'}</td>
-                    <td data-label="Hosting">{item.hostingDue || '—'}</td>
-                    <td data-label="Website link">
-                      {item.websiteUrl ? (
-                        <a
-                          className="office-link"
-                          href={item.websiteUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Open site
-                        </a>
-                      ) : (
-                        '—'
-                      )}
+                    <td data-label="Domain expiry">
+                      <strong>{item.domainDue || '—'}</strong>
+                      <small>{item.domainProvider || 'Provider not set'}</small>
+                    </td>
+                    <td data-label="Hosting expiry">
+                      <strong>{item.hostingDue || '—'}</strong>
+                      <small>{item.hostingProvider || 'Provider not set'}</small>
                     </td>
                     <td className="office-row-actions" data-label="Actions">
                       <button

@@ -96,6 +96,7 @@ type LocalRow = {
   currency: string;
   exchangeRate: number;
   note: string;
+  discount: number;
   advance: number;
   workDue: number;
   workPaid: number;
@@ -253,6 +254,7 @@ const emptyProject = {
   project: '',
   clientId: '',
   value: '',
+  discount: '',
   advance: '',
   currency: 'LKR',
   note: '',
@@ -417,6 +419,7 @@ export function LocalFinance() {
             currency: row.currency ?? 'LKR',
             exchangeRate: Number(row.exchangeRate) || 1,
             note: row.note ?? '',
+            discount: Number(row.discount) || 0,
             advance: Number(row.advance) || 0,
             workDue: Number(row.workDue) || 0,
             workPaid: Number(row.workPaid) || 0,
@@ -427,7 +430,13 @@ export function LocalFinance() {
             recurring: row.recurring ?? false,
           }))
           .filter(
-            (row) => row.project.trim() || row.value || row.advance || row.workDue || row.workPaid,
+            (row) =>
+              row.project.trim() ||
+              row.value ||
+              row.discount ||
+              row.advance ||
+              row.workDue ||
+              row.workPaid,
           ),
       );
       setClients(
@@ -842,11 +851,14 @@ export function LocalFinance() {
     event.preventDefault();
     const project = projectDraft.project.trim();
     const value = Number(projectDraft.value);
+    const discount = Number(projectDraft.discount || 0);
     const advance = Number(projectDraft.advance || 0);
     if (
       !project ||
       !Number.isFinite(value) ||
       value < 0 ||
+      !Number.isFinite(discount) ||
+      discount < 0 ||
       !Number.isFinite(advance) ||
       advance < 0
     )
@@ -860,6 +872,7 @@ export function LocalFinance() {
         currency: projectDraft.currency,
         exchangeRate: rateFor(projectDraft.currency),
         note: projectDraft.note.trim(),
+        discount,
         advance,
         workDue: 0,
         workPaid: 0,
@@ -991,6 +1004,7 @@ export function LocalFinance() {
           currency: action.currency,
           exchangeRate: rate(action.currency),
           note: action.note,
+          discount: 0,
           advance: 0,
           workDue: 0,
           workPaid: 0,
@@ -1140,6 +1154,9 @@ export function LocalFinance() {
         projectId: row.id,
         amount: String(row.value),
         currency: row.currency,
+        description: row.note,
+        discount: String(row.discount),
+        advance: String(row.advance),
         notes: preferences.showPaymentTerms ? preferences.paymentTerms : '',
         includeBankDetails: preferences.invoiceBankDefault,
         bankDetails: preferences.invoiceBankDefault ? preferences.bankDetails : '',
@@ -1485,7 +1502,7 @@ export function LocalFinance() {
                       className={notificationTab === 'notifications' ? 'active' : ''}
                       onClick={() => setNotificationTab('notifications')}
                     >
-                      Notifications <b>{unreadNotifications}</b>
+                      <Bell size={14} /> <span>Notifications</span> <b>{unreadNotifications}</b>
                     </button>
                     <button
                       type="button"
@@ -1494,7 +1511,8 @@ export function LocalFinance() {
                       className={notificationTab === 'today' ? 'active' : ''}
                       onClick={() => setNotificationTab('today')}
                     >
-                      Today <b>{todayNotifications.length}</b>
+                      <CalendarDays size={14} /> <span>Today</span>{' '}
+                      <b>{todayNotifications.length}</b>
                     </button>
                   </div>
                   <div>
@@ -3081,6 +3099,7 @@ function ProjectForm({
 }) {
   const rate = draft.currency === 'LKR' ? 1 : (rates[draft.currency] ?? 1);
   const projectValue = Number(draft.value || 0) * rate;
+  const discountValue = Number(draft.discount || 0) * rate;
   const advanceValue = Number(draft.advance || 0) * rate;
   return (
     <form className="local-entry-form modal-project-form" onSubmit={onSubmit}>
@@ -3157,6 +3176,17 @@ function ProjectForm({
               placeholder="0.00"
             />
           </label>
+          <label>
+            <span>Project discount</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={draft.discount}
+              onChange={(event) => setDraft({ ...draft, discount: event.target.value })}
+              placeholder="0.00"
+            />
+          </label>
           <label className="form-feature-field">
             <span>Advance payment</span>
             <input
@@ -3172,7 +3202,8 @@ function ProjectForm({
             <small>Converted project value</small>
             <strong>{money(projectValue)}</strong>
             <span>
-              Advance {money(advanceValue)} · 1 {draft.currency} = {rate.toFixed(4)} LKR
+              Discount {money(discountValue)} · Advance {money(advanceValue)} · 1 {draft.currency} ={' '}
+              {rate.toFixed(4)} LKR
             </span>
           </div>
           <label className="settings-switch project-recurring-switch wide">
@@ -3493,6 +3524,7 @@ function ProjectTable({
                           </label>
                           {(
                             [
+                              ['discount', 'Project discount'],
                               ['advance', 'Advance received'],
                               ['workDue', 'Work cost to pay'],
                               ['workPaid', 'Work cost paid'],
