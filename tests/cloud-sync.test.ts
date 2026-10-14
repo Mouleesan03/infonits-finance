@@ -42,4 +42,44 @@ describe('cloud workspace conflict resolution', () => {
 
     expect(resolveCloudSnapshot(remote, baseline, baseline)).toEqual(baseline);
   });
+
+  it('keeps a local deletion when the cloud copy is unchanged', () => {
+    const baseline = snapshot([
+      { id: '1', name: 'Keep' },
+      { id: '2', name: 'Delete me' },
+    ]);
+    const local = snapshot([{ id: '1', name: 'Keep' }]);
+
+    expect(resolveCloudSnapshot(baseline, local, baseline)).toEqual(local);
+  });
+
+  it('accepts a deletion made on another device when local data is unchanged', () => {
+    const baseline = snapshot([
+      { id: '1', name: 'Keep' },
+      { id: '2', name: 'Delete on phone' },
+    ]);
+    const remote = snapshot([{ id: '1', name: 'Keep' }]);
+
+    expect(resolveCloudSnapshot(remote, baseline, baseline)).toEqual(remote);
+  });
+
+  it('preserves independent edits to different records', () => {
+    const baseline = snapshot([
+      { id: '1', name: 'First' },
+      { id: '2', name: 'Second' },
+    ]);
+    const remote = snapshot([
+      { id: '1', name: 'Phone edit' },
+      { id: '2', name: 'Second' },
+    ]);
+    const local = snapshot([
+      { id: '1', name: 'First' },
+      { id: '2', name: 'Laptop edit' },
+    ]);
+
+    expect(resolveCloudSnapshot(remote, local, baseline).finance.rows).toEqual([
+      { id: '1', name: 'Phone edit' },
+      { id: '2', name: 'Laptop edit' },
+    ]);
+  });
 });

@@ -268,6 +268,20 @@ const compactMoney = (value: number) =>
   `LKR ${new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)}`;
 const lkr = (amount: number, rate: number) => amount * rate;
 const clientLabel = (client: ClientRef) => client.company.trim() || client.name;
+const clientColors = [
+  '#12b8b0',
+  '#ef4444',
+  '#8b5cf6',
+  '#f59e0b',
+  '#ec4899',
+  '#2563eb',
+  '#16a34a',
+  '#334155',
+];
+const clientColor = (clientId = '') => {
+  const hash = [...clientId].reduce((value, character) => value + character.charCodeAt(0), 0);
+  return clientColors[hash % clientColors.length];
+};
 const socialPlatform = (platform: string) => {
   const normalized = platform.toLowerCase();
   if (normalized === 'facebook') return 'Facebook';
@@ -723,6 +737,11 @@ function MonthCalendar({
                   title={`View ${event.title}`}
                   aria-label={`View ${event.title}`}
                   className={`office-calendar-event ${event.type.toLowerCase()}`}
+                  style={
+                    event.type === 'Post' && event.clientId
+                      ? { backgroundColor: clientColor(event.clientId), color: '#fff' }
+                      : undefined
+                  }
                   onClick={() => onEventClick?.(event)}
                 >
                   {compact ? '' : event.title}
@@ -791,7 +810,7 @@ function CalendarEventModal({
   };
   return (
     <FormModal
-      title={initialEvent ? 'Event details' : postMode ? 'Add posted update' : 'Add event'}
+      title={initialEvent?.id ? 'Event details' : postMode ? 'Add posted update' : 'Add event'}
       subtitle={
         readOnly
           ? 'This item is managed from its original invoice or renewal record.'
@@ -3150,6 +3169,7 @@ function PostsModule({
   const [calendarMonth, setCalendarMonth] = useState(thisMonth());
   const [eventDate, setEventDate] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [quickPostPlan, setQuickPostPlan] = useState<PostPlan | null>(null);
   const names = new Map(clients.map((client) => [client.id, clientLabel(client)]));
   const projectNames = new Map(projects.map((project) => [project.id, project.project]));
   const monthPlans = items.filter((item) => item.month === calendarMonth);
@@ -3201,6 +3221,20 @@ function PostsModule({
   const recordPageCount = Math.max(1, Math.ceil(postEvents.length / 10));
   const safeRecordPage = Math.min(recordPage, recordPageCount - 1);
   const pagePostEvents = postEvents.slice(safeRecordPage * 10, safeRecordPage * 10 + 10);
+  const eventDraft =
+    selectedEvent ??
+    (quickPostPlan && eventDate
+      ? {
+          id: '',
+          title: '',
+          date: eventDate,
+          type: 'Post',
+          clientId: quickPostPlan.clientId,
+          projectId: quickPostPlan.projectId,
+          platform: quickPostPlan.platform,
+          count: 1,
+        }
+      : undefined);
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -3232,7 +3266,14 @@ function PostsModule({
           }}
           aria-label="Post tracker month"
         />
-        <button className="button button-outline" onClick={() => setEventDate(defaultUpdateDate)}>
+        <button
+          className="button button-outline"
+          onClick={() => {
+            setSelectedEvent(null);
+            setQuickPostPlan(null);
+            setEventDate(defaultUpdateDate);
+          }}
+        >
           <Plus size={16} /> Add posted update
         </button>
       </ModuleHeader>
@@ -3385,6 +3426,7 @@ function PostsModule({
                     <th>Platform</th>
                     <th>Team</th>
                     <th>Posts</th>
+                    <th>Update</th>
                     <th />
                   </tr>
                 </thead>
@@ -3402,16 +3444,20 @@ function PostsModule({
                     return (
                       <tr key={item.id}>
                         <td data-label="Client">
-                          <strong>{names.get(item.clientId) || 'Unknown'}</strong>
+                          <strong className="office-post-client-name">
+                            <i style={{ backgroundColor: clientColor(item.clientId) }} />
+                            <span>{names.get(item.clientId) || 'Unknown'}</span>
+                          </strong>
                           <small>{projectNames.get(item.projectId) || 'No project'}</small>
                         </td>
                         <td data-label="Platform">
                           <span
-                            className="office-platform-icon"
+                            className={`office-platform-badge ${socialPlatform(item.platform).toLowerCase()}`}
                             aria-label={socialPlatform(item.platform)}
                             title={socialPlatform(item.platform)}
                           >
                             {platformIcon(item.platform)}
+                            <span>{socialPlatform(item.platform)}</span>
                           </span>
                         </td>
                         <td data-label="Team">
@@ -3447,6 +3493,19 @@ function PostsModule({
                           ) : (
                             <small>Not tracked</small>
                           )}
+                        </td>
+                        <td data-label="Update">
+                          <button
+                            type="button"
+                            className="office-post-update"
+                            onClick={() => {
+                              setSelectedEvent(null);
+                              setQuickPostPlan(item);
+                              setEventDate(defaultUpdateDate);
+                            }}
+                          >
+                            <Plus size={14} /> Add update
+                          </button>
                         </td>
                         <td className="office-row-actions">
                           <button
@@ -3486,10 +3545,12 @@ function PostsModule({
             events={postCalendarEvents}
             onDateClick={(date) => {
               setSelectedEvent(null);
+              setQuickPostPlan(null);
               setEventDate(date);
             }}
             onEventClick={(event) => {
               setSelectedEvent(event);
+              setQuickPostPlan(null);
               setEventDate(event.date);
             }}
             compact
@@ -3567,9 +3628,9 @@ function PostsModule({
 
       {eventDate && (
         <CalendarEventModal
-          key={`${selectedEvent?.id ?? 'new'}-${eventDate}`}
+          key={`${selectedEvent?.id ?? quickPostPlan?.id ?? 'new'}-${eventDate}`}
           initialDate={eventDate}
-          initialEvent={selectedEvent ?? undefined}
+          initialEvent={eventDraft}
           dateEvents={postCalendarEvents.filter((event) => event.date === eventDate)}
           readOnly={Boolean(
             selectedEvent && !events.some((event) => event.id === selectedEvent.id),
@@ -3581,6 +3642,7 @@ function PostsModule({
           onClose={() => {
             setEventDate(null);
             setSelectedEvent(null);
+            setQuickPostPlan(null);
           }}
           onSave={(event) => {
             onEventsChange(
@@ -3592,6 +3654,7 @@ function PostsModule({
             );
             setEventDate(null);
             setSelectedEvent(null);
+            setQuickPostPlan(null);
           }}
           onDelete={
             selectedEvent && events.some((event) => event.id === selectedEvent.id)
@@ -3599,6 +3662,7 @@ function PostsModule({
                   onEventsChange(events.filter((event) => event.id !== selectedEvent.id));
                   setEventDate(null);
                   setSelectedEvent(null);
+                  setQuickPostPlan(null);
                 }
               : undefined
           }
@@ -3954,7 +4018,7 @@ function LettersModule({
     const popup = window.open('', '_blank', 'width=800,height=900');
     if (!popup) return;
     popup.document.write(
-      `<html><head><title>${escapeHtml(item.subject)}</title><style>body{font-family:Arial;padding:70px;line-height:1.7;color:#172033}h1{color:#0d4070;font-size:24px}small{color:#667}</style></head><body><h1>Infonits</h1><small>${escapeHtml(item.date)}</small><h2>${escapeHtml(item.subject)}</h2><p>To: ${escapeHtml(item.client)}</p><p>${escapeHtml(item.body).replaceAll('\n', '<br>')}</p><br><p>Prepared by<br><strong>${escapeHtml(item.preparedBy)}</strong></p></body></html>`,
+      `<html><head><title>${escapeHtml(item.subject)}</title><style>@page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;line-height:1.7;color:#30445e}.brand{height:150px;display:flex;align-items:center;justify-content:space-between;padding:36px 54px;border-top:8px solid #267ee6;background:linear-gradient(120deg,#0f2544,#144d84);color:#fff}.brand img{width:190px}.brand div{text-align:right}.brand strong,.brand small{display:block}.brand strong{font-size:18px;letter-spacing:.08em}.brand small{margin-top:5px;color:#b9d3ed}.content{padding:48px 54px}.label{margin:0;color:#71849b;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.client{margin:2px 0 24px;color:#152f4d;font-size:20px}.subject{padding:17px 20px;border-radius:10px;background:#eff5fb}.subject h2{margin:2px 0 0;color:#183656;font-size:18px}.body{min-height:420px;padding:30px 2px}.footer{display:flex;justify-content:space-between;align-items:end;padding-top:18px;border-top:1px solid #dfe7ef}.footer strong{display:block;color:#223b57}.footer small{color:#7a8ba0}</style></head><body><header class="brand"><img src="/infonits-white-logo.png" alt="Infonits"><div><strong>SERVICE LETTER</strong><small>${escapeHtml(item.date)}</small></div></header><main class="content"><p class="label">Prepared for</p><h1 class="client">${escapeHtml(item.client)}</h1><section class="subject"><p class="label">Subject</p><h2>${escapeHtml(item.subject)}</h2></section><div class="body">${escapeHtml(item.body).replaceAll('\n', '<br>')}</div><footer class="footer"><div><p class="label">Prepared by</p><strong>${escapeHtml(item.preparedBy || 'Infonits (Pvt) Ltd')}</strong></div><small>hello@infonits.io · www.infonits.io</small></footer></main></body></html>`,
     );
     popup.document.close();
     popup.print();
@@ -4127,14 +4191,30 @@ function LettersModule({
               </button>
             </header>
             <article className="letter-preview-paper">
-              <span>INFONITS</span>
-              <small>{preview.date}</small>
-              <p>Prepared for</p>
-              <h3>{preview.client}</h3>
-              <h4>{preview.subject}</h4>
-              <div>{preview.body || 'No letter content provided.'}</div>
+              <header className="letter-preview-brand">
+                <span className="letter-preview-logo" aria-label="Infonits" />
+                <div>
+                  <strong>SERVICE LETTER</strong>
+                  <small>{preview.date}</small>
+                </div>
+              </header>
+              <section className="letter-preview-recipient">
+                <p>Prepared for</p>
+                <h3>{preview.client}</h3>
+              </section>
+              <section className="letter-preview-subject">
+                <span>Subject</span>
+                <h4>{preview.subject}</h4>
+              </section>
+              <div className="letter-preview-body">
+                {preview.body || 'No letter content provided.'}
+              </div>
               <footer>
-                Prepared by <strong>{preview.preparedBy || 'Infonits (Pvt) Ltd'}</strong>
+                <div>
+                  <span>Prepared by</span>
+                  <strong>{preview.preparedBy || 'Infonits (Pvt) Ltd'}</strong>
+                </div>
+                <small>hello@infonits.io · www.infonits.io</small>
               </footer>
             </article>
             <footer className="letter-preview-actions">

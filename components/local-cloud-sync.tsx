@@ -53,43 +53,92 @@ function sameSnapshot(left: Snapshot, right: Snapshot) {
   return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
 }
 
-function mergeArrays(remote: unknown, local: unknown) {
+function sameValue(left: unknown, right: unknown) {
+  return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function mergeArrays(remote: unknown, local: unknown, baseline: unknown) {
   const remoteItems = Array.isArray(remote) ? remote : [];
   const localItems = Array.isArray(local) ? local : [];
-  const records = new Map<string, unknown>();
-  for (const item of remoteItems) {
-    if (item && typeof item === 'object' && 'id' in item) records.set(String(item.id), item);
+  const baselineItems = Array.isArray(baseline) ? baseline : [];
+  const allItems = [...remoteItems, ...localItems, ...baselineItems];
+  if (!allItems.every((item) => isRecord(item) && 'id' in item)) {
+    if (sameValue(remoteItems, localItems)) return localItems;
+    if (sameValue(localItems, baselineItems)) return remoteItems;
+    return localItems;
   }
-  for (const item of localItems) {
-    if (item && typeof item === 'object' && 'id' in item) records.set(String(item.id), item);
-  }
-  return [...records.values()];
+
+  const byId = (items: unknown[]) =>
+    new Map(items.map((item) => [String((item as Record<string, unknown>).id), item]));
+  const remoteById = byId(remoteItems);
+  const localById = byId(localItems);
+  const baselineById = byId(baselineItems);
+  const preferredOrder = baselineItems.length
+    ? [...localById.keys(), ...remoteById.keys(), ...baselineById.keys()]
+    : [...remoteById.keys(), ...localById.keys()];
+  const ids = [...new Set(preferredOrder)];
+
+  return ids.flatMap((id) => {
+    const remoteItem = remoteById.get(id);
+    const localItem = localById.get(id);
+    const baselineItem = baselineById.get(id);
+    const localChanged = !sameValue(localItem, baselineItem);
+    const remoteChanged = !sameValue(remoteItem, baselineItem);
+    let resolved: unknown;
+
+    if (sameValue(remoteItem, localItem)) resolved = localItem;
+    else if (localChanged && !remoteChanged) resolved = localItem;
+    else if (remoteChanged && !localChanged) resolved = remoteItem;
+    else if (!localChanged && !remoteChanged) resolved = localItem;
+    else if (localItem === undefined || remoteItem === undefined) resolved = undefined;
+    else resolved = mergeValue(remoteItem, localItem, baselineItem);
+
+    return resolved === undefined ? [] : [resolved];
+  });
 }
 
-function mergeSection(remote: Record<string, unknown>, local: Record<string, unknown>) {
-  const merged: Record<string, unknown> = { ...remote, ...local };
-  for (const key of new Set([...Object.keys(remote), ...Object.keys(local)])) {
-    if (Array.isArray(remote[key]) || Array.isArray(local[key])) {
-      merged[key] = mergeArrays(remote[key], local[key]);
-    } else if (
-      remote[key] &&
-      local[key] &&
-      typeof remote[key] === 'object' &&
-      typeof local[key] === 'object'
-    ) {
-      merged[key] = {
-        ...(remote[key] as Record<string, unknown>),
-        ...(local[key] as Record<string, unknown>),
-      };
+function mergeValue(remote: unknown, local: unknown, baseline: unknown): unknown {
+  if (sameValue(remote, local)) return local;
+  if (sameValue(local, baseline)) return remote;
+  if (sameValue(remote, baseline)) return local;
+  if (Array.isArray(remote) || Array.isArray(local)) {
+    return mergeArrays(remote, local, baseline);
+  }
+  if (isRecord(remote) && isRecord(local)) {
+    const baselineRecord = isRecord(baseline) ? baseline : {};
+    const merged: Record<string, unknown> = {};
+    const keys = new Set([
+      ...Object.keys(remote),
+      ...Object.keys(local),
+      ...Object.keys(baselineRecord),
+    ]);
+    for (const key of keys) {
+      const resolved = mergeValue(remote[key], local[key], baselineRecord[key]);
+      if (resolved !== undefined) merged[key] = resolved;
     }
+    return merged;
   }
-  return merged;
+  return local;
 }
 
-function mergeSnapshots(remote: Partial<Snapshot>, local: Snapshot): Snapshot {
+function mergeSnapshots(
+  remote: Partial<Snapshot>,
+  local: Snapshot,
+  baseline: Partial<Snapshot> = {},
+): Snapshot {
   return {
-    finance: mergeSection(remote.finance ?? {}, local.finance),
-    office: mergeSection(remote.office ?? {}, local.office),
+    finance: mergeValue(remote.finance ?? {}, local.finance, baseline.finance ?? {}) as Record<
+      string,
+      unknown
+    >,
+    office: mergeValue(remote.office ?? {}, local.office, baseline.office ?? {}) as Record<
+      string,
+      unknown
+    >,
   };
 }
 
@@ -107,7 +156,7 @@ export function resolveCloudSnapshot(
   if (localChanged && !remoteChanged) return local;
   if (!localChanged && !remoteChanged) return local;
   if (sameSnapshot(remote, local)) return local;
-  return mergeSnapshots(remote, local);
+  return mergeSnapshots(remote, local, baseline);
 }
 
 function saveSnapshot(snapshot: Snapshot) {
@@ -126,6 +175,9 @@ export function LocalCloudSync() {
   const syncNow = useRef<() => void>(() => undefined);
   const ready = useRef(false);
   const pulling = useRef(false);
+  const pushing = useRef(false);
+  const dirty = useRef(false);
+  const changeVersion = useRef(0);
 
   useEffect(() => {
     if (!configured) {
@@ -134,9 +186,51 @@ export function LocalCloudSync() {
     }
     const db = browserClient();
     let active = true;
+    let realtimeChannel: ReturnType<typeof db.channel> | null = null;
+
+    async function pushLocal() {
+      if (pushing.current) return false;
+      pushing.current = true;
+      const {
+        data: { user },
+      } = await db.auth.getUser();
+      if (!active || !user) {
+        pushing.current = false;
+        return false;
+      }
+      setStatus('syncing');
+      const pushVersion = changeVersion.current;
+      const snapshot = localSnapshot();
+      const { error } = await db
+        .from('local_workspaces')
+        .upsert({ user_id: user.id, data: snapshot }, { onConflict: 'user_id' });
+      if (!active) {
+        pushing.current = false;
+        return false;
+      }
+      setStatus(error ? 'error' : 'synced');
+      if (error) {
+        setMessage('Cloud sync failed. Your changes are safe here and will retry automatically.');
+      } else {
+        dirty.current = changeVersion.current !== pushVersion;
+        rememberSynced(snapshot);
+        setMessage('');
+        setLastSyncedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      }
+      pushing.current = false;
+      if (!error && dirty.current) {
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = setTimeout(() => {
+          timer.current = null;
+          void pushLocal();
+        }, 150);
+      }
+      return !error;
+    }
 
     async function pullAndMerge() {
       if (pulling.current) return;
+      if (dirty.current && !(await pushLocal())) return;
       pulling.current = true;
       const {
         data: { user },
@@ -189,31 +283,15 @@ export function LocalCloudSync() {
       }
     }
 
-    async function pushLocal() {
-      const {
-        data: { user },
-      } = await db.auth.getUser();
-      if (!active || !user) return;
-      setStatus('syncing');
-      const snapshot = localSnapshot();
-      const { error } = await db
-        .from('local_workspaces')
-        .upsert({ user_id: user.id, data: snapshot }, { onConflict: 'user_id' });
-      if (!active) return;
-      setStatus(error ? 'error' : 'synced');
-      if (error) {
-        setMessage('Cloud sync failed. Your changes are safe here and will retry automatically.');
-      } else {
-        rememberSynced(snapshot);
-        setMessage('');
-        setLastSyncedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      }
-    }
-
     const schedulePush = () => {
       if (!ready.current) return;
+      dirty.current = true;
+      changeVersion.current += 1;
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => void pushLocal(), 250);
+      timer.current = setTimeout(() => {
+        timer.current = null;
+        void pushLocal();
+      }, 150);
     };
     const onVisible = () => {
       if (document.visibilityState === 'visible') void pullAndMerge();
@@ -223,6 +301,22 @@ export function LocalCloudSync() {
     const onSyncNow = () => void pullAndMerge();
     syncNow.current = onSyncNow;
     void pullAndMerge();
+    void db.auth.getUser().then(({ data: { user } }) => {
+      if (!active || !user) return;
+      realtimeChannel = db
+        .channel(`local-workspace-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'local_workspaces',
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => void pullAndMerge(),
+        )
+        .subscribe();
+    });
     window.addEventListener('infonits:local-change', schedulePush);
     window.addEventListener('focus', onFocus);
     window.addEventListener('online', onOnline);
@@ -230,7 +324,7 @@ export function LocalCloudSync() {
     document.addEventListener('visibilitychange', onVisible);
     const refresh = window.setInterval(() => {
       if (document.visibilityState === 'visible') void pullAndMerge();
-    }, 60_000);
+    }, 15_000);
     const {
       data: { subscription },
     } = db.auth.onAuthStateChange((event) => {
@@ -249,6 +343,7 @@ export function LocalCloudSync() {
       window.removeEventListener('infonits:sync-now', onSyncNow);
       document.removeEventListener('visibilitychange', onVisible);
       window.clearInterval(refresh);
+      if (realtimeChannel) void db.removeChannel(realtimeChannel);
       subscription.unsubscribe();
     };
   }, [configured]);

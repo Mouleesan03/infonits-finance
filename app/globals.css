@@ -18547,3 +18547,316 @@ summary:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Compact page identity bars leave more room for the working content on every
+   module while preserving the shared hierarchy and primary actions. */
+.local-main > .local-titlebar,
+.local-dashboard-page > .local-titlebar {
+  min-height: 70px;
+  margin-bottom: 10px;
+  padding: 10px 16px;
+  border-radius: 14px;
+}
+.local-main > .local-titlebar .local-eyebrow {
+  font-size: 9px;
+  line-height: 1.2;
+}
+.local-main > .local-titlebar h1,
+.local-dashboard-page > .local-titlebar h1 {
+  font-size: 21px !important;
+  line-height: 1.12;
+}
+.local-main > .local-titlebar p,
+.local-dashboard-page > .local-titlebar p {
+  margin-top: 2px;
+  font-size: 11.5px !important;
+  line-height: 1.3;
+}
+.local-main > .local-titlebar .button,
+.local-dashboard-page > .local-titlebar .button {
+  min-height: 36px;
+  height: 36px;
+}
+
+/* The project editor owns one bounded scroll area. Its footer remains visible
+   at the bottom instead of falling below the viewport. */
+.local-project-edit-modal {
+  height: min(820px, calc(100dvh - 36px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.local-project-edit-modal > header {
+  flex: 0 0 auto;
+}
+.local-project-edit-modal .local-project-editor {
+  min-height: 0;
+  flex: 1 1 auto;
+  overscroll-behavior: contain;
+  scroll-padding-bottom: 76px;
+}
+.local-project-edit-modal .local-modal-actions {
+  bottom: 0;
+}
+
+/* Post tracker: readable identities, recognisable channels and a direct update
+   action. Client colours are reused by the calendar dots. */
+.office-post-project-table th:first-child,
+.office-post-project-table td:first-child {
+  width: 25%;
+}
+.office-post-project-table th:nth-child(2),
+.office-post-project-table td:nth-child(2) {
+  width: 16%;
+  text-align: left;
+}
+.office-post-project-table th:nth-child(3),
+.office-post-project-table td:nth-child(3) {
+  width: 25%;
+}
+.office-post-project-table th:nth-child(4),
+.office-post-project-table td:nth-child(4) {
+  width: 11%;
+}
+.office-post-project-table th:nth-child(5),
+.office-post-project-table td:nth-child(5) {
+  width: 16%;
+}
+.office-post-project-table th:last-child,
+.office-post-project-table td:last-child {
+  width: 7%;
+}
+.office-post-client-name {
+  display: flex !important;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+.office-post-client-name > i {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(33, 54, 80, 0.14);
+}
+.office-post-client-name > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.office-platform-badge {
+  width: max-content;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border: 1px solid #dbe5f0;
+  border-radius: 999px;
+  background: #f6f9fd;
+  color: #286fb9;
+  font-size: 10px;
+  font-weight: 700;
+}
+.office-platform-badge.facebook {
+  border-color: #d7e5fb;
+  background: #eef5ff;
+  color: #1877f2;
+}
+.office-platform-badge.instagram {
+  border-color: #efdced;
+  background: #fff3fb;
+  color: #c13584;
+}
+.office-platform-badge.tiktok {
+  border-color: #dfe4e9;
+  background: #f5f7f9;
+  color: #111827;
+}
+.office-post-project-table .office-inline-select {
+  max-width: none;
+  font-size: 10.5px;
+}
+.office-post-update {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 9px;
+  border: 1px solid #cfe0f3;
+  border-radius: 8px;
+  background: #edf5ff;
+  color: #1768bd;
+  font-size: 9.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.office-post-update:hover {
+  border-color: #9fc2ea;
+  background: #e2f0ff;
+}
+.office-month-grid.compact .office-calendar-event.post {
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 3px rgba(38, 58, 82, 0.12);
+}
+
+/* Service-letter preview follows the same branded A4 language as invoices. */
+.letter-preview-paper {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #dbe5f0;
+  border-top: 0;
+  border-radius: 4px;
+}
+.letter-preview-brand {
+  min-height: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 26px 32px;
+  background: linear-gradient(120deg, #0f2544, #144d84);
+  border-top: 5px solid #267ee6;
+}
+.letter-preview-logo {
+  width: 156px;
+  height: 34px;
+  display: block;
+  background: url('/infonits-white-logo.png') left center / contain no-repeat;
+}
+.letter-preview-brand > div {
+  text-align: right;
+}
+.letter-preview-brand strong,
+.letter-preview-brand small {
+  display: block;
+}
+.letter-preview-brand strong {
+  color: #fff;
+  font-size: 17px;
+  letter-spacing: 0.08em;
+}
+.letter-preview-brand small {
+  margin-top: 6px;
+  color: #b9d3ed;
+  font-size: 10px;
+}
+.letter-preview-recipient {
+  padding: 27px 32px 14px;
+}
+.letter-preview-recipient p,
+.letter-preview-subject > span,
+.letter-preview-paper footer span {
+  margin: 0 0 5px;
+  color: #71849b;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.letter-preview-recipient h3 {
+  color: #152f4d;
+  font-size: 18px;
+}
+.letter-preview-subject {
+  margin: 0 32px;
+  padding: 14px 17px;
+  border-radius: 10px;
+  background: #eff5fb;
+}
+.letter-preview-subject h4 {
+  margin: 3px 0 0;
+  padding: 0;
+  background: transparent;
+  color: #183656;
+  font-size: 16px;
+}
+.letter-preview-paper .letter-preview-body {
+  min-height: 190px;
+  padding: 24px 32px;
+  color: #40546d;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+.letter-preview-paper > footer {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0 32px;
+  padding: 17px 0 24px;
+  border-top: 1px solid #dfe7ef;
+}
+.letter-preview-paper > footer strong {
+  display: block;
+  color: #223b57;
+}
+.letter-preview-paper > footer small {
+  color: #7a8ba0;
+  font-size: 9px;
+}
+
+@media (max-width: 720px) {
+  .local-main > .local-titlebar,
+  .local-dashboard-page > .local-titlebar {
+    min-height: 0;
+    gap: 10px;
+    padding: 11px 13px;
+  }
+  .local-main > .local-titlebar h1,
+  .local-dashboard-page > .local-titlebar h1 {
+    font-size: 19px !important;
+  }
+  .local-main > .local-titlebar p,
+  .local-dashboard-page > .local-titlebar p {
+    font-size: 10.5px !important;
+  }
+  .local-project-edit-modal {
+    height: min(92dvh, calc(100dvh - env(safe-area-inset-top) - 12px));
+  }
+  .office-post-project-table tr {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+  .office-post-project-table td:nth-child(2),
+  .office-post-project-table td:nth-child(3),
+  .office-post-project-table td:nth-child(4),
+  .office-post-project-table td:nth-child(5) {
+    width: auto;
+  }
+  .office-post-project-table td:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+  .office-platform-badge > span {
+    display: none;
+  }
+  .letter-preview-brand {
+    min-height: 88px;
+    padding: 21px 20px;
+  }
+  .letter-preview-logo {
+    width: 112px;
+    height: 26px;
+  }
+  .letter-preview-brand strong {
+    font-size: 12px;
+  }
+  .letter-preview-recipient {
+    padding: 22px 20px 12px;
+  }
+  .letter-preview-subject {
+    margin-inline: 20px;
+  }
+  .letter-preview-paper .letter-preview-body {
+    min-height: 160px;
+    padding: 20px;
+  }
+  .letter-preview-paper > footer {
+    align-items: start;
+    flex-direction: column;
+    margin-inline: 20px;
+  }
+}
