@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  Archive,
   CalendarDays,
   Camera,
   ChartNoAxesColumnIncreasing,
@@ -32,6 +33,7 @@ import {
   ReceiptText,
   RefreshCw,
   Repeat2,
+  RotateCcw,
   Search,
   Send,
   ShieldCheck,
@@ -114,6 +116,16 @@ type SalesDocument = {
   notes?: string;
   includeBankDetails?: boolean;
   bankDetails?: string;
+  sourceQuotationId?: string;
+};
+type TrashedSalesDocument = SalesDocument & { deletedAt: string };
+type OfficeActivity = {
+  id: string;
+  action: 'Created' | 'Updated' | 'Deleted' | 'Restored' | 'Converted' | 'Generated';
+  entity: 'Invoice' | 'Quotation' | 'Recurring invoice';
+  recordId: string;
+  label: string;
+  occurredAt: string;
 };
 type Payment = {
   id: string;
@@ -208,6 +220,7 @@ type CalendarEvent = {
   remarks?: string;
   completed?: boolean;
   priority?: 'Low' | 'Medium' | 'High';
+  memberId?: string;
 };
 type RecurringInvoice = {
   id: string;
@@ -224,6 +237,8 @@ type RecurringInvoice = {
 };
 type Store = {
   documents: SalesDocument[];
+  trashedDocuments: TrashedSalesDocument[];
+  activityLog: OfficeActivity[];
   payments: Payment[];
   team: TeamMember[];
   posts: PostPlan[];
@@ -258,6 +273,8 @@ const paidForInvoice = (invoiceId: string, payments: Payment[]) =>
 const currencies = ['LKR', 'USD', 'GBP', 'EUR', 'AUD', 'CAD', 'INR', 'AED', 'SGD', 'JPY'];
 const emptyStore: Store = {
   documents: [],
+  trashedDocuments: [],
+  activityLog: [],
   payments: [],
   team: [],
   posts: [],
@@ -322,6 +339,10 @@ const readStoredOffice = (): Store => {
     ...emptyStore,
     ...savedStore,
     documents: savedStore.documents ?? [],
+    trashedDocuments: (savedStore.trashedDocuments ?? []).filter(
+      (item) => Date.now() - Date.parse(item.deletedAt) < 30 * 86_400_000,
+    ),
+    activityLog: savedStore.activityLog ?? [],
     posts: (savedStore.posts ?? []).map((item) => ({
       ...item,
       platform: socialPlatform(item.platform),
@@ -424,6 +445,7 @@ export function LocalOfficeModule({
       );
       if (!due.length) return current;
       let documents = [...current.documents];
+      const generatedActivity: OfficeActivity[] = [];
       const recurringInvoices = current.recurringInvoices.map((schedule) => {
         if (!due.some((item) => item.id === schedule.id)) return schedule;
         const runDate = schedule.nextRun;
@@ -449,11 +471,24 @@ export function LocalOfficeModule({
           },
           ...documents,
         ];
+        generatedActivity.push({
+          id: crypto.randomUUID(),
+          action: 'Generated',
+          entity: 'Recurring invoice',
+          recordId: schedule.id,
+          label: schedule.description || 'Scheduled invoice',
+          occurredAt: new Date().toISOString(),
+        });
         let nextRun = advanceRecurringDate(runDate, schedule.frequency);
         while (nextRun <= today()) nextRun = advanceRecurringDate(nextRun, schedule.frequency);
         return { ...schedule, lastGenerated: runDate, nextRun };
       });
-      return { ...current, documents, recurringInvoices };
+      return {
+        ...current,
+        documents,
+        recurringInvoices,
+        activityLog: [...generatedActivity, ...current.activityLog].slice(0, 200),
+      };
     });
   }, [
     invoiceDefaults?.bankDetails,
@@ -511,12 +546,23 @@ export function LocalOfficeModule({
         invoiceDefaults={invoiceDefaults}
         payments={store.payments}
         recurringInvoices={store.recurringInvoices}
+        trashedItems={store.trashedDocuments.filter((item) => item.kind === kind)}
         search={search}
         setSearch={setSearch}
         formOpen={formOpen}
         setFormOpen={setFormOpen}
         onChange={(items) =>
           update('documents', [...store.documents.filter((item) => item.kind !== kind), ...items])
+        }
+        onAllItemsChange={(items) => update('documents', items)}
+        onTrashChange={(items) =>
+          update('trashedDocuments', [
+            ...store.trashedDocuments.filter((item) => item.kind !== kind),
+            ...items,
+          ])
+        }
+        onActivity={(activity) =>
+          update('activityLog', [activity, ...store.activityLog].slice(0, 200))
         }
         onPaymentsChange={(items) => update('payments', items)}
         onRecurringChange={(items) => update('recurringInvoices', items)}
@@ -541,6 +587,7 @@ export function LocalOfficeModule({
     return (
       <TeamModule
         items={store.team}
+        tasks={store.events}
         search={search}
         setSearch={setSearch}
         formOpen={formOpen}
@@ -595,6 +642,7 @@ export function LocalOfficeModule({
     return (
       <TodoModule
         items={store.events}
+        team={store.team}
         clients={clients}
         projects={projects}
         formOpen={formOpen}
@@ -622,6 +670,7 @@ export function LocalOfficeModule({
       projects={projects}
       clients={clients}
       recurringInvoices={store.recurringInvoices}
+      activityLog={store.activityLog}
     />
   );
 }
@@ -1020,11 +1069,15 @@ function SalesDocuments({
   invoiceDefaults,
   payments,
   recurringInvoices,
+  trashedItems,
   search,
   setSearch,
   formOpen,
   setFormOpen,
   onChange,
+  onAllItemsChange,
+  onTrashChange,
+  onActivity,
   onPaymentsChange,
   onRecurringChange,
 }: {
@@ -1037,11 +1090,15 @@ function SalesDocuments({
   invoiceDefaults?: { includeBankDetails: boolean; bankDetails: string; notes: string };
   payments: Payment[];
   recurringInvoices: RecurringInvoice[];
+  trashedItems: TrashedSalesDocument[];
   search: string;
   setSearch: (value: string) => void;
   formOpen: boolean;
   setFormOpen: (value: boolean) => void;
   onChange: (items: SalesDocument[]) => void;
+  onAllItemsChange: (items: SalesDocument[]) => void;
+  onTrashChange: (items: TrashedSalesDocument[]) => void;
+  onActivity: (activity: OfficeActivity) => void;
   onPaymentsChange: (items: Payment[]) => void;
   onRecurringChange: (items: RecurringInvoice[]) => void;
 }) {
@@ -1070,8 +1127,11 @@ function SalesDocuments({
   const [page, setPage] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [paymentTarget, setPaymentTarget] = useState<SalesDocument | null>(null);
+  const [reminderTarget, setReminderTarget] = useState<SalesDocument | null>(null);
+  const [reminderCopied, setReminderCopied] = useState(false);
   const [paymentDraft, setPaymentDraft] = useState({ amount: '', date: today(), note: '' });
   const [recurringOpen, setRecurringOpen] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
   const [recurringDraft, setRecurringDraft] = useState({
     clientId: '',
     projectId: '',
@@ -1227,6 +1287,14 @@ function SalesDocuments({
         ? items.map((item) => (item.id === existing.id ? nextDocument : item))
         : [nextDocument, ...items],
     );
+    onActivity({
+      id: crypto.randomUUID(),
+      action: existing ? 'Updated' : 'Created',
+      entity: kind,
+      recordId: nextDocument.id,
+      label: nextDocument.number,
+      occurredAt: new Date().toISOString(),
+    });
     setDraft({
       clientId: '',
       projectId: '',
@@ -1248,6 +1316,66 @@ function SalesDocuments({
     });
     setEditingId('');
     setFormOpen(false);
+  }
+
+  function moveToTrash(item: SalesDocument) {
+    onChange(items.filter((document) => document.id !== item.id));
+    onTrashChange([{ ...item, deletedAt: new Date().toISOString() }, ...trashedItems]);
+    onActivity({
+      id: crypto.randomUUID(),
+      action: 'Deleted',
+      entity: item.kind,
+      recordId: item.id,
+      label: item.number,
+      occurredAt: new Date().toISOString(),
+    });
+  }
+
+  function restoreDocument(item: TrashedSalesDocument) {
+    const document: Partial<TrashedSalesDocument> = { ...item };
+    delete document.deletedAt;
+    onAllItemsChange([document as SalesDocument, ...allItems]);
+    onTrashChange(trashedItems.filter((trashed) => trashed.id !== item.id));
+    onActivity({
+      id: crypto.randomUUID(),
+      action: 'Restored',
+      entity: item.kind,
+      recordId: item.id,
+      label: item.number,
+      occurredAt: new Date().toISOString(),
+    });
+  }
+
+  function convertQuotation(item: SalesDocument) {
+    if (kind !== 'Quotation' || allItems.some((document) => document.sourceQuotationId === item.id))
+      return;
+    const invoice: SalesDocument = {
+      ...item,
+      id: crypto.randomUUID(),
+      kind: 'Invoice',
+      number: nextNumber('Invoice', allItems),
+      issueDate: today(),
+      dueDate: addDays(today(), 10),
+      status: 'Pending',
+      notes: invoiceDefaults?.notes ?? '',
+      includeBankDetails: invoiceDefaults?.includeBankDetails ?? false,
+      bankDetails: invoiceDefaults?.includeBankDetails ? (invoiceDefaults.bankDetails ?? '') : '',
+      sourceQuotationId: item.id,
+    };
+    onAllItemsChange([
+      invoice,
+      ...allItems.map((document) =>
+        document.id === item.id ? { ...document, status: 'Accepted' } : document,
+      ),
+    ]);
+    onActivity({
+      id: crypto.randomUUID(),
+      action: 'Converted',
+      entity: 'Quotation',
+      recordId: item.id,
+      label: `${item.number} → ${invoice.number}`,
+      occurredAt: new Date().toISOString(),
+    });
   }
 
   function editDocument(item: SalesDocument) {
@@ -1311,6 +1439,18 @@ function SalesDocuments({
     setPaymentTarget(null);
     setPaymentDraft({ amount: '', date: today(), note: '' });
   }
+
+  function paymentReminder(item: SalesDocument) {
+    const client = clientDetails.get(item.clientId);
+    const balance = Math.max(0, documentTotal(item) - paidForInvoice(item.id, payments));
+    return `Hello ${client?.name || client?.company || 'there'}, this is a friendly reminder that invoice ${item.number} has a balance of ${item.currency} ${balance.toLocaleString()} due on ${item.dueDate}. Please let us know once payment has been arranged. Thank you, Infonits.`;
+  }
+
+  async function copyReminder(item: SalesDocument) {
+    await navigator.clipboard.writeText(paymentReminder(item));
+    setReminderCopied(true);
+    window.setTimeout(() => setReminderCopied(false), 1800);
+  }
   function saveRecurringInvoice(event: React.FormEvent) {
     event.preventDefault();
     const amount = Number(recurringDraft.amount);
@@ -1349,6 +1489,9 @@ function SalesDocuments({
         action={`New ${kind.toLowerCase()}`}
         onAction={() => setFormOpen(!formOpen)}
       >
+        <button className="button button-outline" type="button" onClick={() => setTrashOpen(true)}>
+          <Archive size={16} /> Trash {trashedItems.length ? `(${trashedItems.length})` : ''}
+        </button>
         {kind === 'Invoice' && (
           <button
             className="button button-outline"
@@ -1916,13 +2059,21 @@ function SalesDocuments({
                       <StatusSelect
                         className={`office-status ${item.status.toLowerCase()}`}
                         value={item.status}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           onChange(
                             items.map((x) =>
                               x.id === item.id ? { ...x, status: e.target.value } : x,
                             ),
-                          )
-                        }
+                          );
+                          onActivity({
+                            id: crypto.randomUUID(),
+                            action: 'Updated',
+                            entity: item.kind,
+                            recordId: item.id,
+                            label: `${item.number} · ${e.target.value}`,
+                            occurredAt: new Date().toISOString(),
+                          });
+                        }}
                       >
                         {(kind === 'Invoice'
                           ? ['Pending', 'Sent', 'Partial', 'Paid', 'Overdue']
@@ -1973,6 +2124,18 @@ function SalesDocuments({
                           <CircleDollarSign size={15} />
                         </button>
                       )}
+                      {kind === 'Invoice' && item.status !== 'Paid' && (
+                        <button
+                          aria-label={`Prepare payment reminder for ${item.number}`}
+                          title="Payment reminder"
+                          onClick={() => {
+                            setReminderCopied(false);
+                            setReminderTarget(item);
+                          }}
+                        >
+                          <Mail size={15} />
+                        </button>
+                      )}
                       {kind === 'Invoice' && (
                         <button
                           aria-label={`Download ${item.number} PDF`}
@@ -1988,10 +2151,27 @@ function SalesDocuments({
                           <FileDown size={15} />
                         </button>
                       )}
+                      {kind === 'Quotation' && (
+                        <button
+                          aria-label={`Convert ${item.number} to invoice`}
+                          title={
+                            allItems.some((document) => document.sourceQuotationId === item.id)
+                              ? 'Already converted'
+                              : 'Convert to invoice'
+                          }
+                          disabled={allItems.some(
+                            (document) => document.sourceQuotationId === item.id,
+                          )}
+                          onClick={() => convertQuotation(item)}
+                        >
+                          <RefreshCw size={15} />
+                        </button>
+                      )}
                       <button
                         className="local-delete"
                         aria-label={`Delete ${item.number}`}
-                        onClick={() => onChange(items.filter((x) => x.id !== item.id))}
+                        title="Move to trash"
+                        onClick={() => moveToTrash(item)}
                       >
                         <Trash2 size={15} />
                       </button>
@@ -2019,6 +2199,67 @@ function SalesDocuments({
           </div>
         ) : null}
       </section>
+      {trashOpen && (
+        <div
+          className="local-modal-layer"
+          role="presentation"
+          onMouseDown={() => setTrashOpen(false)}
+        >
+          <section
+            className="local-modal sales-trash-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sales-trash-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <span className="local-modal-icon">
+                  <Archive size={19} />
+                </span>
+                <div>
+                  <h2 id="sales-trash-title">{kind} trash</h2>
+                  <p>Deleted records can be restored for 30 days.</p>
+                </div>
+              </div>
+              <button aria-label="Close trash" onClick={() => setTrashOpen(false)}>
+                <X size={19} />
+              </button>
+            </header>
+            {trashedItems.length ? (
+              <div className="sales-trash-list">
+                {trashedItems.map((item) => (
+                  <article key={item.id}>
+                    <span>
+                      <strong>{item.number}</strong>
+                      <small>
+                        {names.get(item.clientId) ?? 'Unknown client'} · deleted{' '}
+                        {new Date(item.deletedAt).toLocaleDateString('en-GB')}
+                      </small>
+                    </span>
+                    <b>
+                      {item.currency} {documentTotal(item).toLocaleString()}
+                    </b>
+                    <button
+                      type="button"
+                      className="button button-outline"
+                      onClick={() => restoreDocument(item)}
+                    >
+                      <RotateCcw size={15} /> Restore
+                    </button>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <Empty
+                icon={<Archive size={25} />}
+                title="Trash is empty"
+                text={`Deleted ${kind.toLowerCase()}s will appear here for 30 days.`}
+              />
+            )}
+          </section>
+        </div>
+      )}
       {preview && (
         <InvoicePreview
           item={preview}
@@ -2118,6 +2359,72 @@ function SalesDocuments({
                 </button>
               </footer>
             </form>
+          </section>
+        </div>
+      )}
+      {reminderTarget && (
+        <div
+          className="local-modal-layer"
+          role="presentation"
+          onMouseDown={() => setReminderTarget(null)}
+        >
+          <section
+            className="local-modal payment-reminder-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="payment-reminder-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <span className="local-modal-icon">
+                  <Mail size={19} />
+                </span>
+                <div>
+                  <h2 id="payment-reminder-title">Payment reminder</h2>
+                  <p>
+                    {reminderTarget.number} ·{' '}
+                    {names.get(reminderTarget.clientId) ?? 'Unknown client'}
+                  </p>
+                </div>
+              </div>
+              <button aria-label="Close reminder" onClick={() => setReminderTarget(null)}>
+                <X size={19} />
+              </button>
+            </header>
+            <div className="payment-reminder-body">
+              <label>
+                <span>Ready-to-send message</span>
+                <textarea readOnly rows={7} value={paymentReminder(reminderTarget)} />
+              </label>
+              <footer>
+                <button
+                  type="button"
+                  className="button button-outline"
+                  onClick={() => void copyReminder(reminderTarget)}
+                >
+                  <Copy size={16} /> {reminderCopied ? 'Copied' : 'Copy message'}
+                </button>
+                {clientDetails.get(reminderTarget.clientId)?.phone ? (
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    onClick={() => {
+                      const phone = clientDetails
+                        .get(reminderTarget.clientId)!
+                        .phone!.replace(/\D/g, '');
+                      window.open(
+                        `https://wa.me/${phone}?text=${encodeURIComponent(paymentReminder(reminderTarget))}`,
+                        '_blank',
+                        'noopener,noreferrer',
+                      );
+                    }}
+                  >
+                    <Send size={16} /> Open WhatsApp
+                  </button>
+                ) : null}
+              </footer>
+            </div>
           </section>
         </div>
       )}
@@ -2899,6 +3206,7 @@ function PaymentsModule({
 
 function TeamModule({
   items,
+  tasks,
   search,
   setSearch,
   formOpen,
@@ -2906,6 +3214,7 @@ function TeamModule({
   onChange,
 }: {
   items: TeamMember[];
+  tasks: CalendarEvent[];
   search: string;
   setSearch: (v: string) => void;
   formOpen: boolean;
@@ -2929,6 +3238,9 @@ function TeamModule({
   const safePage = Math.min(page, pageCount - 1);
   const pageItems = visible.slice(safePage * 10, safePage * 10 + 10);
   const selected = items.find((item) => item.id === selectedId);
+  const openTasks = tasks.filter((task) => task.type === 'Task' && !task.completed);
+  const taskCount = (memberId: string) =>
+    openTasks.filter((task) => task.memberId === memberId).length;
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!draft.name.trim() || !draft.role.trim()) return;
@@ -2985,6 +3297,39 @@ function TeamModule({
           </form>
         </FormModal>
       )}
+      {items.length ? (
+        <section className="team-workload" aria-label="Team workload">
+          <header>
+            <div>
+              <strong>Current workload</strong>
+              <small>Open tasks assigned to each active team member</small>
+            </div>
+            <span>{openTasks.filter((task) => !task.memberId).length} unassigned</span>
+          </header>
+          <div>
+            {items
+              .filter((item) => item.status === 'Active')
+              .map((item) => {
+                const count = taskCount(item.id);
+                const capacity = Math.min(100, count * 20);
+                return (
+                  <article key={item.id}>
+                    <span className="office-avatar">{item.name.slice(0, 2).toUpperCase()}</span>
+                    <div>
+                      <strong>{item.name}</strong>
+                      <small>
+                        {count ? `${count} open task${count === 1 ? '' : 's'}` : 'Available'}
+                      </small>
+                      <i>
+                        <b style={{ width: `${capacity}%` }} />
+                      </i>
+                    </div>
+                  </article>
+                );
+              })}
+          </div>
+        </section>
+      ) : null}
       <section className="office-panel office-team-panel">
         <div className="office-toolbar">
           <SearchBox
@@ -4986,6 +5331,7 @@ function UsersModule({
 
 function TodoModule({
   items,
+  team,
   clients,
   projects,
   formOpen,
@@ -4993,6 +5339,7 @@ function TodoModule({
   onChange,
 }: {
   items: CalendarEvent[];
+  team: TeamMember[];
   clients: ClientRef[];
   projects: ProjectRef[];
   formOpen: boolean;
@@ -5015,6 +5362,7 @@ function TodoModule({
     remarks: '',
     clientId: '',
     projectId: '',
+    memberId: '',
   });
   const visibleTasks = tasks.filter((task) =>
     filter === 'All' ? true : filter === 'Done' ? task.completed : !task.completed,
@@ -5024,6 +5372,7 @@ function TodoModule({
   const pageTasks = visibleTasks.slice(safePage * 10, safePage * 10 + 10);
   const clientNames = new Map(clients.map((client) => [client.id, client.company || client.name]));
   const projectNames = new Map(projects.map((project) => [project.id, project.project]));
+  const memberNames = new Map(team.map((member) => [member.id, member.name]));
   const openCount = tasks.filter((task) => !task.completed).length;
   const dueToday = tasks.filter((task) => !task.completed && task.date === today()).length;
 
@@ -5036,6 +5385,7 @@ function TodoModule({
       remarks: '',
       clientId: '',
       projectId: '',
+      memberId: '',
     });
   }
 
@@ -5058,6 +5408,7 @@ function TodoModule({
       remarks: draft.remarks.trim() || undefined,
       clientId: draft.clientId || undefined,
       projectId: draft.projectId || undefined,
+      memberId: draft.memberId || undefined,
       completed: existing?.completed ?? false,
     };
     onChange(
@@ -5077,6 +5428,7 @@ function TodoModule({
       remarks: task.remarks ?? '',
       clientId: task.clientId ?? '',
       projectId: task.projectId ?? '',
+      memberId: task.memberId ?? '',
     });
     setFormOpen(true);
   }
@@ -5165,6 +5517,7 @@ function TodoModule({
                   <strong>{task.title}</strong>
                   <small>
                     {[
+                      memberNames.get(task.memberId ?? ''),
                       projectNames.get(task.projectId ?? ''),
                       clientNames.get(task.clientId ?? ''),
                       task.remarks,
@@ -5264,6 +5617,22 @@ function TodoModule({
                 <option>Low</option>
                 <option>Medium</option>
                 <option>High</option>
+              </select>
+            </label>
+            <label className="wide">
+              <span>Assign to</span>
+              <select
+                value={draft.memberId}
+                onChange={(event) => setDraft({ ...draft, memberId: event.target.value })}
+              >
+                <option value="">Unassigned</option>
+                {team
+                  .filter((member) => member.status === 'Active')
+                  .map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.name} · {member.role}
+                    </option>
+                  ))}
               </select>
             </label>
             <details className="form-optional-fields wide">
@@ -5492,6 +5861,7 @@ function ReportsModule({
   projects,
   clients,
   recurringInvoices,
+  activityLog,
 }: {
   documents: SalesDocument[];
   payments: Payment[];
@@ -5500,6 +5870,7 @@ function ReportsModule({
   projects: ProjectRef[];
   clients: ClientRef[];
   recurringInvoices: RecurringInvoice[];
+  activityLog: OfficeActivity[];
 }) {
   const paidInvoices = payments
     .filter((x) => x.type === 'Income' && x.status === 'Paid' && x.invoiceId)
@@ -5781,6 +6152,25 @@ function ReportsModule({
             ))
           ) : (
             <p>No project value recorded yet.</p>
+          )}
+        </article>
+        <article className="office-report-card report-activity-card">
+          <h2>Sales audit activity</h2>
+          <p className="report-card-intro">Recent invoice, quotation and automation changes.</p>
+          {activityLog.length ? (
+            activityLog.slice(0, 6).map((item) => (
+              <div key={item.id}>
+                <span>
+                  <b>
+                    {item.action} · {item.entity}
+                  </b>
+                  <small>{new Date(item.occurredAt).toLocaleString('en-GB')}</small>
+                </span>
+                <strong>{item.label}</strong>
+              </div>
+            ))
+          ) : (
+            <p>New sales changes will be recorded here.</p>
           )}
         </article>
       </section>

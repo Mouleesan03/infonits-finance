@@ -1,6 +1,7 @@
 import 'server-only';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { isSessionExpired } from '@/lib/session-security';
 export const configured = () =>
   !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 export async function serverClient() {
@@ -30,7 +31,7 @@ export async function authorize() {
     data: { user },
     error,
   } = await db.auth.getUser();
-  if (error || !user) throw new Error('UNAUTHORIZED');
+  if (error || !user || isSessionExpired(user.last_sign_in_at)) throw new Error('UNAUTHORIZED');
   const { data: profile, error: profileError } = await db
     .from('profiles')
     .select('id,organization_id,role,active')

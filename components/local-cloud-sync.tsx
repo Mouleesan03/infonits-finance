@@ -7,6 +7,7 @@ import { browserClient } from '@/lib/supabase/browser';
 const financeKey = 'infonits-finance-local-v1';
 const officeKey = 'infonits-finance-office-v1';
 const cloudBaselineKey = 'infonits-cloud-baseline-v1';
+export const lastCloudSyncKey = 'infonits-last-cloud-sync-at';
 
 export type CloudSnapshot = { finance: Record<string, unknown>; office: Record<string, unknown> };
 type Snapshot = CloudSnapshot;
@@ -188,6 +189,15 @@ export function LocalCloudSync() {
     let active = true;
     let realtimeChannel: ReturnType<typeof db.channel> | null = null;
 
+    function markCloudSync() {
+      const syncedAt = new Date();
+      localStorage.setItem(lastCloudSyncKey, syncedAt.toISOString());
+      setLastSyncedAt(syncedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      window.dispatchEvent(
+        new CustomEvent('infonits:sync-status', { detail: { syncedAt: syncedAt.toISOString() } }),
+      );
+    }
+
     async function pushLocal() {
       if (pushing.current) return false;
       pushing.current = true;
@@ -215,7 +225,7 @@ export function LocalCloudSync() {
         dirty.current = changeVersion.current !== pushVersion;
         rememberSynced(snapshot);
         setMessage('');
-        setLastSyncedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        markCloudSync();
       }
       pushing.current = false;
       if (!error && dirty.current) {
@@ -275,7 +285,7 @@ export function LocalCloudSync() {
       ready.current = true;
       setMessage('');
       setStatus('synced');
-      setLastSyncedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      markCloudSync();
       pulling.current = false;
       if (localChanged) {
         saveSnapshot(resolved);

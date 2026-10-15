@@ -38,9 +38,11 @@ export function AuthForm({
   const [error, setError] = useState(
     initialError === 'membership'
       ? 'Your account has no active workspace membership. Contact the workspace administrator.'
-      : initialError
-        ? 'This secure link could not be verified. Request a new PIN link.'
-        : '',
+      : initialError === 'session-expired'
+        ? 'For your security, your 2-hour session ended. Sign in again to continue.'
+        : initialError
+          ? 'This secure link could not be verified. Request a new PIN link.'
+          : '',
   );
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);

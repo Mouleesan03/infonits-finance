@@ -7,12 +7,14 @@ import {
   AlertTriangle,
   Bell,
   Bot,
+  Archive,
   BriefcaseBusiness,
   CalendarDays,
   Check,
   CircleDollarSign,
   Clock3,
   CreditCard,
+  DatabaseBackup,
   Eye,
   FileCheck2,
   FilePlus2,
@@ -30,6 +32,8 @@ import {
   Plus,
   ReceiptText,
   RefreshCw,
+  Search,
+  Repeat2,
   Settings2,
   Sparkles,
   ShieldCheck,
@@ -43,7 +47,7 @@ import {
   X,
 } from 'lucide-react';
 import { LocalOfficeModule, type OfficeSection } from './local-office-modules';
-import { LocalCloudSync } from './local-cloud-sync';
+import { lastCloudSyncKey, LocalCloudSync } from './local-cloud-sync';
 import { AgentLeads } from './agent-leads';
 import { InfonitsAssistant, type AssistantAction } from './infonits-assistant';
 import { browserClient } from '@/lib/supabase/browser';
@@ -134,6 +138,16 @@ type OfficeOverview = {
     notes?: string;
     includeBankDetails?: boolean;
     bankDetails?: string;
+    sourceQuotationId?: string;
+  }>;
+  trashedDocuments: Array<OfficeOverview['documents'][number] & { deletedAt: string }>;
+  activityLog: Array<{
+    id: string;
+    action: string;
+    entity: string;
+    recordId: string;
+    label: string;
+    occurredAt: string;
   }>;
   payments: Array<{
     id: string;
@@ -154,6 +168,10 @@ type OfficeOverview = {
     website: string;
     username?: string;
     websiteUrl?: string;
+    siteStatus?: 'Unknown' | 'Online' | 'Issue' | 'Offline' | 'Maintenance';
+    monitorError?: string;
+    agentConnected?: boolean;
+    agentLastSeen?: string;
     domainDue: string;
     hostingDue: string;
   }>;
@@ -167,6 +185,7 @@ type OfficeOverview = {
     remarks?: string;
     clientId?: string;
     projectId?: string;
+    memberId?: string;
   }>;
   letters: Array<{ id: string; client: string; subject: string; date: string }>;
   recurringInvoices: Array<{
@@ -260,6 +279,29 @@ const emptyProject = {
   note: '',
   recurring: false,
 };
+const projectTemplates = [
+  {
+    id: 'website',
+    label: 'New website',
+    project: 'Website Design & Development',
+    note: 'Discovery, UI design, responsive WordPress development, testing and launch support.',
+    recurring: false,
+  },
+  {
+    id: 'maintenance',
+    label: 'Website care',
+    project: 'Website Maintenance & Support',
+    note: 'Monthly WordPress updates, backups, uptime checks, security review and content support.',
+    recurring: true,
+  },
+  {
+    id: 'social',
+    label: 'Social media',
+    project: 'Social Media Marketing',
+    note: 'Monthly content planning, design, publishing coordination and performance reporting.',
+    recurring: true,
+  },
+] as const;
 const emptyExpense = {
   description: '',
   category: 'Office',
@@ -316,6 +358,8 @@ function readOfficeOverview(): OfficeOverview {
     ) as Partial<OfficeOverview>;
     return {
       documents: saved.documents ?? [],
+      trashedDocuments: saved.trashedDocuments ?? [],
+      activityLog: saved.activityLog ?? [],
       payments: saved.payments ?? [],
       renewals: saved.renewals ?? [],
       events: saved.events ?? [],
@@ -325,6 +369,8 @@ function readOfficeOverview(): OfficeOverview {
   } catch {
     return {
       documents: [],
+      trashedDocuments: [],
+      activityLog: [],
       payments: [],
       renewals: [],
       events: [],
@@ -352,6 +398,8 @@ export function LocalFinance() {
   const [expenseDraft, setExpenseDraft] = useState(emptyExpense);
   const [officeOverview, setOfficeOverview] = useState<OfficeOverview>({
     documents: [],
+    trashedDocuments: [],
+    activityLog: [],
     payments: [],
     renewals: [],
     events: [],
@@ -360,6 +408,7 @@ export function LocalFinance() {
   });
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
   const [officeFormSignal, setOfficeFormSignal] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationTab, setNotificationTab] = useState<'notifications' | 'today'>(
@@ -510,6 +559,7 @@ export function LocalFinance() {
     );
     if (!due.length) return;
     const documents = [...office.documents];
+    const generatedActivity: OfficeOverview['activityLog'] = [];
     const recurringInvoices = office.recurringInvoices.map((schedule) => {
       if (!due.some((item) => item.id === schedule.id)) return schedule;
       const sequence =
@@ -520,10 +570,12 @@ export function LocalFinance() {
             0,
           ) + 1;
       const runDate = schedule.nextRun;
+      const invoiceId = crypto.randomUUID();
+      const invoiceNumber = `INV-${new Date().getFullYear()}-${String(sequence).padStart(3, '0')}`;
       documents.unshift({
-        id: crypto.randomUUID(),
+        id: invoiceId,
         kind: 'Invoice',
-        number: `INV-${new Date().getFullYear()}-${String(sequence).padStart(3, '0')}`,
+        number: invoiceNumber,
         clientId: schedule.clientId,
         projectId: schedule.projectId,
         issueDate: runDate,
@@ -536,6 +588,14 @@ export function LocalFinance() {
         notes: preferences.showPaymentTerms ? preferences.paymentTerms : '',
         includeBankDetails: preferences.invoiceBankDefault,
         bankDetails: preferences.invoiceBankDefault ? preferences.bankDetails : '',
+      });
+      generatedActivity.push({
+        id: crypto.randomUUID(),
+        action: 'Generated',
+        entity: 'Recurring invoice',
+        recordId: invoiceId,
+        label: invoiceNumber,
+        occurredAt: new Date().toISOString(),
       });
       const next = new Date(`${runDate}T00:00:00Z`);
       if (schedule.frequency === 'Yearly') next.setUTCFullYear(next.getUTCFullYear() + 1);
@@ -555,9 +615,19 @@ export function LocalFinance() {
     >;
     localStorage.setItem(
       officeStorageKey,
-      JSON.stringify({ ...raw, documents, recurringInvoices }),
+      JSON.stringify({
+        ...raw,
+        documents,
+        recurringInvoices,
+        activityLog: [...generatedActivity, ...office.activityLog].slice(0, 200),
+      }),
     );
-    setOfficeOverview({ ...office, documents, recurringInvoices });
+    setOfficeOverview({
+      ...office,
+      documents,
+      recurringInvoices,
+      activityLog: [...generatedActivity, ...office.activityLog].slice(0, 200),
+    });
     window.dispatchEvent(new Event('infonits:local-change'));
   }, [loaded]);
 
@@ -830,6 +900,57 @@ export function LocalFinance() {
       })),
     }),
     [clients, effectiveRows, expenses, officeOverview, totals],
+  );
+  const globalSearchItems = useMemo(
+    () => [
+      ...clients.map((client) => ({
+        id: `client-${client.id}`,
+        recordId: client.id,
+        kind: 'Client',
+        title: clientLabel(client),
+        subtitle: client.email || client.phone || 'Client record',
+        section: 'clients' as Section,
+      })),
+      ...effectiveRows.map((project) => ({
+        id: `project-${project.id}`,
+        recordId: project.id,
+        kind: 'Project',
+        title: project.project,
+        subtitle: `${project.currency} ${project.value.toLocaleString()} · ${project.status}`,
+        section: 'projects' as Section,
+      })),
+      ...officeOverview.documents.map((document) => ({
+        id: `document-${document.id}`,
+        recordId: document.id,
+        kind: document.kind,
+        title: document.number,
+        subtitle: `${document.currency} ${document.amount.toLocaleString()} · ${document.status}`,
+        section: (document.kind === 'Invoice' ? 'invoices' : 'quotations') as Section,
+      })),
+      ...officeOverview.renewals.map((website) => ({
+        id: `website-${website.id}`,
+        recordId: website.id,
+        kind: 'Website',
+        title: website.website,
+        subtitle: website.websiteUrl || website.siteStatus || 'Website care',
+        section: 'renewals' as Section,
+      })),
+      ...officeOverview.events.map((event) => ({
+        id: `event-${event.id}`,
+        recordId: event.id,
+        kind: event.type,
+        title: event.title,
+        subtitle: `${event.date}${event.completed ? ' · Completed' : ''}`,
+        section: (event.type === 'Task' ? 'todos' : 'calendar') as Section,
+      })),
+    ],
+    [
+      clients,
+      effectiveRows,
+      officeOverview.documents,
+      officeOverview.events,
+      officeOverview.renewals,
+    ],
   );
 
   const selectedProject = effectiveRows.find((row) => row.id === selectedProjectId);
@@ -1184,7 +1305,7 @@ export function LocalFinance() {
   }
 
   function deleteDashboardInvoice(id: string) {
-    if (!window.confirm('Delete this invoice? This cannot be undone.')) return;
+    if (!window.confirm('Move this invoice to Trash? You can restore it for 30 days.')) return;
     let saved: Record<string, unknown>;
     try {
       saved = JSON.parse(localStorage.getItem(officeStorageKey) ?? '{}') as Record<string, unknown>;
@@ -1194,7 +1315,30 @@ export function LocalFinance() {
     const documents = Array.isArray(saved.documents)
       ? (saved.documents as OfficeOverview['documents'])
       : [];
+    const deleted = documents.find((document) => document.id === id);
+    if (!deleted) return;
+    const trashedDocuments = Array.isArray(saved.trashedDocuments)
+      ? (saved.trashedDocuments as OfficeOverview['trashedDocuments'])
+      : [];
+    const activityLog = Array.isArray(saved.activityLog)
+      ? (saved.activityLog as OfficeOverview['activityLog'])
+      : [];
     saved.documents = documents.filter((document) => document.id !== id);
+    saved.trashedDocuments = [
+      { ...deleted, deletedAt: new Date().toISOString() },
+      ...trashedDocuments,
+    ];
+    saved.activityLog = [
+      {
+        id: crypto.randomUUID(),
+        action: 'Deleted',
+        entity: 'Invoice',
+        recordId: deleted.id,
+        label: deleted.number,
+        occurredAt: new Date().toISOString(),
+      },
+      ...activityLog,
+    ].slice(0, 200);
     localStorage.setItem(officeStorageKey, JSON.stringify(saved));
     setOfficeOverview(readOfficeOverview());
     window.dispatchEvent(new Event('infonits:local-change'));
@@ -1210,9 +1354,26 @@ export function LocalFinance() {
     const documents = Array.isArray(saved.documents)
       ? (saved.documents as OfficeOverview['documents'])
       : [];
+    const changed = documents.find((document) => document.id === id);
+    const activityLog = Array.isArray(saved.activityLog)
+      ? (saved.activityLog as OfficeOverview['activityLog'])
+      : [];
     saved.documents = documents.map((document) =>
       document.id === id ? { ...document, status } : document,
     );
+    if (changed) {
+      saved.activityLog = [
+        {
+          id: crypto.randomUUID(),
+          action: 'Updated',
+          entity: 'Invoice',
+          recordId: changed.id,
+          label: `${changed.number} · ${status}`,
+          occurredAt: new Date().toISOString(),
+        },
+        ...activityLog,
+      ].slice(0, 200);
+    }
     localStorage.setItem(officeStorageKey, JSON.stringify(saved));
     setOfficeOverview(readOfficeOverview());
     window.dispatchEvent(new Event('infonits:local-change'));
@@ -1453,6 +1614,14 @@ export function LocalFinance() {
           </button>
           <span>Infonits Finance</span>
           <div className="local-topbar-actions">
+            <button
+              type="button"
+              className="local-global-search-button"
+              aria-label="Search workspace"
+              onClick={() => setGlobalSearchOpen(true)}
+            >
+              <Search size={17} /> <span>Search</span>
+            </button>
             <button
               type="button"
               className="local-ai-shortcut"
@@ -1845,6 +2014,20 @@ export function LocalFinance() {
       {quickAddOpen ? (
         <QuickAddMenu onClose={() => setQuickAddOpen(false)} onAdd={quickAdd} />
       ) : null}
+      {globalSearchOpen ? (
+        <GlobalSearch
+          items={globalSearchItems}
+          onClose={() => setGlobalSearchOpen(false)}
+          onSelect={(item) => {
+            setGlobalSearchOpen(false);
+            if (item.kind === 'Invoice') openDashboardInvoice(item.recordId, 'view');
+            else {
+              changeSection(item.section);
+              if (item.kind === 'Project') setSelectedProjectId(item.recordId);
+            }
+          }}
+        />
+      ) : null}
       {selectedProject ? (
         <ProjectDetail
           row={selectedProject}
@@ -2220,6 +2403,94 @@ function QuickAddMenu({
   );
 }
 
+type GlobalSearchItem = {
+  id: string;
+  recordId: string;
+  kind: string;
+  title: string;
+  subtitle: string;
+  section: Section;
+};
+
+function GlobalSearch({
+  items,
+  onClose,
+  onSelect,
+}: {
+  items: GlobalSearchItem[];
+  onClose: () => void;
+  onSelect: (item: GlobalSearchItem) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const normalized = query.trim().toLowerCase();
+  const results = normalized
+    ? items
+        .filter((item) =>
+          `${item.kind} ${item.title} ${item.subtitle}`.toLowerCase().includes(normalized),
+        )
+        .slice(0, 12)
+    : items.slice(0, 8);
+  return (
+    <div
+      className="local-modal-layer global-search-layer"
+      role="presentation"
+      onMouseDown={onClose}
+    >
+      <section
+        className="local-modal global-search-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="global-search-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <span className="local-modal-icon">
+              <Search size={19} />
+            </span>
+            <div>
+              <h2 id="global-search-title">Search workspace</h2>
+              <p>Clients, projects, invoices, websites and tasks</p>
+            </div>
+          </div>
+          <button aria-label="Close search" onClick={onClose}>
+            <X size={19} />
+          </button>
+        </header>
+        <label className="global-search-input">
+          <Search size={18} />
+          <input
+            autoFocus
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search anything…"
+          />
+        </label>
+        <div className="global-search-results">
+          {results.length ? (
+            results.map((item) => (
+              <button key={item.id} type="button" onClick={() => onSelect(item)}>
+                <span>{item.kind}</span>
+                <div>
+                  <strong>{item.title}</strong>
+                  <small>{item.subtitle}</small>
+                </div>
+                <ArrowUpRight size={15} />
+              </button>
+            ))
+          ) : (
+            <div className="global-search-empty">
+              <Search size={23} />
+              <strong>No matching records</strong>
+              <small>Try a client, project, invoice number or website.</small>
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function ProjectDetail({
   row,
   rates,
@@ -2255,6 +2526,36 @@ function ProjectDetail({
         (payment.invoiceId ? invoiceIds.has(payment.invoiceId) : false),
     )
     .toSorted((left, right) => right.date.localeCompare(left.date));
+  const timeline = [
+    {
+      id: `created-${row.id}`,
+      date: row.createdAt,
+      title: 'Project created',
+      detail: row.status,
+      tone: 'project',
+    },
+    ...invoices.map((invoice) => ({
+      id: `invoice-${invoice.id}`,
+      date: invoice.issueDate || invoice.dueDate,
+      title: invoice.number,
+      detail: `${invoice.kind} · ${invoice.status}`,
+      tone: 'invoice',
+    })),
+    ...projectPayments.map((payment) => ({
+      id: `payment-${payment.id}`,
+      date: payment.date,
+      title: payment.note || payment.receiptNumber || 'Payment recorded',
+      detail: `${payment.currency} ${payment.amount.toLocaleString()} · ${payment.status}`,
+      tone: 'payment',
+    })),
+    ...tasks.map((task) => ({
+      id: `task-${task.id}`,
+      date: task.date,
+      title: task.title,
+      detail: task.completed ? 'Task completed' : 'Task due',
+      tone: 'task',
+    })),
+  ].toSorted((left, right) => left.date.localeCompare(right.date));
   return (
     <div className="local-modal-layer" role="presentation" onMouseDown={onClose}>
       <section
@@ -2336,6 +2637,24 @@ function ProjectDetail({
             <p>{row.note}</p>
           </div>
         ) : null}
+        <section className="project-timeline">
+          <header>
+            <strong>Project timeline</strong>
+            <span>{timeline.length} milestones</span>
+          </header>
+          <div>
+            {timeline.map((item) => (
+              <article key={item.id}>
+                <i className={item.tone} />
+                <time dateTime={item.date}>{shortDate(item.date)}</time>
+                <span>
+                  <strong>{item.title}</strong>
+                  <small>{item.detail}</small>
+                </span>
+              </article>
+            ))}
+          </div>
+        </section>
         <section className="local-project-workspace">
           <div>
             <header>
@@ -2415,6 +2734,16 @@ function AttentionCenter({
 }) {
   const [filter, setFilter] = useState<'All' | 'Urgent' | 'Upcoming'>('All');
   const [page, setPage] = useState(0);
+  const [lastCloudSync, setLastCloudSync] = useState('');
+  useEffect(() => {
+    const refresh = (event?: Event) => {
+      const detail = (event as CustomEvent<{ syncedAt?: string }> | undefined)?.detail;
+      setLastCloudSync(detail?.syncedAt ?? localStorage.getItem(lastCloudSyncKey) ?? '');
+    };
+    refresh();
+    window.addEventListener('infonits:sync-status', refresh);
+    return () => window.removeEventListener('infonits:sync-status', refresh);
+  }, []);
   const now = new Date(`${today()}T00:00:00`).getTime();
   const day = 86_400_000;
   const clientNames = new Map(clients.map((client) => [client.id, clientLabel(client)]));
@@ -2462,6 +2791,36 @@ function AttentionCenter({
         dateLabel: `Scheduled ${shortDate(payment.date)}`,
         priority: 'Upcoming' as const,
         section: 'payments' as Section,
+      })),
+    ...office.recurringInvoices
+      .filter((schedule) => {
+        if (!schedule.active || !schedule.nextRun) return false;
+        const due = new Date(`${schedule.nextRun}T00:00:00`).getTime();
+        return due - now <= 7 * day;
+      })
+      .map((schedule) => {
+        const due = new Date(`${schedule.nextRun}T00:00:00`).getTime();
+        const overdue = due < now;
+        return {
+          id: `recurring-${schedule.id}`,
+          title: schedule.description || 'Recurring invoice ready',
+          detail: `${clientNames.get(schedule.clientId) ?? 'Unknown client'} · ${schedule.currency} ${schedule.amount.toLocaleString()}`,
+          date: due,
+          dateLabel: overdue ? 'Generation overdue' : `Runs ${shortDate(schedule.nextRun)}`,
+          priority: overdue ? ('Urgent' as const) : ('Upcoming' as const),
+          section: 'invoices' as Section,
+        };
+      }),
+    ...office.renewals
+      .filter((renewal) => renewal.siteStatus === 'Offline' || renewal.siteStatus === 'Issue')
+      .map((renewal) => ({
+        id: `website-health-${renewal.id}`,
+        title: `${renewal.website} needs attention`,
+        detail: renewal.monitorError || `Website status: ${renewal.siteStatus}`,
+        date: now,
+        dateLabel: renewal.siteStatus,
+        priority: 'Urgent' as const,
+        section: 'renewals' as Section,
       })),
     ...office.renewals.flatMap((renewal) =>
       [
@@ -2516,6 +2875,12 @@ function AttentionCenter({
   const safePage = Math.min(page, pageCount - 1);
   const pageItems = visible.slice(safePage * 10, safePage * 10 + 10);
   const urgentCount = items.filter((item) => item.priority === 'Urgent').length;
+  const websiteIssues = office.renewals.filter(
+    (renewal) => renewal.siteStatus === 'Offline' || renewal.siteStatus === 'Issue',
+  ).length;
+  const activeAutomations = office.recurringInvoices.filter((item) => item.active).length;
+  const lastCloudSyncTime = lastCloudSync ? Date.parse(lastCloudSync) : 0;
+  const cloudBackupHealthy = lastCloudSyncTime > 0 && lastCloudSyncTime >= now - day;
   return (
     <>
       <PageHeading
@@ -2549,6 +2914,52 @@ function AttentionCenter({
             <strong>{items.length}</strong>
           </span>
         </article>
+      </section>
+      <section className="operations-health" aria-label="Workspace protection and automation">
+        <button
+          className={cloudBackupHealthy ? 'healthy' : 'warning'}
+          onClick={() => window.dispatchEvent(new Event('infonits:sync-now'))}
+        >
+          <DatabaseBackup size={20} />
+          <span>
+            <small>Cloud backup</small>
+            <strong>{cloudBackupHealthy ? 'Protected' : 'Check backup'}</strong>
+            <em>
+              {lastCloudSyncTime
+                ? `Last saved ${new Date(lastCloudSyncTime).toLocaleString('en-GB')}`
+                : 'Click to sync now'}
+            </em>
+          </span>
+        </button>
+        <button
+          className={websiteIssues ? 'warning' : 'healthy'}
+          onClick={() => onSection('renewals')}
+        >
+          <Globe2 size={20} />
+          <span>
+            <small>Website health</small>
+            <strong>
+              {websiteIssues ? `${websiteIssues} need attention` : 'All checked sites healthy'}
+            </strong>
+            <em>{office.renewals.length} websites tracked</em>
+          </span>
+        </button>
+        <button className="automation" onClick={() => onSection('invoices')}>
+          <Repeat2 size={20} />
+          <span>
+            <small>Invoice automation</small>
+            <strong>{activeAutomations} active schedules</strong>
+            <em>Next invoices appear automatically</em>
+          </span>
+        </button>
+        <button className="trash" onClick={() => onSection('invoices')}>
+          <Archive size={20} />
+          <span>
+            <small>Recoverable trash</small>
+            <strong>{office.trashedDocuments.length} records</strong>
+            <em>Available to restore for 30 days</em>
+          </span>
+        </button>
       </section>
       <section className="attention-center-card">
         <header>
@@ -3105,6 +3516,34 @@ function ProjectForm({
   const advanceValue = Number(draft.advance || 0) * rate;
   return (
     <form className="local-entry-form modal-project-form" onSubmit={onSubmit}>
+      <div className="project-template-picker" aria-label="Project templates">
+        <span>Start with a template</span>
+        <div>
+          {projectTemplates.map((template) => (
+            <button
+              type="button"
+              key={template.id}
+              onClick={() =>
+                setDraft((current) => ({
+                  ...current,
+                  project: template.project,
+                  note: template.note,
+                  recurring: template.recurring,
+                }))
+              }
+            >
+              {template.id === 'website' ? (
+                <Globe2 size={15} />
+              ) : template.id === 'maintenance' ? (
+                <RefreshCw size={15} />
+              ) : (
+                <MessagesSquare size={15} />
+              )}
+              {template.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <fieldset className="form-section">
         <legend>
           <span>1</span> Project details
@@ -3299,6 +3738,12 @@ function ProjectTable({
           const workCostLkr = localValue(workCost, row.exchangeRate);
           const balance = row.value - row.advance - workCost;
           const balanceLkr = value - received - workCostLkr;
+          const progress =
+            row.status === 'Paid'
+              ? 100
+              : value > 0
+                ? Math.min(100, Math.max(0, Math.round((received / value) * 100)))
+                : 0;
           const client = clients.find((item) => item.id === row.clientId);
           const clientName = client ? clientLabel(client) : '';
           const isEditing = editingId === row.id;
@@ -3313,6 +3758,15 @@ function ProjectTable({
                   {clientName || 'No client'} · {shortDate(row.createdAt)}
                   {row.recurring ? ' · Monthly recurring' : ''}
                 </small>
+                <div
+                  className="local-project-progress"
+                  aria-label={`Project payment progress ${progress}%`}
+                >
+                  <span aria-hidden="true">
+                    <i style={{ width: `${progress}%` }} />
+                  </span>
+                  <small>{progress}%</small>
+                </div>
               </div>
               <div className="local-project-metrics">
                 <div className="local-project-value">
