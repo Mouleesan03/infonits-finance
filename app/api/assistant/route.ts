@@ -81,6 +81,7 @@ const actionSchema = z.union([
 
 const requestSchema = z.object({
   message: z.string().trim().min(1).max(800),
+  language: z.enum(['auto', 'ta', 'en']).default('auto'),
   history: z
     .array(
       z.object({
@@ -214,6 +215,12 @@ export async function POST(request: Request) {
     }
 
     const input = requestSchema.parse(await request.json());
+    const languageInstruction =
+      input.language === 'ta'
+        ? 'Reply in natural, easy-to-understand Tamil. Keep business names, invoice numbers and currencies unchanged. '
+        : input.language === 'en'
+          ? 'Reply in clear, concise English. '
+          : 'Reply in the same language as the user. If the user mixes Tamil and English, respond in natural Tamil-English while keeping business terms clear. ';
     const wantsWebSearch =
       /\b(search|online|web|internet|latest|current|today|news|price|compare|research|find)\b/i.test(
         input.message,
@@ -230,6 +237,7 @@ export async function POST(request: Request) {
         : undefined,
       instructions:
         'You are Nova, the trusted personal operations assistant inside the Infonits Finance workspace. ' +
+        languageInstruction +
         'Use the supplied workspace context for business records and conversation history for follow-up requests. ' +
         'When web search is available and the user asks for online, current, latest, research, comparison, or news information, use it and summarise the answer clearly. ' +
         'You may propose one supported workspace action or a batch of 2 to 10 actions when the user explicitly asks for several records or a monthly set. ' +

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowUp,
   Bot,
@@ -162,6 +162,9 @@ function FormattedMessage({ text }: { text: string }) {
 }
 
 const novaHistoryKey = 'infonits-nova-history-v1';
+const novaLanguageKey = 'infonits-nova-language-v1';
+const dailyBriefingPrompt =
+  'Give me a short morning briefing using the live workspace data. Start with a friendly greeting, then list overdue payments, today tasks, renewals and website issues in priority order. Finish with the three best actions for today.';
 const novaWelcome: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
@@ -217,14 +220,23 @@ const quickActions = [
 ];
 
 type NovaTab = 'chat' | 'briefing' | 'actions' | 'approvals';
+type NovaLanguage = 'auto' | 'ta' | 'en';
+
+function speechLanguage(text: string, language: NovaLanguage, fallback: string) {
+  if (language === 'ta') return 'ta-IN';
+  if (language === 'en') return 'en-US';
+  return /[\u0B80-\u0BFF]/.test(text) ? 'ta-IN' : fallback;
+}
 
 export function InfonitsAssistant({
   context,
+  dailyBriefing = false,
   onApply,
   onClose,
   voice,
 }: {
   context: object;
+  dailyBriefing?: boolean;
   onApply: (action: Exclude<AssistantAction, { type: 'none' }>) => string;
   onClose: () => void;
   voice: { enabled: boolean; autoSpeak: boolean; rate: number; language: string };
@@ -236,7 +248,10 @@ export function InfonitsAssistant({
   const [error, setError] = useState('');
   const [listening, setListening] = useState(false);
   const [historyReady, setHistoryReady] = useState(false);
+  const [language, setLanguage] = useState<NovaLanguage>('auto');
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const dailyBriefingStartedRef = useRef(false);
 
   useEffect(() => {
     try {
@@ -244,6 +259,10 @@ export function InfonitsAssistant({
       if (saved) {
         const parsed = JSON.parse(saved) as ChatMessage[];
         if (Array.isArray(parsed) && parsed.length) setMessages(parsed.slice(-40));
+      }
+      const savedLanguage = localStorage.getItem(novaLanguageKey);
+      if (savedLanguage === 'auto' || savedLanguage === 'ta' || savedLanguage === 'en') {
+        setLanguage(savedLanguage);
       }
     } catch {
       localStorage.removeItem(novaHistoryKey);
@@ -260,12 +279,93 @@ export function InfonitsAssistant({
   }, [historyReady, messages]);
 
   useEffect(() => {
+    if (!historyReady) return;
+    localStorage.setItem(novaLanguageKey, language);
+  }, [historyReady, language]);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 96)}px`;
+  }, [input]);
+
+  useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [onClose]);
+
+  const send = useCallback(
+    async (message = input, options: { speak?: boolean; silentUser?: boolean } = {}) => {
+      const clean = message.trim();
+      if (!clean || busy) return;
+      setInput('');
+      setError('');
+      if (!options.silentUser) {
+        setMessages((current) => [
+          ...current,
+          { id: crypto.randomUUID(), role: 'user', text: clean },
+        ]);
+      }
+      setBusy(true);
+      try {
+        const response = await fetch('/api/assistant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: clean,
+            language,
+            context,
+            history: messages
+              .filter((item) => item.id !== 'welcome')
+              .slice(-10)
+              .map((item) => ({ role: item.role, text: item.text })),
+          }),
+        });
+        const data = (await response.json()) as {
+          reply?: string;
+          action?: AssistantAction;
+          sources?: AssistantSource[];
+          error?: string;
+        };
+        if (!response.ok || !data.reply || !data.action) {
+          throw new Error(data.error || 'Nova could not answer right now.');
+        }
+        setMessages((current) => [
+          ...current,
+          {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            text: data.reply!,
+            action: data.action,
+            sources: data.sources,
+          },
+        ]);
+        if ((voice.autoSpeak || options.speak) && 'speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(data.reply);
+          utterance.lang = speechLanguage(data.reply, language, voice.language);
+          utterance.rate = voice.rate;
+          window.speechSynthesis.speak(utterance);
+        }
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : 'Nova is unavailable.');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, context, input, language, messages, voice.autoSpeak, voice.language, voice.rate],
+  );
+
+  useEffect(() => {
+    if (!dailyBriefing || !historyReady || dailyBriefingStartedRef.current) return;
+    dailyBriefingStartedRef.current = true;
+    setActiveTab('chat');
+    void send(dailyBriefingPrompt, { silentUser: true });
+  }, [dailyBriefing, historyReady, send]);
 
   function toggleListening() {
     if (listening) {
@@ -284,7 +384,7 @@ export function InfonitsAssistant({
     const recognition = new Recognition();
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.lang = voice.language;
+    recognition.lang = language === 'ta' ? 'ta-IN' : language === 'en' ? 'en-US' : voice.language;
     recognition.onresult = (event) => {
       const results = Array.from(event.results);
       const transcript = results
@@ -294,7 +394,7 @@ export function InfonitsAssistant({
       if (!transcript) return;
       setInput(transcript);
       const finalResult = results.length > 0 && results.every((result) => result.isFinal);
-      if (finalResult) void send(transcript);
+      if (finalResult) void send(transcript, { speak: true });
     };
     recognition.onerror = (event) => {
       const message =
@@ -313,59 +413,6 @@ export function InfonitsAssistant({
     setError('');
     setListening(true);
     recognition.start();
-  }
-
-  async function send(message = input) {
-    const clean = message.trim();
-    if (!clean || busy) return;
-    setInput('');
-    setError('');
-    setMessages((current) => [...current, { id: crypto.randomUUID(), role: 'user', text: clean }]);
-    setBusy(true);
-    try {
-      const response = await fetch('/api/assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: clean,
-          context,
-          history: messages
-            .filter((item) => item.id !== 'welcome')
-            .slice(-10)
-            .map((item) => ({ role: item.role, text: item.text })),
-        }),
-      });
-      const data = (await response.json()) as {
-        reply?: string;
-        action?: AssistantAction;
-        sources?: AssistantSource[];
-        error?: string;
-      };
-      if (!response.ok || !data.reply || !data.action) {
-        throw new Error(data.error || 'Nova could not answer right now.');
-      }
-      setMessages((current) => [
-        ...current,
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          text: data.reply!,
-          action: data.action,
-          sources: data.sources,
-        },
-      ]);
-      if (voice.autoSpeak && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(data.reply);
-        utterance.lang = voice.language;
-        utterance.rate = voice.rate;
-        window.speechSynthesis.speak(utterance);
-      }
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Nova is unavailable.');
-    } finally {
-      setBusy(false);
-    }
   }
 
   function apply(message: ChatMessage) {
@@ -451,6 +498,18 @@ export function InfonitsAssistant({
           <p>Ask, analyse and prepare safe workspace actions.</p>
         </div>
         <div className="nova-header-actions">
+          <label className="nova-language-select">
+            <Globe2 size={13} aria-hidden="true" />
+            <select
+              aria-label="Nova response language"
+              value={language}
+              onChange={(event) => setLanguage(event.target.value as NovaLanguage)}
+            >
+              <option value="auto">Auto</option>
+              <option value="ta">தமிழ்</option>
+              <option value="en">English</option>
+            </select>
+          </label>
           <i>{voice.enabled ? 'Voice ready' : 'Claude connected'}</i>
           <button type="button" onClick={resetConversation} title="Start a new conversation">
             <RefreshCw size={16} />
@@ -532,6 +591,7 @@ export function InfonitsAssistant({
             >
               <textarea
                 autoFocus
+                ref={textareaRef}
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 onKeyDown={(event) => {
@@ -541,7 +601,7 @@ export function InfonitsAssistant({
                   }
                 }}
                 placeholder="Ask Nova or describe a task…"
-                rows={2}
+                rows={1}
               />
               {voice.enabled ? (
                 <button

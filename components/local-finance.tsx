@@ -206,6 +206,7 @@ type OfficeOverview = {
 const storageKey = 'infonits-finance-local-v1';
 const officeStorageKey = 'infonits-finance-office-v1';
 const previewSeedKey = 'infonits-mobile-preview-seed-version';
+const novaBriefingDateKey = 'infonits-nova-daily-briefing-date-v1';
 const previewSections: Section[] = [
   'dashboard',
   'attention',
@@ -410,6 +411,7 @@ export function LocalFinance() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
   const [novaOpen, setNovaOpen] = useState(false);
+  const [novaDailyBriefing, setNovaDailyBriefing] = useState(false);
   const [officeFormSignal, setOfficeFormSignal] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationTab, setNotificationTab] = useState<'notifications' | 'today'>(
@@ -547,6 +549,17 @@ export function LocalFinance() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!loaded || mobilePreview) return;
+    const previewQuery = new URLSearchParams(window.location.search);
+    if (previewQuery.has('mobile-preview') || previewQuery.has('ui-preview')) return;
+    const currentDate = today();
+    if (localStorage.getItem(novaBriefingDateKey) === currentDate) return;
+    localStorage.setItem(novaBriefingDateKey, currentDate);
+    setNovaDailyBriefing(true);
+    setNovaOpen(true);
+  }, [loaded, mobilePreview]);
 
   useEffect(() => {
     if (loaded)
@@ -970,6 +983,7 @@ export function LocalFinance() {
 
   function changeSection(next: Section) {
     if (next === 'assistant') {
+      setNovaDailyBriefing(false);
       setNovaOpen(true);
       setMenuOpen(false);
       setNotificationsOpen(false);
@@ -1643,7 +1657,10 @@ export function LocalFinance() {
               className="local-ai-shortcut"
               aria-label="Open Nova personal assistant"
               aria-expanded={novaOpen}
-              onClick={() => setNovaOpen(true)}
+              onClick={() => {
+                setNovaDailyBriefing(false);
+                setNovaOpen(true);
+              }}
             >
               <Sparkles size={17} />
             </button>
@@ -1986,12 +2003,19 @@ export function LocalFinance() {
           <div
             className="local-modal-layer nova-layer"
             role="presentation"
-            onMouseDown={() => setNovaOpen(false)}
+            onMouseDown={() => {
+              setNovaOpen(false);
+              setNovaDailyBriefing(false);
+            }}
           >
             <InfonitsAssistant
               context={assistantContext}
+              dailyBriefing={novaDailyBriefing}
               onApply={applyAssistantAction}
-              onClose={() => setNovaOpen(false)}
+              onClose={() => {
+                setNovaOpen(false);
+                setNovaDailyBriefing(false);
+              }}
               voice={{
                 enabled: preferences.voiceEnabled,
                 autoSpeak: preferences.autoSpeak,

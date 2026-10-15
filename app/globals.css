@@ -12,13 +12,14 @@
 /* Nova is a global personal-assistant workspace, opened from the top bar. */
 .nova-layer {
   z-index: 1400;
-  padding: 22px;
+  place-items: center end;
+  padding: 16px;
   background: rgb(7 22 43 / 58%);
   backdrop-filter: blur(8px);
 }
 .nova-modal.assistant-page {
-  width: min(920px, calc(100vw - 44px));
-  height: min(760px, calc(100dvh - 44px));
+  width: min(540px, calc(100vw - 32px));
+  height: min(720px, calc(100dvh - 32px));
   min-height: 0;
   grid-template-rows: auto auto minmax(0, 1fr);
   overflow: hidden;
@@ -34,6 +35,34 @@
   display: flex;
   align-items: center;
   gap: 7px;
+}
+.nova-language-select {
+  display: flex;
+  height: 34px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 7px;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 10px;
+  color: #d9e9f8;
+  background: rgb(255 255 255 / 9%);
+}
+.nova-language-select select {
+  width: 66px;
+  border: 0;
+  outline: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 750;
+}
+.nova-language-select svg {
+  display: none;
+}
+.nova-language-select option {
+  color: #203852;
+  background: #fff;
 }
 .nova-header-actions > i {
   padding: 7px 10px;
@@ -89,6 +118,17 @@
   width: 100%;
   height: 100%;
   padding: 16px 18px;
+}
+.nova-modal .assistant-composer {
+  padding: 7px;
+  border-radius: 12px;
+}
+.nova-modal .assistant-composer textarea {
+  min-height: 40px;
+  max-height: 96px;
+  padding: 10px 7px;
+  resize: none;
+  overflow-y: auto;
 }
 .nova-modal .assistant-messages {
   min-height: 0;
@@ -214,6 +254,7 @@
 
 @media (max-width: 720px) {
   .nova-layer {
+    place-items: stretch;
     padding: 0;
   }
   .nova-modal.assistant-page {
@@ -239,6 +280,13 @@
   .nova-header-actions > button {
     width: 40px;
     height: 40px;
+  }
+  .nova-language-select {
+    height: 40px;
+    padding-inline: 6px;
+  }
+  .nova-language-select select {
+    width: 60px;
   }
   .nova-tabs {
     grid-auto-flow: column;
@@ -20210,13 +20258,15 @@ summary:focus-visible {
 /* Ensure Nova's overlay treatment wins after the shared modal rules. */
 .local-modal-layer.nova-layer {
   z-index: 1400;
-  padding: 22px;
+  place-items: center end;
+  padding: 16px;
   background: rgb(7 22 43 / 58%);
   backdrop-filter: blur(8px);
 }
 
 @media (max-width: 720px) {
   .local-modal-layer.nova-layer {
+    place-items: stretch;
     padding: 0;
   }
 }
