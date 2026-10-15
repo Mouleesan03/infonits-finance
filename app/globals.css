@@ -9,6 +9,254 @@
   --radius-lg: 12px;
 }
 
+/* Nova is a global personal-assistant workspace, opened from the top bar. */
+.nova-layer {
+  z-index: 140;
+  padding: 22px;
+  background: rgb(7 22 43 / 58%);
+  backdrop-filter: blur(8px);
+}
+.nova-modal.assistant-page {
+  width: min(920px, calc(100vw - 44px));
+  height: min(760px, calc(100dvh - 44px));
+  min-height: 0;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 20px;
+  box-shadow: 0 30px 90px rgb(2 16 35 / 35%);
+}
+.nova-modal .assistant-header {
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  padding: 16px 18px;
+}
+.nova-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.nova-header-actions > i {
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: #a9f3d7;
+  background: rgb(119 237 192 / 14%);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 750;
+}
+.nova-header-actions > button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 10px;
+  color: #d9e9f8;
+  background: rgb(255 255 255 / 9%);
+}
+.nova-header-actions > button:hover {
+  color: #fff;
+  background: rgb(255 255 255 / 16%);
+}
+.nova-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e0e8f1;
+  background: #f8fafc;
+}
+.nova-tabs button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 9px;
+  color: #667b94;
+  font-size: 11px;
+  font-weight: 800;
+}
+.nova-tabs button:hover,
+.nova-tabs button.active {
+  color: #176bc5;
+  background: #eaf3ff;
+}
+.nova-tabs button.active {
+  box-shadow: inset 0 0 0 1px #c9ddf7;
+}
+.nova-modal .assistant-body {
+  width: 100%;
+  height: 100%;
+  padding: 16px 18px;
+}
+.nova-modal .assistant-messages {
+  min-height: 0;
+  scroll-behavior: smooth;
+}
+.nova-panel-view {
+  height: 100%;
+  overflow-y: auto;
+  padding: 3px;
+}
+.nova-panel-intro {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid #dce7f3;
+  border-radius: 13px;
+  color: #4f42b7;
+  background: linear-gradient(135deg, #f5f8ff, #f5f1ff);
+}
+.nova-panel-intro strong,
+.nova-panel-intro p {
+  display: block;
+}
+.nova-panel-intro strong {
+  color: #253b56;
+  font-size: 14px;
+}
+.nova-panel-intro p {
+  margin: 3px 0 0;
+  color: #71839a;
+  font-size: 11px;
+}
+.nova-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.nova-choice-grid > button {
+  position: relative;
+  min-height: 128px;
+  padding: 15px;
+  border: 1px solid #dfe7f0;
+  border-radius: 13px;
+  color: #2c71c7;
+  background: #fff;
+  text-align: left;
+  box-shadow: 0 6px 18px rgb(28 56 89 / 4%);
+}
+.nova-choice-grid > button:hover:not(:disabled) {
+  border-color: #b9d2f1;
+  background: #f8fbff;
+  transform: translateY(-1px);
+}
+.nova-choice-grid > button > span,
+.nova-choice-grid > button > small {
+  display: block;
+}
+.nova-choice-grid > button > span {
+  margin-top: 8px;
+  color: #293f5a;
+  font-size: 12px;
+  font-weight: 850;
+}
+.nova-choice-grid > button > small {
+  margin-top: 5px;
+  color: #7b8ca0;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.nova-choice-grid > button > svg:last-child {
+  position: absolute;
+  right: 13px;
+  bottom: 13px;
+}
+.nova-action-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.nova-action-grid > button {
+  min-height: 112px;
+}
+.nova-action-grid > button > svg:first-child {
+  padding: 8px;
+  box-sizing: content-box;
+  border-radius: 10px;
+  background: #eaf3ff;
+}
+.nova-approvals > article {
+  margin-bottom: 10px;
+  padding: 13px;
+  border: 1px solid #dfe7f0;
+  border-radius: 12px;
+  background: #f9fbfd;
+  color: #344a64;
+  font-size: 11px;
+}
+.nova-empty-state {
+  display: grid;
+  min-height: 260px;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  color: #7890aa;
+  text-align: center;
+}
+.nova-empty-state svg {
+  color: #23a171;
+}
+.nova-empty-state strong {
+  color: #304761;
+  font-size: 14px;
+}
+.nova-empty-state p {
+  margin: 0;
+  font-size: 10px;
+}
+.local-ai-shortcut[aria-expanded='true'] {
+  border-color: #b9d4f6;
+  color: #176bc5;
+  background: #eaf3ff;
+}
+
+@media (max-width: 720px) {
+  .nova-layer {
+    padding: 0;
+  }
+  .nova-modal.assistant-page {
+    width: 100vw;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+  .nova-modal .assistant-header {
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    padding: max(12px, env(safe-area-inset-top)) 12px 12px;
+  }
+  .nova-modal .assistant-header > span {
+    width: 42px;
+    height: 42px;
+  }
+  .nova-header-actions > i,
+  .nova-header-actions > button:first-of-type {
+    display: none;
+  }
+  .nova-tabs {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(112px, 1fr);
+    grid-template-columns: none;
+    overflow-x: auto;
+    padding: 7px 9px;
+  }
+  .nova-tabs button {
+    white-space: nowrap;
+  }
+  .nova-modal .assistant-body {
+    padding: 11px;
+  }
+  .nova-choice-grid,
+  .nova-action-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .nova-choice-grid > button,
+  .nova-action-grid > button {
+    min-height: 98px;
+  }
+}
+
 /* Assistant, notification center, invoice states and branded loading. */
 .workspace-loader {
   min-height: 100dvh;
@@ -19428,151 +19676,6 @@ summary:focus-visible {
   }
 }
 
-/* AI operations uses the existing dashboard rhythm and keeps every result read-only. */
-.ai-operations-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(310px, 0.85fr);
-  gap: 12px 18px;
-  margin-bottom: 14px;
-  padding: 16px;
-  border: 1px solid #d9e6f5;
-  border-radius: 15px;
-  background:
-    radial-gradient(circle at 94% 8%, rgb(110 77 255 / 10%), transparent 34%),
-    linear-gradient(135deg, #f7fbff, #fff);
-  box-shadow: 0 8px 26px rgb(27 55 89 / 5%);
-}
-.ai-operations-panel > header {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 11px;
-}
-.ai-operations-panel > header > span {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border-radius: 11px;
-  color: #5a3fd2;
-  background: #eeeaff;
-}
-.ai-operations-panel header small,
-.ai-operations-panel header strong,
-.ai-operations-panel header p {
-  display: block;
-}
-.ai-operations-panel header small {
-  color: #6a56ca;
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: 0.09em;
-}
-.ai-operations-panel header strong {
-  margin-top: 2px;
-  color: #243b56;
-  font-size: 14px;
-}
-.ai-operations-panel header p {
-  margin: 2px 0 0;
-  color: #71839a;
-  font-size: 10px;
-}
-.ai-operations-panel > form {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 38px;
-  align-items: center;
-  overflow: hidden;
-  border: 1px solid #cfddeb;
-  border-radius: 11px;
-  background: #fff;
-}
-.ai-operations-panel > form:focus-within {
-  border-color: #357fdf;
-  box-shadow: 0 0 0 3px rgb(44 125 224 / 10%);
-}
-.ai-operations-panel > form input,
-.ai-operations-panel > form input:focus,
-.ai-operations-panel > form input:focus-visible {
-  width: 100%;
-  min-height: 42px;
-  padding: 0 12px;
-  border: 0 !important;
-  outline: 0 !important;
-  background: transparent;
-  box-shadow: none !important;
-  color: #29415c;
-  font: inherit;
-  font-size: 11px;
-}
-.ai-operations-panel > form button {
-  display: grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  border-radius: 8px;
-  color: #fff;
-  background: #276fd1;
-}
-.ai-operations-panel > form button:disabled {
-  opacity: 0.45;
-}
-.ai-operations-prompts {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-.ai-operations-prompts button {
-  padding: 7px 10px;
-  border: 1px solid #dce5ef;
-  border-radius: 999px;
-  color: #516b88;
-  background: #fff;
-  font-size: 9px;
-  font-weight: 750;
-}
-.ai-operations-prompts button:hover:not(:disabled) {
-  border-color: #bcd0eb;
-  color: #236ac9;
-  background: #f5f9ff;
-}
-.ai-operations-answer {
-  grid-column: 1 / -1;
-  position: relative;
-  padding: 13px 42px 13px 14px;
-  border: 1px solid #dde7f1;
-  border-radius: 12px;
-  background: #fff;
-}
-.ai-operations-answer > span {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #5b46c0;
-  font-size: 9px;
-  font-weight: 850;
-  text-transform: uppercase;
-}
-.ai-operations-answer > p {
-  margin: 7px 0 0;
-  color: #3a506b;
-  font-size: 11px;
-  line-height: 1.6;
-  white-space: pre-wrap;
-}
-.ai-operations-answer > button {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: #627892;
-  font-size: 8px;
-  font-weight: 800;
-}
-.ai-operations-error,
 .payment-reminder-error {
   grid-column: 1 / -1;
   margin: 0;
@@ -19603,34 +19706,7 @@ summary:focus-visible {
   background: #fff;
 }
 
-@media (max-width: 900px) {
-  .ai-operations-panel {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .ai-operations-panel > form {
-    grid-row: auto;
-  }
-}
-
 @media (max-width: 720px) {
-  .ai-operations-panel {
-    gap: 11px;
-    padding: 13px;
-  }
-  .ai-operations-panel > header {
-    grid-template-columns: 36px minmax(0, 1fr);
-  }
-  .ai-operations-panel > header .button {
-    grid-column: 1 / -1;
-    width: 100%;
-  }
-  .ai-operations-prompts {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .ai-operations-prompts button {
-    text-align: left;
-  }
   .payment-reminder-ai {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -20100,5 +20176,19 @@ summary:focus-visible {
   .sales-trash-list article .button {
     grid-column: 1 / -1;
     justify-content: center;
+  }
+}
+
+/* Ensure Nova's overlay treatment wins after the shared modal rules. */
+.local-modal-layer.nova-layer {
+  z-index: 140;
+  padding: 22px;
+  background: rgb(7 22 43 / 58%);
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 720px) {
+  .local-modal-layer.nova-layer {
+    padding: 0;
   }
 }

@@ -56,7 +56,6 @@ import { StatusSelect } from './ui/status-select';
 import { PageTitle } from './ui/typography';
 import { FormModal } from './ui/form-modal';
 import { DescriptionAssistant } from './ui/description-assistant';
-import { AiOperationsPanel } from './ai-operations-panel';
 
 type Section =
   | 'dashboard'
@@ -410,6 +409,7 @@ export function LocalFinance() {
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
+  const [novaOpen, setNovaOpen] = useState(false);
   const [officeFormSignal, setOfficeFormSignal] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationTab, setNotificationTab] = useState<'notifications' | 'today'>(
@@ -437,7 +437,12 @@ export function LocalFinance() {
         previewSection &&
         previewSections.includes(previewSection as Section)
       ) {
-        setSection(previewSection as Section);
+        if (previewSection === 'assistant') {
+          setSection('dashboard');
+          setNovaOpen(true);
+        } else {
+          setSection(previewSection as Section);
+        }
       }
       if (isMobilePreview && localStorage.getItem(previewSeedKey) !== mobilePreviewSeedVersion) {
         const previewData = buildMobilePreviewData();
@@ -964,6 +969,13 @@ export function LocalFinance() {
   );
 
   function changeSection(next: Section) {
+    if (next === 'assistant') {
+      setNovaOpen(true);
+      setMenuOpen(false);
+      setNotificationsOpen(false);
+      setProfileOpen(false);
+      return;
+    }
     setSection(next);
     setMenuOpen(false);
     setNotificationsOpen(false);
@@ -1629,8 +1641,9 @@ export function LocalFinance() {
             <button
               type="button"
               className="local-ai-shortcut"
-              aria-label="Open Infonits GPT"
-              onClick={() => changeSection('assistant')}
+              aria-label="Open Nova personal assistant"
+              aria-expanded={novaOpen}
+              onClick={() => setNovaOpen(true)}
             >
               <Sparkles size={17} />
             </button>
@@ -1756,7 +1769,6 @@ export function LocalFinance() {
         <main className="local-main">
           {section === 'dashboard' && (
             <Dashboard
-              assistantContext={assistantContext}
               totals={totals}
               rows={monthRows}
               rates={fxRates}
@@ -1769,19 +1781,6 @@ export function LocalFinance() {
               onInvoiceEdit={(id) => openDashboardInvoice(id, 'edit')}
               onInvoiceStatusChange={updateDashboardInvoiceStatus}
               onInvoiceDelete={deleteDashboardInvoice}
-            />
-          )}
-
-          {section === 'assistant' && (
-            <InfonitsAssistant
-              context={assistantContext}
-              onApply={applyAssistantAction}
-              voice={{
-                enabled: preferences.voiceEnabled,
-                autoSpeak: preferences.autoSpeak,
-                rate: preferences.speechRate,
-                language: preferences.voiceLanguage,
-              }}
             />
           )}
 
@@ -1982,6 +1981,26 @@ export function LocalFinance() {
             />
           )}
         </main>
+
+        {novaOpen && (
+          <div
+            className="local-modal-layer nova-layer"
+            role="presentation"
+            onMouseDown={() => setNovaOpen(false)}
+          >
+            <InfonitsAssistant
+              context={assistantContext}
+              onApply={applyAssistantAction}
+              onClose={() => setNovaOpen(false)}
+              voice={{
+                enabled: preferences.voiceEnabled,
+                autoSpeak: preferences.autoSpeak,
+                rate: preferences.speechRate,
+                language: preferences.voiceLanguage,
+              }}
+            />
+          </div>
+        )}
         <nav className="local-mobile-nav" aria-label="Mobile workspace navigation">
           <button
             className={section === 'dashboard' ? 'active' : ''}
@@ -2170,7 +2189,7 @@ function WorkspaceSettings({
                     <Bot size={19} />
                   </span>
                   <div>
-                    <h2>AI personal assistant</h2>
+                    <h2>Nova personal assistant</h2>
                     <p>Control microphone input for Claude requests.</p>
                   </div>
                 </header>
@@ -2894,7 +2913,7 @@ function AttentionCenter({
         subtitle="Everything overdue, pending or coming up across your workspace."
       >
         <button className="button button-outline" onClick={() => onSection('assistant')}>
-          <Sparkles size={16} /> Ask Infonits GPT
+          <Sparkles size={16} /> Ask Nova
         </button>
       </PageHeading>
       <section className="attention-summary">
@@ -3032,7 +3051,6 @@ function AttentionCenter({
 }
 
 function Dashboard({
-  assistantContext,
   totals,
   rows,
   rates,
@@ -3046,7 +3064,6 @@ function Dashboard({
   onInvoiceStatusChange,
   onInvoiceDelete,
 }: {
-  assistantContext: object;
   totals: { value: number; received: number; work: number; expenses: number; net: number };
   rows: LocalRow[];
   rates: Record<string, number>;
@@ -3219,7 +3236,6 @@ function Dashboard({
           <TrendingUp size={18} />
         </article>
       </section>
-      <AiOperationsPanel context={assistantContext} />
       <section className="local-dashboard-middle">
         <article className="local-outstanding-card">
           <div className="local-card-heading">

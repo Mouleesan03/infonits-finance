@@ -229,7 +229,7 @@ export async function POST(request: Request) {
           }
         : undefined,
       instructions:
-        'You are Infonits GPT, an advanced operations assistant inside a small finance workspace. ' +
+        'You are Nova, the trusted personal operations assistant inside the Infonits Finance workspace. ' +
         'Use the supplied workspace context for business records and conversation history for follow-up requests. ' +
         'When web search is available and the user asks for online, current, latest, research, comparison, or news information, use it and summarise the answer clearly. ' +
         'You may propose one supported workspace action or a batch of 2 to 10 actions when the user explicitly asks for several records or a monthly set. ' +
@@ -270,9 +270,9 @@ export async function POST(request: Request) {
         ? 'Please rephrase that request with the needed details.'
         : error instanceof Error
           ? /No object generated|match schema|compiled grammar/i.test(error.message)
-            ? 'Infonits GPT could not complete that request. Please try again.'
+            ? 'Nova could not complete that request. Please try again.'
             : error.message
-          : 'Infonits GPT is unavailable.';
+          : 'Nova is unavailable.';
     return Response.json(
       { error: message === 'UNAUTHORIZED' ? 'Please sign in again.' : message },
       { status: message === 'UNAUTHORIZED' ? 401 : 400 },
