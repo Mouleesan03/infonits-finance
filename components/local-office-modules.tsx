@@ -38,6 +38,7 @@ import {
   Send,
   ShieldCheck,
   SlidersHorizontal,
+  Sparkles,
   ThumbsUp,
   Trash2,
   UserRound,
@@ -1129,6 +1130,10 @@ function SalesDocuments({
   const [paymentTarget, setPaymentTarget] = useState<SalesDocument | null>(null);
   const [reminderTarget, setReminderTarget] = useState<SalesDocument | null>(null);
   const [reminderCopied, setReminderCopied] = useState(false);
+  const [reminderTone, setReminderTone] = useState<'friendly' | 'firm' | 'final'>('friendly');
+  const [reminderText, setReminderText] = useState('');
+  const [reminderBusy, setReminderBusy] = useState(false);
+  const [reminderError, setReminderError] = useState('');
   const [paymentDraft, setPaymentDraft] = useState({ amount: '', date: today(), note: '' });
   const [recurringOpen, setRecurringOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
@@ -1447,9 +1452,39 @@ function SalesDocuments({
   }
 
   async function copyReminder(item: SalesDocument) {
-    await navigator.clipboard.writeText(paymentReminder(item));
+    await navigator.clipboard.writeText(reminderText || paymentReminder(item));
     setReminderCopied(true);
     window.setTimeout(() => setReminderCopied(false), 1800);
+  }
+
+  async function generatePaymentReminder(item: SalesDocument) {
+    const client = clientDetails.get(item.clientId);
+    const balance = Math.max(0, documentTotal(item) - paidForInvoice(item.id, payments));
+    setReminderBusy(true);
+    setReminderError('');
+    try {
+      const response = await fetch('/api/ai/payment-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tone: reminderTone,
+          client: { name: client?.name ?? '', company: client?.company ?? '' },
+          invoice: {
+            number: item.number,
+            currency: item.currency,
+            balance,
+            dueDate: item.dueDate,
+          },
+        }),
+      });
+      const data = (await response.json()) as { message?: string; error?: string };
+      if (!response.ok || !data.message) throw new Error(data.error || 'AI reminder unavailable.');
+      setReminderText(data.message);
+    } catch (caught) {
+      setReminderError(caught instanceof Error ? caught.message : 'AI reminder unavailable.');
+    } finally {
+      setReminderBusy(false);
+    }
   }
   function saveRecurringInvoice(event: React.FormEvent) {
     event.preventDefault();
@@ -2130,6 +2165,9 @@ function SalesDocuments({
                           title="Payment reminder"
                           onClick={() => {
                             setReminderCopied(false);
+                            setReminderTone('friendly');
+                            setReminderText(paymentReminder(item));
+                            setReminderError('');
                             setReminderTarget(item);
                           }}
                         >
@@ -2393,10 +2431,43 @@ function SalesDocuments({
               </button>
             </header>
             <div className="payment-reminder-body">
+              <div className="payment-reminder-ai">
+                <label>
+                  <span>Message tone</span>
+                  <select
+                    value={reminderTone}
+                    onChange={(event) =>
+                      setReminderTone(event.target.value as 'friendly' | 'firm' | 'final')
+                    }
+                  >
+                    <option value="friendly">Friendly</option>
+                    <option value="firm">Firm</option>
+                    <option value="final">Final notice</option>
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="button button-outline"
+                  disabled={reminderBusy}
+                  onClick={() => void generatePaymentReminder(reminderTarget)}
+                >
+                  {reminderBusy ? (
+                    <RefreshCw className="spin" size={15} />
+                  ) : (
+                    <Sparkles size={15} />
+                  )}
+                  {reminderBusy ? 'Writing…' : 'Rewrite with AI'}
+                </button>
+              </div>
               <label>
                 <span>Ready-to-send message</span>
-                <textarea readOnly rows={7} value={paymentReminder(reminderTarget)} />
+                <textarea
+                  rows={7}
+                  value={reminderText || paymentReminder(reminderTarget)}
+                  onChange={(event) => setReminderText(event.target.value)}
+                />
               </label>
+              {reminderError ? <p className="payment-reminder-error">{reminderError}</p> : null}
               <footer>
                 <button
                   type="button"
@@ -2414,7 +2485,7 @@ function SalesDocuments({
                         .get(reminderTarget.clientId)!
                         .phone!.replace(/\D/g, '');
                       window.open(
-                        `https://wa.me/${phone}?text=${encodeURIComponent(paymentReminder(reminderTarget))}`,
+                        `https://wa.me/${phone}?text=${encodeURIComponent(reminderText || paymentReminder(reminderTarget))}`,
                         '_blank',
                         'noopener,noreferrer',
                       );

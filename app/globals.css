@@ -19428,6 +19428,217 @@ summary:focus-visible {
   }
 }
 
+/* AI operations uses the existing dashboard rhythm and keeps every result read-only. */
+.ai-operations-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(310px, 0.85fr);
+  gap: 12px 18px;
+  margin-bottom: 14px;
+  padding: 16px;
+  border: 1px solid #d9e6f5;
+  border-radius: 15px;
+  background:
+    radial-gradient(circle at 94% 8%, rgb(110 77 255 / 10%), transparent 34%),
+    linear-gradient(135deg, #f7fbff, #fff);
+  box-shadow: 0 8px 26px rgb(27 55 89 / 5%);
+}
+.ai-operations-panel > header {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+}
+.ai-operations-panel > header > span {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 11px;
+  color: #5a3fd2;
+  background: #eeeaff;
+}
+.ai-operations-panel header small,
+.ai-operations-panel header strong,
+.ai-operations-panel header p {
+  display: block;
+}
+.ai-operations-panel header small {
+  color: #6a56ca;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+}
+.ai-operations-panel header strong {
+  margin-top: 2px;
+  color: #243b56;
+  font-size: 14px;
+}
+.ai-operations-panel header p {
+  margin: 2px 0 0;
+  color: #71839a;
+  font-size: 10px;
+}
+.ai-operations-panel > form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #cfddeb;
+  border-radius: 11px;
+  background: #fff;
+}
+.ai-operations-panel > form:focus-within {
+  border-color: #357fdf;
+  box-shadow: 0 0 0 3px rgb(44 125 224 / 10%);
+}
+.ai-operations-panel > form input,
+.ai-operations-panel > form input:focus,
+.ai-operations-panel > form input:focus-visible {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent;
+  box-shadow: none !important;
+  color: #29415c;
+  font: inherit;
+  font-size: 11px;
+}
+.ai-operations-panel > form button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 8px;
+  color: #fff;
+  background: #276fd1;
+}
+.ai-operations-panel > form button:disabled {
+  opacity: 0.45;
+}
+.ai-operations-prompts {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.ai-operations-prompts button {
+  padding: 7px 10px;
+  border: 1px solid #dce5ef;
+  border-radius: 999px;
+  color: #516b88;
+  background: #fff;
+  font-size: 9px;
+  font-weight: 750;
+}
+.ai-operations-prompts button:hover:not(:disabled) {
+  border-color: #bcd0eb;
+  color: #236ac9;
+  background: #f5f9ff;
+}
+.ai-operations-answer {
+  grid-column: 1 / -1;
+  position: relative;
+  padding: 13px 42px 13px 14px;
+  border: 1px solid #dde7f1;
+  border-radius: 12px;
+  background: #fff;
+}
+.ai-operations-answer > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #5b46c0;
+  font-size: 9px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+.ai-operations-answer > p {
+  margin: 7px 0 0;
+  color: #3a506b;
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.ai-operations-answer > button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #627892;
+  font-size: 8px;
+  font-weight: 800;
+}
+.ai-operations-error,
+.payment-reminder-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #b54545;
+  font-size: 10px;
+}
+.payment-reminder-ai {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+.payment-reminder-ai label > span {
+  display: block;
+  margin-bottom: 5px;
+}
+.payment-reminder-ai select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 34px 0 11px;
+  border: 1px solid #d7e1ec;
+  border-radius: 10px;
+  color: #29415c;
+  background: #fff;
+  font: inherit;
+}
+.payment-reminder-body textarea:not([readonly]) {
+  background: #fff;
+}
+
+@media (max-width: 900px) {
+  .ai-operations-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ai-operations-panel > form {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .ai-operations-panel {
+    gap: 11px;
+    padding: 13px;
+  }
+  .ai-operations-panel > header {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+  .ai-operations-panel > header .button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .ai-operations-prompts {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ai-operations-prompts button {
+    text-align: left;
+  }
+  .payment-reminder-ai {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .payment-reminder-ai .button {
+    width: 100%;
+  }
+}
+
 /* Keep invoice KPI symbols visible and make every symbol match its business meaning. */
 .invoice-kpis .invoice-kpi-icon {
   display: grid;

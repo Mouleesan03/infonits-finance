@@ -56,6 +56,7 @@ import { StatusSelect } from './ui/status-select';
 import { PageTitle } from './ui/typography';
 import { FormModal } from './ui/form-modal';
 import { DescriptionAssistant } from './ui/description-assistant';
+import { AiOperationsPanel } from './ai-operations-panel';
 
 type Section =
   | 'dashboard'
@@ -887,11 +888,14 @@ export function LocalFinance() {
         website: renewal.website,
         domainDue: renewal.domainDue,
         hostingDue: renewal.hostingDue,
+        siteStatus: renewal.siteStatus,
+        monitorError: renewal.monitorError,
       })),
       events: officeOverview.events.slice(0, 20).map((event) => ({
         title: event.title,
         date: event.date,
         type: event.type,
+        completed: event.completed,
       })),
       letters: officeOverview.letters.slice(0, 20).map((letter) => ({
         client: letter.client,
@@ -1752,6 +1756,7 @@ export function LocalFinance() {
         <main className="local-main">
           {section === 'dashboard' && (
             <Dashboard
+              assistantContext={assistantContext}
               totals={totals}
               rows={monthRows}
               rates={fxRates}
@@ -3027,6 +3032,7 @@ function AttentionCenter({
 }
 
 function Dashboard({
+  assistantContext,
   totals,
   rows,
   rates,
@@ -3040,6 +3046,7 @@ function Dashboard({
   onInvoiceStatusChange,
   onInvoiceDelete,
 }: {
+  assistantContext: object;
   totals: { value: number; received: number; work: number; expenses: number; net: number };
   rows: LocalRow[];
   rates: Record<string, number>;
@@ -3212,6 +3219,7 @@ function Dashboard({
           <TrendingUp size={18} />
         </article>
       </section>
+      <AiOperationsPanel context={assistantContext} />
       <section className="local-dashboard-middle">
         <article className="local-outstanding-card">
           <div className="local-card-heading">

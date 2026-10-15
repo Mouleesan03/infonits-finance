@@ -136,11 +136,26 @@ const requestSchema = z.object({
         .max(20)
         .default([]),
       renewals: z
-        .array(z.object({ website: z.string(), domainDue: z.string(), hostingDue: z.string() }))
+        .array(
+          z.object({
+            website: z.string(),
+            domainDue: z.string(),
+            hostingDue: z.string(),
+            siteStatus: z.string().optional(),
+            monitorError: z.string().optional(),
+          }),
+        )
         .max(20)
         .default([]),
       events: z
-        .array(z.object({ title: z.string(), date: z.string(), type: z.string() }))
+        .array(
+          z.object({
+            title: z.string(),
+            date: z.string(),
+            type: z.string(),
+            completed: z.boolean().optional(),
+          }),
+        )
         .max(20)
         .default([]),
       letters: z
