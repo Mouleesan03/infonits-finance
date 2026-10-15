@@ -19088,27 +19088,63 @@ summary:focus-visible {
 }
 .website-agent-setup {
   display: grid;
-  gap: 14px;
+  gap: 16px;
+  padding: 18px 20px 20px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .website-agent-setup ol {
   display: grid;
-  gap: 9px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
   margin: 0;
-  padding-left: 22px;
+  padding: 0;
+  list-style: none;
+  counter-reset: agent-step;
 }
 .website-agent-setup li {
-  padding-left: 4px;
+  position: relative;
+  min-height: 112px;
+  padding: 14px 12px 12px 44px;
+  border: 1px solid #dfe8f2;
+  border-radius: 13px;
+  background: #f8fbff;
   color: #213a57;
   font-size: 12px;
+  counter-increment: agent-step;
+}
+.website-agent-setup li::before {
+  content: counter(agent-step);
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 23px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #fff;
+  background: #267ee6;
+  font-size: 10px;
+  font-weight: 900;
 }
 .website-agent-setup li > strong,
 .website-agent-setup li > span {
   display: block;
 }
 .website-agent-setup li > span {
-  margin: 2px 0 7px;
+  margin: 4px 0 9px;
   color: #6a7d93;
   font-size: 10.5px;
+  line-height: 1.45;
+}
+.website-agent-setup li .button {
+  min-height: 34px;
+  padding-inline: 10px;
+  border-color: #cfe0f3;
+  color: #1768bd;
+  background: #fff;
 }
 .website-agent-copy {
   display: grid;
@@ -19135,6 +19171,9 @@ summary:focus-visible {
     SFMono-Regular,
     Menlo,
     monospace;
+}
+.website-agent-modal {
+  width: min(780px, calc(100vw - 32px));
 }
 .website-agent-copy .button {
   min-width: 40px;
@@ -19222,5 +19261,14 @@ summary:focus-visible {
   .website-care-kpis article > svg {
     width: 32px;
     height: 32px;
+  }
+  .website-agent-setup {
+    padding: 14px 16px max(20px, env(safe-area-inset-bottom));
+  }
+  .website-agent-setup ol {
+    grid-template-columns: 1fr;
+  }
+  .website-agent-setup li {
+    min-height: 0;
   }
 }

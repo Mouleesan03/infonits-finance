@@ -279,7 +279,7 @@ export function LocalCloudSync() {
       pulling.current = false;
       if (localChanged) {
         saveSnapshot(resolved);
-        window.location.reload();
+        window.dispatchEvent(new Event('infonits:cloud-update'));
       }
     }
 

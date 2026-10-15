@@ -564,9 +564,11 @@ export function LocalFinance() {
   useEffect(() => {
     const refreshOfficeOverview = () => setOfficeOverview(readOfficeOverview());
     window.addEventListener('infonits:local-change', refreshOfficeOverview);
+    window.addEventListener('infonits:cloud-update', refreshOfficeOverview);
     window.addEventListener('storage', refreshOfficeOverview);
     return () => {
       window.removeEventListener('infonits:local-change', refreshOfficeOverview);
+      window.removeEventListener('infonits:cloud-update', refreshOfficeOverview);
       window.removeEventListener('storage', refreshOfficeOverview);
     };
   }, []);

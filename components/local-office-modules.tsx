@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   CalendarDays,
@@ -165,6 +165,7 @@ type Renewal = {
   monitorFinalUrl?: string;
   monitorError?: string;
   agentConnected?: boolean;
+  agentTokenVersion?: string;
   agentLastSeen?: string;
   agentSiteUrl?: string;
   agentVersion?: string;
@@ -313,6 +314,29 @@ const socialPlatform = (platform: string) => {
   if (normalized === 'tiktok') return 'TikTok';
   return 'Instagram';
 };
+const readStoredOffice = (): Store => {
+  const saved = localStorage.getItem(storeKey);
+  if (!saved) return emptyStore;
+  const savedStore = JSON.parse(saved) as Partial<Store>;
+  const parsed: Store = {
+    ...emptyStore,
+    ...savedStore,
+    documents: savedStore.documents ?? [],
+    posts: (savedStore.posts ?? []).map((item) => ({
+      ...item,
+      platform: socialPlatform(item.platform),
+    })),
+    recurringInvoices: savedStore.recurringInvoices ?? [],
+  };
+  return {
+    ...parsed,
+    documents: parsed.documents.map((item) => ({
+      ...item,
+      dueDate: item.kind === 'Invoice' ? invoiceDueDate(item) : item.dueDate,
+      status: currentDocumentStatus(item),
+    })),
+  };
+};
 const platformIcon = (platform: string) => {
   const iconProps = { size: 16, strokeWidth: 2 };
   switch (socialPlatform(platform)) {
@@ -377,31 +401,11 @@ export function LocalOfficeModule({
   const [loaded, setLoaded] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const cloudHydrating = useRef(false);
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(storeKey);
-      if (saved) {
-        const savedStore = JSON.parse(saved) as Partial<Store>;
-        const parsed: Store = {
-          ...emptyStore,
-          ...savedStore,
-          documents: savedStore.documents ?? [],
-          posts: (savedStore.posts ?? []).map((item) => ({
-            ...item,
-            platform: socialPlatform(item.platform),
-          })),
-          recurringInvoices: savedStore.recurringInvoices ?? [],
-        };
-        setStore({
-          ...parsed,
-          documents: parsed.documents.map((item) => ({
-            ...item,
-            dueDate: item.kind === 'Invoice' ? invoiceDueDate(item) : item.dueDate,
-            status: currentDocumentStatus(item),
-          })),
-        });
-      }
+      setStore(readStoredOffice());
     } catch {
       setStore(emptyStore);
     } finally {
@@ -461,9 +465,23 @@ export function LocalOfficeModule({
   useEffect(() => {
     if (loaded) {
       localStorage.setItem(storeKey, JSON.stringify(store));
-      window.dispatchEvent(new Event('infonits:local-change'));
+      if (cloudHydrating.current) cloudHydrating.current = false;
+      else window.dispatchEvent(new Event('infonits:local-change'));
     }
   }, [loaded, store]);
+
+  useEffect(() => {
+    const hydrateFromCloud = () => {
+      try {
+        cloudHydrating.current = true;
+        setStore(readStoredOffice());
+      } catch {
+        cloudHydrating.current = false;
+      }
+    };
+    window.addEventListener('infonits:cloud-update', hydrateFromCloud);
+    return () => window.removeEventListener('infonits:cloud-update', hydrateFromCloud);
+  }, []);
 
   useEffect(() => {
     setFormOpen(false);
@@ -3877,12 +3895,27 @@ function RenewalsModule({
         error?: string;
         appUrl?: string;
         siteId?: string;
+        tokenVersion?: string;
         token?: string;
         pluginUrl?: string;
       };
-      if (!response.ok || !result.appUrl || !result.siteId || !result.token || !result.pluginUrl) {
+      if (
+        !response.ok ||
+        !result.appUrl ||
+        !result.siteId ||
+        !result.tokenVersion ||
+        !result.token ||
+        !result.pluginUrl
+      ) {
         throw new Error(result.error || 'Unable to connect the agent.');
       }
+      onChange(
+        items.map((current) =>
+          current.id === item.id
+            ? { ...current, agentTokenVersion: result.tokenVersion }
+            : current,
+        ),
+      );
       setPairing({
         website: item.website,
         appUrl: result.appUrl,
@@ -3953,6 +3986,7 @@ function RenewalsModule({
           title={`Connect ${pairing.website}`}
           subtitle="Install the read-only agent, then paste these three connection values in WordPress."
           icon={<PlugZap size={19} />}
+          className="website-agent-modal"
           onClose={() => setPairing(null)}
         >
           <div className="website-agent-setup">
@@ -3969,8 +4003,8 @@ function RenewalsModule({
                 <span>WordPress → Settings → Infonits Site Agent.</span>
               </li>
               <li>
-                <strong>Paste these values and send health</strong>
-                <span>No WordPress password is shared with Infonits Finance.</span>
+                <strong>Paste, save and test</strong>
+                <span>Click “Save connection &amp; test now” in WordPress.</span>
               </li>
             </ol>
             {[
@@ -4001,7 +4035,7 @@ function RenewalsModule({
               <ShieldCheck size={18} />
               <p>
                 Reports versions, update counts, HTTPS and debug state only. It cannot edit posts,
-                users, plugins or settings.
+                users, plugins or settings. Reopening this window keeps the same connection token.
               </p>
             </div>
           </div>

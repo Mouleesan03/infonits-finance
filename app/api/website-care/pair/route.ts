@@ -24,15 +24,22 @@ export async function POST(request: Request) {
       .eq('user_id', user.id)
       .maybeSingle();
     if (error) throw error;
-    if (!websitesFromWorkspace(data?.data).some((item) => item.id === siteId)) {
+    const site = websitesFromWorkspace(data?.data).find((item) => item.id === siteId);
+    if (!site) {
       return Response.json({ error: 'Website not found.' }, { status: 404 });
     }
-    const tokenVersion = randomUUID();
-    await updateWorkspaceWebsite(user.id, siteId, { agentTokenVersion: tokenVersion });
+    const tokenVersion =
+      typeof site.agentTokenVersion === 'string' && site.agentTokenVersion
+        ? site.agentTokenVersion
+        : randomUUID();
+    if (site.agentTokenVersion !== tokenVersion) {
+      await updateWorkspaceWebsite(user.id, siteId, { agentTokenVersion: tokenVersion });
+    }
     return Response.json({
       ok: true,
       appUrl: new URL(request.url).origin,
       siteId,
+      tokenVersion,
       token: createAgentToken(user.id, siteId, tokenVersion),
       pluginUrl: `${new URL(request.url).origin}/downloads/infonits-site-agent.zip`,
     });

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Infonits Site Agent
  * Description: Read-only WordPress health reporting for Infonits Website Care.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Infonits
  * License: GPL-2.0-or-later
  */
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('INFONITS_SITE_AGENT_VERSION', '1.0.0');
+define('INFONITS_SITE_AGENT_VERSION', '1.1.0');
 define('INFONITS_SITE_AGENT_CRON', 'infonits_site_agent_hourly');
 
 function infonits_site_agent_health() {
@@ -64,7 +64,9 @@ function infonits_site_agent_send_health() {
     $site_id = trim((string) get_option('infonits_site_agent_site_id', ''));
     $token = infonits_site_agent_token();
     if ($app_url === '' || $site_id === '' || $token === '') {
-        return new WP_Error('infonits_not_connected', 'The Site Agent connection is incomplete.');
+        $error = 'Connection is incomplete. Save the Website Care URL, Site ID and Agent token first.';
+        update_option('infonits_site_agent_last_error', $error, false);
+        return new WP_Error('infonits_not_connected', $error);
     }
 
     $response = wp_remote_post($app_url . '/api/website-care/heartbeat', array(
@@ -87,7 +89,9 @@ function infonits_site_agent_send_health() {
 
     $code = wp_remote_retrieve_response_code($response);
     if ($code < 200 || $code >= 300) {
-        $error = 'Website Care returned HTTP ' . $code . '.';
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+        $detail = is_array($body) && isset($body['error']) ? sanitize_text_field((string) $body['error']) : '';
+        $error = 'Website Care returned HTTP ' . $code . ($detail !== '' ? ': ' . $detail : '.');
         update_option('infonits_site_agent_last_error', $error, false);
         return new WP_Error('infonits_agent_http', $error);
     }
@@ -148,6 +152,30 @@ function infonits_site_agent_handle_send() {
 }
 add_action('admin_post_infonits_site_agent_send', 'infonits_site_agent_handle_send');
 
+function infonits_site_agent_handle_save_test() {
+    if (!current_user_can('manage_options')) {
+        wp_die(esc_html__('You are not allowed to do this.', 'infonits-site-agent'));
+    }
+    check_admin_referer('infonits_site_agent_save_test');
+    $app_url = isset($_POST['infonits_site_agent_app_url'])
+        ? esc_url_raw(wp_unslash($_POST['infonits_site_agent_app_url']))
+        : '';
+    $site_id = isset($_POST['infonits_site_agent_site_id'])
+        ? sanitize_text_field(wp_unslash($_POST['infonits_site_agent_site_id']))
+        : '';
+    $token = isset($_POST['infonits_site_agent_token'])
+        ? sanitize_text_field(wp_unslash($_POST['infonits_site_agent_token']))
+        : '';
+    update_option('infonits_site_agent_app_url', $app_url, false);
+    update_option('infonits_site_agent_site_id', $site_id, false);
+    update_option('infonits_site_agent_token', $token, false);
+    $result = infonits_site_agent_send_health();
+    $status = is_wp_error($result) ? 'error' : 'sent';
+    wp_safe_redirect(add_query_arg(array('page' => 'infonits-site-agent', 'agent_status' => $status), admin_url('options-general.php')));
+    exit;
+}
+add_action('admin_post_infonits_site_agent_save_test', 'infonits_site_agent_handle_save_test');
+
 function infonits_site_agent_settings_page() {
     if (!current_user_can('manage_options')) {
         return;
@@ -162,8 +190,9 @@ function infonits_site_agent_settings_page() {
         <?php elseif ($status === 'error') : ?>
             <div class="notice notice-error is-dismissible"><p><?php echo esc_html((string) get_option('infonits_site_agent_last_error', 'Unable to send health report.')); ?></p></div>
         <?php endif; ?>
-        <form method="post" action="options.php">
-            <?php settings_fields('infonits_site_agent'); ?>
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+            <input type="hidden" name="action" value="infonits_site_agent_save_test">
+            <?php wp_nonce_field('infonits_site_agent_save_test'); ?>
             <table class="form-table" role="presentation">
                 <tr>
                     <th scope="row"><label for="infonits_site_agent_app_url">Website Care URL</label></th>
@@ -178,11 +207,12 @@ function infonits_site_agent_settings_page() {
                     <td><input class="large-text code" type="password" id="infonits_site_agent_token" name="infonits_site_agent_token" value="<?php echo esc_attr(infonits_site_agent_token()); ?>" autocomplete="off" required></td>
                 </tr>
             </table>
-            <?php submit_button('Save connection'); ?>
+            <?php submit_button('Save connection & test now'); ?>
         </form>
         <hr>
         <h2>Connection status</h2>
         <p><strong>Last sent:</strong> <?php echo esc_html((string) get_option('infonits_site_agent_last_sent', 'Not sent yet')); ?></p>
+        <p>If the connection values are already saved, use this button to send a fresh report.</p>
         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
             <input type="hidden" name="action" value="infonits_site_agent_send">
             <?php wp_nonce_field('infonits_site_agent_send'); ?>

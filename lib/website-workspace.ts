@@ -48,7 +48,11 @@ export async function updateWorkspaceWebsite(
     const sites = websitesFromWorkspace(workspace);
     const site = sites.find((item) => item.id === siteId);
     if (!site) throw new Error('Website not found.');
-    if (expectedAgentTokenVersion && site.agentTokenVersion !== expectedAgentTokenVersion) {
+    if (
+      expectedAgentTokenVersion &&
+      typeof site.agentTokenVersion === 'string' &&
+      site.agentTokenVersion !== expectedAgentTokenVersion
+    ) {
       throw new Error('Agent token has been replaced.');
     }
     const nextData: WorkspaceData = {

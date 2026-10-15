@@ -34,6 +34,7 @@ export async function POST(request: Request) {
       identity.userId,
       identity.siteId,
       {
+        agentTokenVersion: identity.tokenVersion,
         agentConnected: true,
         agentLastSeen: new Date().toISOString(),
         agentSiteUrl: payload.siteUrl,
