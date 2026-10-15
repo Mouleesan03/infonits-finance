@@ -10072,7 +10072,8 @@ tr:hover .cell-edit,
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
-.assistant-composer:has(.assistant-mic-button) {
+.assistant-composer:has(.assistant-mic-button),
+.assistant-composer:has(.assistant-voice-stop-button) {
   grid-template-columns: minmax(0, 1fr) 42px 42px;
 }
 .assistant-composer > .assistant-mic-button {
@@ -10085,6 +10086,16 @@ tr:hover .cell-edit,
   background: #fff0f0;
   color: #c93f45;
   animation: assistant-pulse 1.2s ease-in-out infinite;
+}
+.assistant-composer > .assistant-voice-stop-button {
+  border: 1px solid #efb3b5;
+  background: #fff0f0;
+  color: #c8323a;
+  animation: assistant-stop-pulse 1.5s ease-in-out infinite;
+}
+.assistant-composer > .assistant-voice-stop-button:hover {
+  border-color: #dc7479;
+  background: #ffe2e3;
 }
 .assistant-speak-button {
   display: inline-flex !important;
@@ -10102,6 +10113,11 @@ tr:hover .cell-edit,
 @keyframes assistant-pulse {
   50% {
     box-shadow: 0 0 0 5px rgba(210, 61, 69, 0.12);
+  }
+}
+@keyframes assistant-stop-pulse {
+  50% {
+    box-shadow: 0 0 0 4px rgba(200, 50, 58, 0.1);
   }
 }
 

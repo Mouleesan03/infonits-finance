@@ -15,6 +15,7 @@ import {
   Mic,
   Plus,
   RefreshCw,
+  Square,
   Sparkles,
   X,
 } from 'lucide-react';
@@ -247,9 +248,11 @@ export function InfonitsAssistant({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const [historyReady, setHistoryReady] = useState(false);
   const [language, setLanguage] = useState<NovaLanguage>('auto');
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const dailyBriefingStartedRef = useRef(false);
 
@@ -270,7 +273,14 @@ export function InfonitsAssistant({
     setHistoryReady(true);
     return () => {
       recognitionRef.current?.stop();
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     };
+  }, []);
+
+  const stopSpeaking = useCallback(() => {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    utteranceRef.current = null;
+    setSpeaking(false);
   }, []);
 
   useEffect(() => {
@@ -292,11 +302,14 @@ export function InfonitsAssistant({
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') {
+        stopSpeaking();
+        onClose();
+      }
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [onClose]);
+  }, [onClose, stopSpeaking]);
 
   const send = useCallback(
     async (message = input, options: { speak?: boolean; silentUser?: boolean } = {}) => {
@@ -345,10 +358,18 @@ export function InfonitsAssistant({
           },
         ]);
         if ((voice.autoSpeak || options.speak) && 'speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
+          stopSpeaking();
           const utterance = new SpeechSynthesisUtterance(data.reply);
+          utteranceRef.current = utterance;
           utterance.lang = speechLanguage(data.reply, language, voice.language);
           utterance.rate = voice.rate;
+          utterance.onend = () => {
+            if (utteranceRef.current !== utterance) return;
+            utteranceRef.current = null;
+            setSpeaking(false);
+          };
+          utterance.onerror = utterance.onend;
+          setSpeaking(true);
           window.speechSynthesis.speak(utterance);
         }
       } catch (caught) {
@@ -357,7 +378,17 @@ export function InfonitsAssistant({
         setBusy(false);
       }
     },
-    [busy, context, input, language, messages, voice.autoSpeak, voice.language, voice.rate],
+    [
+      busy,
+      context,
+      input,
+      language,
+      messages,
+      stopSpeaking,
+      voice.autoSpeak,
+      voice.language,
+      voice.rate,
+    ],
   );
 
   useEffect(() => {
@@ -436,6 +467,7 @@ export function InfonitsAssistant({
   }
 
   function resetConversation() {
+    stopSpeaking();
     setMessages([novaWelcome]);
     setInput('');
     setError('');
@@ -510,11 +542,18 @@ export function InfonitsAssistant({
               <option value="en">English</option>
             </select>
           </label>
-          <i>{voice.enabled ? 'Voice ready' : 'Claude connected'}</i>
+          <i>{speaking ? 'Nova speaking' : voice.enabled ? 'Voice ready' : 'Claude connected'}</i>
           <button type="button" onClick={resetConversation} title="Start a new conversation">
             <RefreshCw size={16} />
           </button>
-          <button type="button" onClick={onClose} aria-label="Close Nova">
+          <button
+            type="button"
+            onClick={() => {
+              stopSpeaking();
+              onClose();
+            }}
+            aria-label="Close Nova"
+          >
             <X size={19} />
           </button>
         </div>
@@ -603,7 +642,17 @@ export function InfonitsAssistant({
                 placeholder="Ask Nova or describe a task…"
                 rows={1}
               />
-              {voice.enabled ? (
+              {speaking ? (
+                <button
+                  type="button"
+                  className="assistant-voice-stop-button"
+                  aria-label="Stop Nova speaking"
+                  title="Stop voice"
+                  onClick={stopSpeaking}
+                >
+                  <Square size={15} fill="currentColor" />
+                </button>
+              ) : voice.enabled ? (
                 <button
                   type="button"
                   className={`assistant-mic-button ${listening ? 'listening' : ''}`}
