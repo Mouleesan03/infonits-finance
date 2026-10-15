@@ -11,7 +11,7 @@
 
 /* Nova is a global personal-assistant workspace, opened from the top bar. */
 .nova-layer {
-  z-index: 140;
+  z-index: 1400;
   padding: 22px;
   background: rgb(7 22 43 / 58%);
   backdrop-filter: blur(8px);
@@ -219,12 +219,14 @@
   .nova-modal.assistant-page {
     width: 100vw;
     height: 100dvh;
+    max-height: 100dvh;
     border: 0;
     border-radius: 0;
   }
   .nova-modal .assistant-header {
     grid-template-columns: 42px minmax(0, 1fr) auto;
-    padding: max(12px, env(safe-area-inset-top)) 12px 12px;
+    gap: 10px;
+    padding: max(12px, env(safe-area-inset-top)) 12px 11px;
   }
   .nova-modal .assistant-header > span {
     width: 42px;
@@ -234,18 +236,27 @@
   .nova-header-actions > button:first-of-type {
     display: none;
   }
+  .nova-header-actions > button {
+    width: 40px;
+    height: 40px;
+  }
   .nova-tabs {
     grid-auto-flow: column;
     grid-auto-columns: minmax(112px, 1fr);
     grid-template-columns: none;
     overflow-x: auto;
     padding: 7px 9px;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
   }
   .nova-tabs button {
+    min-height: 42px;
+    scroll-snap-align: start;
     white-space: nowrap;
   }
   .nova-modal .assistant-body {
-    padding: 11px;
+    overflow: hidden;
+    padding: 11px 11px max(11px, env(safe-area-inset-bottom));
   }
   .nova-choice-grid,
   .nova-action-grid {
@@ -254,6 +265,23 @@
   .nova-choice-grid > button,
   .nova-action-grid > button {
     min-height: 98px;
+  }
+}
+
+@media (max-width: 390px) {
+  .nova-modal .assistant-header small {
+    display: none;
+  }
+  .nova-modal .assistant-header h1 {
+    margin: 0;
+    font-size: 18px;
+  }
+  .nova-modal .assistant-header p {
+    overflow: hidden;
+    margin-top: 2px;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -20181,7 +20209,7 @@ summary:focus-visible {
 
 /* Ensure Nova's overlay treatment wins after the shared modal rules. */
 .local-modal-layer.nova-layer {
-  z-index: 140;
+  z-index: 1400;
   padding: 22px;
   background: rgb(7 22 43 / 58%);
   backdrop-filter: blur(8px);
