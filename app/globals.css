@@ -18951,7 +18951,7 @@ summary:focus-visible {
 /* Website care combines health, access references and renewal dates without storing passwords. */
 .website-care-kpis {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
 }
 .website-care-kpis article {
@@ -18982,6 +18982,10 @@ summary:focus-visible {
   background: #ffe9e9;
   color: #d3474f;
 }
+.website-care-kpis article.agents > svg {
+  background: #eee9ff;
+  color: #7356d8;
+}
 .website-care-kpis article.renewal > svg {
   background: #fff3d9;
   color: #b67108;
@@ -18996,7 +19000,7 @@ summary:focus-visible {
   font-size: 20px;
 }
 .office-renewal-panel .office-table {
-  min-width: 980px;
+  min-width: 1160px;
 }
 .office-renewal-panel .office-table td {
   vertical-align: top;
@@ -19053,6 +19057,104 @@ summary:focus-visible {
   background: #e9f2ff;
   color: #246fca;
 }
+.website-care-message {
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid #d5e4f6;
+  border-radius: 10px;
+  color: #315d8d;
+  background: #f4f9ff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.website-monitor-error {
+  color: #c0444c !important;
+}
+.website-agent-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: max-content;
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: #687b91;
+  background: #eef2f6;
+  font-size: 9.5px;
+  font-weight: 800;
+}
+.website-agent-state.connected {
+  color: #0e8059;
+  background: #e4f8ee;
+}
+.website-agent-setup {
+  display: grid;
+  gap: 14px;
+}
+.website-agent-setup ol {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding-left: 22px;
+}
+.website-agent-setup li {
+  padding-left: 4px;
+  color: #213a57;
+  font-size: 12px;
+}
+.website-agent-setup li > strong,
+.website-agent-setup li > span {
+  display: block;
+}
+.website-agent-setup li > span {
+  margin: 2px 0 7px;
+  color: #6a7d93;
+  font-size: 10.5px;
+}
+.website-agent-copy {
+  display: grid;
+  gap: 5px;
+  color: #4e6480;
+  font-size: 10px;
+  font-weight: 800;
+}
+.website-agent-copy > span:last-child {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+.website-agent-copy input {
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid #d6e1ed;
+  border-radius: 9px;
+  color: #243b58;
+  background: #f7faff;
+  font:
+    500 11px/1.2 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+.website-agent-copy .button {
+  min-width: 40px;
+  padding: 0;
+}
+.website-agent-privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #1b7659;
+  background: #ebf9f2;
+}
+.website-agent-privacy p {
+  margin: 0;
+  color: #426c60;
+  font-size: 10.5px;
+  line-height: 1.5;
+}
 
 @media (max-width: 720px) {
   .local-notification-panel {
@@ -19072,6 +19174,41 @@ summary:focus-visible {
   .office-renewal-panel td.office-row-actions {
     grid-column: 1 / -1 !important;
     grid-row: auto;
+  }
+  .office-renewal-panel > .office-table-wrap > .office-table tbody tr {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .office-renewal-panel > .office-table-wrap,
+  .office-renewal-panel > .office-table-wrap > .office-table,
+  .office-renewal-panel > .office-table-wrap > .office-table tbody,
+  .office-renewal-panel > .office-table-wrap > .office-table tbody tr {
+    width: 100%;
+    min-width: 0;
+  }
+  .office-renewal-panel > .office-table-wrap > .office-table {
+    display: block;
+  }
+  .office-renewal-panel > .office-table-wrap > .office-table tbody {
+    display: grid;
+  }
+  .office-renewal-panel > .office-table-wrap > .office-table td[data-label] {
+    grid-column: 1 / -1 !important;
+    height: auto !important;
+    min-height: 68px;
+  }
+  .office-renewal-panel td[data-label='Availability'],
+  .office-renewal-panel td[data-label='WordPress'],
+  .office-renewal-panel td[data-label='Providers'] {
+    padding-block: 9px;
+  }
+  .office-renewal-panel td[data-label='Hosting expiry'] {
+    border-bottom: 0 !important;
+  }
+  .office-renewal-panel td[data-label='WordPress'] {
+    min-height: 82px;
+  }
+  .office-renewal-panel td.office-row-actions {
+    min-height: 44px !important;
   }
   .website-care-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));

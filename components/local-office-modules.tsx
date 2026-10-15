@@ -11,6 +11,7 @@ import {
   ChevronRight,
   CircleDollarSign,
   Clock3,
+  Copy,
   Download,
   Eye,
   FileDown,
@@ -25,9 +26,11 @@ import {
   Music2,
   Pencil,
   PieChart,
+  PlugZap,
   Plus,
   Printer,
   ReceiptText,
+  RefreshCw,
   Repeat2,
   Search,
   Send,
@@ -157,6 +160,21 @@ type Renewal = {
   hostingPlan?: string;
   siteStatus?: 'Unknown' | 'Online' | 'Issue' | 'Offline' | 'Maintenance';
   lastChecked?: string;
+  monitorHttpStatus?: number | null;
+  monitorResponseMs?: number | null;
+  monitorFinalUrl?: string;
+  monitorError?: string;
+  agentConnected?: boolean;
+  agentLastSeen?: string;
+  agentSiteUrl?: string;
+  agentVersion?: string;
+  wordpressVersion?: string;
+  phpVersion?: string;
+  activeTheme?: string;
+  pluginUpdates?: number;
+  themeUpdates?: number;
+  debugEnabled?: boolean;
+  httpsEnabled?: boolean;
   notes?: string;
   domainDue: string;
   hostingDue: string;
@@ -3711,6 +3729,15 @@ function RenewalsModule({
   onChange: (v: Renewal[]) => void;
 }) {
   const [page, setPage] = useState(0);
+  const [checkingId, setCheckingId] = useState('');
+  const [monitorMessage, setMonitorMessage] = useState('');
+  const [pairing, setPairing] = useState<{
+    website: string;
+    appUrl: string;
+    siteId: string;
+    token: string;
+    pluginUrl: string;
+  } | null>(null);
   const [draft, setDraft] = useState({
     website: '',
     username: '',
@@ -3739,6 +3766,7 @@ function RenewalsModule({
   const needsAttention = items.filter(
     (item) => item.siteStatus === 'Issue' || item.siteStatus === 'Offline',
   ).length;
+  const connectedAgents = items.filter((item) => item.agentConnected).length;
   const pageCount = Math.max(1, Math.ceil(items.length / 10));
   const safePage = Math.min(page, pageCount - 1);
   const pageItems = items.slice(safePage * 10, safePage * 10 + 10);
@@ -3787,6 +3815,96 @@ function RenewalsModule({
     setFormOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+  async function checkNow(item: Renewal) {
+    if (!item.websiteUrl) {
+      setMonitorMessage('Add the website URL before checking.');
+      return;
+    }
+    setCheckingId(item.id);
+    setMonitorMessage('');
+    try {
+      const response = await fetch('/api/website-care/check', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ siteId: item.id }),
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        check?: {
+          status: NonNullable<Renewal['siteStatus']>;
+          checkedAt: string;
+          httpStatus: number | null;
+          responseMs: number | null;
+          finalUrl: string;
+          error: string;
+        };
+      };
+      if (!response.ok || !result.check) throw new Error(result.error || 'Website check failed.');
+      const check = result.check;
+      onChange(
+        items.map((current) =>
+          current.id === item.id
+            ? {
+                ...current,
+                siteStatus: check.status,
+                lastChecked: check.checkedAt,
+                monitorHttpStatus: check.httpStatus,
+                monitorResponseMs: check.responseMs,
+                monitorFinalUrl: check.finalUrl,
+                monitorError: check.error,
+              }
+            : current,
+        ),
+      );
+      setMonitorMessage(
+        `${item.website}: ${check.status}${check.httpStatus ? ` · HTTP ${check.httpStatus}` : ''}`,
+      );
+    } catch (error) {
+      setMonitorMessage(error instanceof Error ? error.message : 'Website check failed.');
+    } finally {
+      setCheckingId('');
+    }
+  }
+  async function connectAgent(item: Renewal) {
+    setMonitorMessage('');
+    try {
+      const response = await fetch('/api/website-care/pair', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ siteId: item.id }),
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        appUrl?: string;
+        siteId?: string;
+        token?: string;
+        pluginUrl?: string;
+      };
+      if (!response.ok || !result.appUrl || !result.siteId || !result.token || !result.pluginUrl) {
+        throw new Error(result.error || 'Unable to connect the agent.');
+      }
+      setPairing({
+        website: item.website,
+        appUrl: result.appUrl,
+        siteId: result.siteId,
+        token: result.token,
+        pluginUrl: result.pluginUrl,
+      });
+    } catch (error) {
+      setMonitorMessage(error instanceof Error ? error.message : 'Unable to connect the agent.');
+    }
+  }
+  async function copyPairingValue(value: string) {
+    await navigator.clipboard.writeText(value);
+    setMonitorMessage('Copied to clipboard.');
+  }
+  const readableTime = (value?: string) =>
+    value
+      ? new Date(value).toLocaleString([], {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        })
+      : 'Not checked yet';
   return (
     <>
       <ModuleHeader
@@ -3814,12 +3932,81 @@ function RenewalsModule({
           <span>Need attention</span>
           <strong>{needsAttention}</strong>
         </article>
+        <article className="agents">
+          <PlugZap size={19} />
+          <span>Agents connected</span>
+          <strong>{connectedAgents}</strong>
+        </article>
         <article className="renewal">
           <CalendarDays size={19} />
           <span>Due within 30 days</span>
           <strong>{soon}</strong>
         </article>
       </section>
+      {monitorMessage ? (
+        <p className="website-care-message" role="status">
+          {monitorMessage}
+        </p>
+      ) : null}
+      {pairing ? (
+        <FormModal
+          title={`Connect ${pairing.website}`}
+          subtitle="Install the read-only agent, then paste these three connection values in WordPress."
+          icon={<PlugZap size={19} />}
+          onClose={() => setPairing(null)}
+        >
+          <div className="website-agent-setup">
+            <ol>
+              <li>
+                <strong>Install the plugin</strong>
+                <span>WordPress → Plugins → Add New → Upload Plugin.</span>
+                <a className="button" href={pairing.pluginUrl} download>
+                  <Download size={16} /> Download read-only plugin
+                </a>
+              </li>
+              <li>
+                <strong>Open the connection page</strong>
+                <span>WordPress → Settings → Infonits Site Agent.</span>
+              </li>
+              <li>
+                <strong>Paste these values and send health</strong>
+                <span>No WordPress password is shared with Infonits Finance.</span>
+              </li>
+            </ol>
+            {[
+              ['Website Care URL', pairing.appUrl],
+              ['Site ID', pairing.siteId],
+              ['Agent token', pairing.token],
+            ].map(([label, value]) => (
+              <label className="website-agent-copy" key={label}>
+                <span>{label}</span>
+                <span>
+                  <input
+                    readOnly
+                    value={value}
+                    type={label === 'Agent token' ? 'password' : 'text'}
+                  />
+                  <button
+                    className="button"
+                    type="button"
+                    aria-label={`Copy ${label}`}
+                    onClick={() => void copyPairingValue(value)}
+                  >
+                    <Copy size={15} />
+                  </button>
+                </span>
+              </label>
+            ))}
+            <div className="website-agent-privacy">
+              <ShieldCheck size={18} />
+              <p>
+                Reports versions, update counts, HTTPS and debug state only. It cannot edit posts,
+                users, plugins or settings.
+              </p>
+            </div>
+          </div>
+        </FormModal>
+      ) : null}
       {formOpen && (
         <FormModal
           title={`${editingId ? 'Edit' : 'Add'} website`}
@@ -3964,7 +4151,8 @@ function RenewalsModule({
               <thead>
                 <tr>
                   <th>Website</th>
-                  <th>Status</th>
+                  <th>Availability</th>
+                  <th>WordPress</th>
                   <th>Providers</th>
                   <th>Domain</th>
                   <th>Hosting</th>
@@ -3988,17 +4176,46 @@ function RenewalsModule({
                       ) : null}
                       {item.notes ? <small>{item.notes}</small> : null}
                     </td>
-                    <td data-label="Status">
+                    <td data-label="Availability">
                       <span
                         className={`office-site-status ${(item.siteStatus ?? 'Unknown').toLowerCase()}`}
                       >
                         <i /> {item.siteStatus ?? 'Unknown'}
                       </span>
-                      <small>
-                        {item.lastChecked
-                          ? `Checked ${item.lastChecked.replace('T', ' ')}`
-                          : 'Not checked yet'}
-                      </small>
+                      <small>{readableTime(item.lastChecked)}</small>
+                      {item.monitorHttpStatus || item.monitorResponseMs ? (
+                        <small>
+                          {item.monitorHttpStatus ? `HTTP ${item.monitorHttpStatus}` : ''}
+                          {item.monitorHttpStatus && item.monitorResponseMs ? ' · ' : ''}
+                          {item.monitorResponseMs ? `${item.monitorResponseMs} ms` : ''}
+                        </small>
+                      ) : null}
+                      {item.monitorError ? (
+                        <small className="website-monitor-error">{item.monitorError}</small>
+                      ) : null}
+                    </td>
+                    <td data-label="WordPress">
+                      <span
+                        className={`website-agent-state ${item.agentConnected ? 'connected' : ''}`}
+                      >
+                        <PlugZap size={13} /> {item.agentConnected ? 'Connected' : 'Not connected'}
+                      </span>
+                      {item.wordpressVersion ? (
+                        <small>
+                          WP {item.wordpressVersion} · PHP {item.phpVersion || '—'}
+                        </small>
+                      ) : null}
+                      {item.agentConnected ? (
+                        <small>
+                          {(item.pluginUpdates ?? 0) + (item.themeUpdates ?? 0)} updates ·{' '}
+                          {item.httpsEnabled ? 'HTTPS' : 'No HTTPS'}
+                        </small>
+                      ) : (
+                        <small>Install the read-only agent</small>
+                      )}
+                      {item.agentLastSeen ? (
+                        <small>Seen {readableTime(item.agentLastSeen)}</small>
+                      ) : null}
                     </td>
                     <td data-label="Providers">
                       <strong>{item.hostingProvider || item.domainProvider || '—'}</strong>
@@ -4027,8 +4244,26 @@ function RenewalsModule({
                     </td>
                     <td className="office-row-actions" data-label="Actions">
                       <button
+                        aria-label={`Check ${item.website} now`}
+                        title="Run external check"
+                        disabled={checkingId === item.id}
+                        onClick={() => void checkNow(item)}
+                      >
+                        <RefreshCw
+                          className={checkingId === item.id ? 'spin' : undefined}
+                          size={15}
+                        />
+                      </button>
+                      <button
+                        aria-label={`Connect WordPress agent for ${item.website}`}
+                        title="Connect read-only agent"
+                        onClick={() => void connectAgent(item)}
+                      >
+                        <PlugZap size={15} />
+                      </button>
+                      <button
                         aria-label={`Edit ${item.website}`}
-                        title="Edit renewal"
+                        title="Edit website"
                         onClick={() => editRenewal(item)}
                       >
                         <Pencil size={15} />
