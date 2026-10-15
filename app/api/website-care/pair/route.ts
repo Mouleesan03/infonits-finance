@@ -35,13 +35,17 @@ export async function POST(request: Request) {
     if (site.agentTokenVersion !== tokenVersion) {
       await updateWorkspaceWebsite(user.id, siteId, { agentTokenVersion: tokenVersion });
     }
+    const appUrl = new URL(request.url).origin;
+    const token = createAgentToken(user.id, siteId, tokenVersion);
+    const setupCode = Buffer.from(JSON.stringify({ appUrl, siteId, token })).toString('base64url');
     return Response.json({
       ok: true,
-      appUrl: new URL(request.url).origin,
+      appUrl,
       siteId,
       tokenVersion,
-      token: createAgentToken(user.id, siteId, tokenVersion),
-      pluginUrl: `${new URL(request.url).origin}/downloads/infonits-site-agent.zip`,
+      token,
+      setupCode,
+      pluginUrl: `${appUrl}/downloads/infonits-site-agent.zip`,
     });
   } catch (error) {
     console.error('Website agent pairing failed', error);

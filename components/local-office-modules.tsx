@@ -3754,6 +3754,7 @@ function RenewalsModule({
     appUrl: string;
     siteId: string;
     token: string;
+    setupCode: string;
     pluginUrl: string;
   } | null>(null);
   const [draft, setDraft] = useState({
@@ -3897,6 +3898,7 @@ function RenewalsModule({
         siteId?: string;
         tokenVersion?: string;
         token?: string;
+        setupCode?: string;
         pluginUrl?: string;
       };
       if (
@@ -3905,15 +3907,14 @@ function RenewalsModule({
         !result.siteId ||
         !result.tokenVersion ||
         !result.token ||
+        !result.setupCode ||
         !result.pluginUrl
       ) {
         throw new Error(result.error || 'Unable to connect the agent.');
       }
       onChange(
         items.map((current) =>
-          current.id === item.id
-            ? { ...current, agentTokenVersion: result.tokenVersion }
-            : current,
+          current.id === item.id ? { ...current, agentTokenVersion: result.tokenVersion } : current,
         ),
       );
       setPairing({
@@ -3921,6 +3922,7 @@ function RenewalsModule({
         appUrl: result.appUrl,
         siteId: result.siteId,
         token: result.token,
+        setupCode: result.setupCode,
         pluginUrl: result.pluginUrl,
       });
     } catch (error) {
@@ -4003,34 +4005,53 @@ function RenewalsModule({
                 <span>WordPress → Settings → Infonits Site Agent.</span>
               </li>
               <li>
-                <strong>Paste, save and test</strong>
-                <span>Click “Save connection &amp; test now” in WordPress.</span>
+                <strong>Paste one connection code</strong>
+                <span>Click “Connect &amp; send test” in WordPress.</span>
               </li>
             </ol>
-            {[
-              ['Website Care URL', pairing.appUrl],
-              ['Site ID', pairing.siteId],
-              ['Agent token', pairing.token],
-            ].map(([label, value]) => (
-              <label className="website-agent-copy" key={label}>
-                <span>{label}</span>
-                <span>
-                  <input
-                    readOnly
-                    value={value}
-                    type={label === 'Agent token' ? 'password' : 'text'}
-                  />
-                  <button
-                    className="button"
-                    type="button"
-                    aria-label={`Copy ${label}`}
-                    onClick={() => void copyPairingValue(value)}
-                  >
-                    <Copy size={15} />
-                  </button>
-                </span>
-              </label>
-            ))}
+            <label className="website-agent-copy website-agent-copy-primary">
+              <span>Connection code — recommended</span>
+              <span>
+                <input readOnly value={pairing.setupCode} type="password" />
+                <button
+                  className="button button-primary"
+                  type="button"
+                  aria-label="Copy connection code"
+                  onClick={() => void copyPairingValue(pairing.setupCode)}
+                >
+                  <Copy size={15} /> Copy
+                </button>
+              </span>
+            </label>
+            <details className="website-agent-advanced">
+              <summary>Advanced: copy values separately</summary>
+              <div>
+                {[
+                  ['Website Care URL', pairing.appUrl],
+                  ['Site ID', pairing.siteId],
+                  ['Agent token', pairing.token],
+                ].map(([label, value]) => (
+                  <label className="website-agent-copy" key={label}>
+                    <span>{label}</span>
+                    <span>
+                      <input
+                        readOnly
+                        value={value}
+                        type={label === 'Agent token' ? 'password' : 'text'}
+                      />
+                      <button
+                        className="button"
+                        type="button"
+                        aria-label={`Copy ${label}`}
+                        onClick={() => void copyPairingValue(value)}
+                      >
+                        <Copy size={15} />
+                      </button>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </details>
             <div className="website-agent-privacy">
               <ShieldCheck size={18} />
               <p>

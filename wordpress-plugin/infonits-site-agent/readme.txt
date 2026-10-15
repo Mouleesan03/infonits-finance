@@ -3,7 +3,7 @@ Contributors: infonits
 Tags: monitoring, health, maintenance
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 
 Read-only WordPress health reporting for Infonits Website Care.
@@ -12,10 +12,14 @@ Read-only WordPress health reporting for Infonits Website Care.
 
 1. Upload and activate the plugin.
 2. Open Settings > Infonits Site Agent.
-3. Copy the Website Care URL, Site ID and Agent token from the Infonits Finance Website care page.
-4. Click Save connection & test now.
+3. Copy the single connection code from the Infonits Finance Website care page.
+4. Paste it and click Connect & send test.
 
 == Changelog ==
+
+= 1.2.0 =
+* Added one-code connection setup so no individual value can be missed.
+* Removed the duplicate send button and now names any missing field precisely.
 
 = 1.1.0 =
 * Added one-step save and connection test.

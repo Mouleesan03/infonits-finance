@@ -19179,6 +19179,36 @@ summary:focus-visible {
   min-width: 40px;
   padding: 0;
 }
+.website-agent-copy-primary {
+  padding: 13px;
+  border: 1px solid #bfdcff;
+  border-radius: 13px;
+  background: #eef6ff;
+}
+.website-agent-copy-primary > span:first-child {
+  color: #1768bd;
+}
+.website-agent-copy-primary .button {
+  min-width: 82px;
+  padding-inline: 13px;
+}
+.website-agent-advanced {
+  border: 1px solid #e0e7ef;
+  border-radius: 11px;
+  background: #fafcff;
+}
+.website-agent-advanced > summary {
+  padding: 11px 13px;
+  cursor: pointer;
+  color: #526b87;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+.website-agent-advanced > div {
+  display: grid;
+  gap: 10px;
+  padding: 0 13px 13px;
+}
 .website-agent-privacy {
   display: flex;
   align-items: flex-start;

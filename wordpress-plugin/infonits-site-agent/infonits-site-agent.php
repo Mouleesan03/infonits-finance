@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Infonits Site Agent
  * Description: Read-only WordPress health reporting for Infonits Website Care.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Infonits
  * License: GPL-2.0-or-later
  */
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('INFONITS_SITE_AGENT_VERSION', '1.1.0');
+define('INFONITS_SITE_AGENT_VERSION', '1.2.0');
 define('INFONITS_SITE_AGENT_CRON', 'infonits_site_agent_hourly');
 
 function infonits_site_agent_health() {
@@ -63,8 +63,18 @@ function infonits_site_agent_send_health() {
     $app_url = untrailingslashit((string) get_option('infonits_site_agent_app_url', ''));
     $site_id = trim((string) get_option('infonits_site_agent_site_id', ''));
     $token = infonits_site_agent_token();
-    if ($app_url === '' || $site_id === '' || $token === '') {
-        $error = 'Connection is incomplete. Save the Website Care URL, Site ID and Agent token first.';
+    $missing = array();
+    if ($app_url === '') {
+        $missing[] = 'Website Care URL';
+    }
+    if ($site_id === '') {
+        $missing[] = 'Site ID';
+    }
+    if ($token === '') {
+        $missing[] = 'Agent token';
+    }
+    if (!empty($missing)) {
+        $error = 'Connection is incomplete. Missing: ' . implode(', ', $missing) . '.';
         update_option('infonits_site_agent_last_error', $error, false);
         return new WP_Error('infonits_not_connected', $error);
     }
@@ -166,6 +176,31 @@ function infonits_site_agent_handle_save_test() {
     $token = isset($_POST['infonits_site_agent_token'])
         ? sanitize_text_field(wp_unslash($_POST['infonits_site_agent_token']))
         : '';
+    $setup_code = isset($_POST['infonits_site_agent_setup_code'])
+        ? sanitize_text_field(wp_unslash($_POST['infonits_site_agent_setup_code']))
+        : '';
+    if ($setup_code !== '') {
+        $normalized = strtr($setup_code, '-_', '+/');
+        $remainder = strlen($normalized) % 4;
+        if ($remainder) {
+            $normalized .= str_repeat('=', 4 - $remainder);
+        }
+        $decoded = base64_decode($normalized, true);
+        $connection = is_string($decoded) ? json_decode($decoded, true) : null;
+        if (
+            !is_array($connection) ||
+            empty($connection['appUrl']) ||
+            empty($connection['siteId']) ||
+            empty($connection['token'])
+        ) {
+            update_option('infonits_site_agent_last_error', 'The connection code is invalid. Copy a fresh code from Website Care.', false);
+            wp_safe_redirect(add_query_arg(array('page' => 'infonits-site-agent', 'agent_status' => 'error'), admin_url('options-general.php')));
+            exit;
+        }
+        $app_url = esc_url_raw((string) $connection['appUrl']);
+        $site_id = sanitize_text_field((string) $connection['siteId']);
+        $token = sanitize_text_field((string) $connection['token']);
+    }
     update_option('infonits_site_agent_app_url', $app_url, false);
     update_option('infonits_site_agent_site_id', $site_id, false);
     update_option('infonits_site_agent_token', $token, false);
@@ -193,6 +228,14 @@ function infonits_site_agent_settings_page() {
         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
             <input type="hidden" name="action" value="infonits_site_agent_save_test">
             <?php wp_nonce_field('infonits_site_agent_save_test'); ?>
+            <h2>Connect this website</h2>
+            <p>Copy the connection code from Infonits Finance → Website Care and paste it below.</p>
+            <p>
+                <label for="infonits_site_agent_setup_code"><strong>Connection code</strong></label><br>
+                <textarea class="large-text code" rows="4" id="infonits_site_agent_setup_code" name="infonits_site_agent_setup_code" placeholder="Paste the complete connection code here"></textarea>
+            </p>
+            <details>
+                <summary>Advanced manual connection</summary>
             <table class="form-table" role="presentation">
                 <tr>
                     <th scope="row"><label for="infonits_site_agent_app_url">Website Care URL</label></th>
@@ -207,17 +250,13 @@ function infonits_site_agent_settings_page() {
                     <td><input class="large-text code" type="password" id="infonits_site_agent_token" name="infonits_site_agent_token" value="<?php echo esc_attr(infonits_site_agent_token()); ?>" autocomplete="off" required></td>
                 </tr>
             </table>
-            <?php submit_button('Save connection & test now'); ?>
+            </details>
+            <?php submit_button('Connect & send test'); ?>
         </form>
         <hr>
         <h2>Connection status</h2>
         <p><strong>Last sent:</strong> <?php echo esc_html((string) get_option('infonits_site_agent_last_sent', 'Not sent yet')); ?></p>
-        <p>If the connection values are already saved, use this button to send a fresh report.</p>
-        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-            <input type="hidden" name="action" value="infonits_site_agent_send">
-            <?php wp_nonce_field('infonits_site_agent_send'); ?>
-            <?php submit_button('Send health now', 'secondary', 'submit', false); ?>
-        </form>
+        <p>To send another report, leave the connection code empty and click <strong>Connect &amp; send test</strong> again.</p>
     </div>
     <?php
 }
