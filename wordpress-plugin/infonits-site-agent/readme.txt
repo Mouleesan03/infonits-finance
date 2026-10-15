@@ -3,7 +3,7 @@ Contributors: infonits
 Tags: monitoring, health, maintenance
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or later
 
 Read-only WordPress health reporting for Infonits Website Care.
@@ -16,6 +16,9 @@ Read-only WordPress health reporting for Infonits Website Care.
 4. Paste it and click Connect & send test.
 
 == Changelog ==
+
+= 1.2.1 =
+* Fixed browser validation blocking connection-code setup when optional manual fields are empty.
 
 = 1.2.0 =
 * Added one-code connection setup so no individual value can be missed.

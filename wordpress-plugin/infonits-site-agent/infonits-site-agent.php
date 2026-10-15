@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Infonits Site Agent
  * Description: Read-only WordPress health reporting for Infonits Website Care.
- * Version: 1.2.0
+ * Version: 1.2.1
  * Author: Infonits
  * License: GPL-2.0-or-later
  */
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('INFONITS_SITE_AGENT_VERSION', '1.2.0');
+define('INFONITS_SITE_AGENT_VERSION', '1.2.1');
 define('INFONITS_SITE_AGENT_CRON', 'infonits_site_agent_hourly');
 
 function infonits_site_agent_health() {
@@ -235,19 +235,19 @@ function infonits_site_agent_settings_page() {
                 <textarea class="large-text code" rows="4" id="infonits_site_agent_setup_code" name="infonits_site_agent_setup_code" placeholder="Paste the complete connection code here"></textarea>
             </p>
             <details>
-                <summary>Advanced manual connection</summary>
+                <summary>Advanced manual connection (optional)</summary>
             <table class="form-table" role="presentation">
                 <tr>
                     <th scope="row"><label for="infonits_site_agent_app_url">Website Care URL</label></th>
-                    <td><input class="regular-text" type="url" id="infonits_site_agent_app_url" name="infonits_site_agent_app_url" value="<?php echo esc_attr((string) get_option('infonits_site_agent_app_url', 'https://infonits-finance.vercel.app')); ?>" required></td>
+                    <td><input class="regular-text" type="url" id="infonits_site_agent_app_url" name="infonits_site_agent_app_url" value="<?php echo esc_attr((string) get_option('infonits_site_agent_app_url', 'https://infonits-finance.vercel.app')); ?>"></td>
                 </tr>
                 <tr>
                     <th scope="row"><label for="infonits_site_agent_site_id">Site ID</label></th>
-                    <td><input class="regular-text" type="text" id="infonits_site_agent_site_id" name="infonits_site_agent_site_id" value="<?php echo esc_attr((string) get_option('infonits_site_agent_site_id', '')); ?>" required></td>
+                    <td><input class="regular-text" type="text" id="infonits_site_agent_site_id" name="infonits_site_agent_site_id" value="<?php echo esc_attr((string) get_option('infonits_site_agent_site_id', '')); ?>"></td>
                 </tr>
                 <tr>
                     <th scope="row"><label for="infonits_site_agent_token">Agent token</label></th>
-                    <td><input class="large-text code" type="password" id="infonits_site_agent_token" name="infonits_site_agent_token" value="<?php echo esc_attr(infonits_site_agent_token()); ?>" autocomplete="off" required></td>
+                    <td><input class="large-text code" type="password" id="infonits_site_agent_token" name="infonits_site_agent_token" value="<?php echo esc_attr(infonits_site_agent_token()); ?>" autocomplete="off"></td>
                 </tr>
             </table>
             </details>
