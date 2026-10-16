@@ -210,7 +210,7 @@ Verified Infonits company profile (source: https://infonits.io and https://infon
 
 function needsSmartModel(message: string) {
   const complexRequest =
-    /\b(analy[sz]e|analysis|forecast|strategy|report|compare|research|investigate|recommend|proposal|quotation|invoice|letter|cash.?flow|all|batch|monthly)\b/i;
+    /\b(analy[sz]e|analysis|forecast|strategy|report|compare|research|investigate|recommend|proposal|letter|cash.?flow|all|batch|monthly)\b/i;
   const workspaceChange =
     /\b(create|add|record|prepare|draft|schedule|update)\b/i.test(message) &&
     /\b(client|project|expense|invoice|quotation|payment|event|renewal|letter|record)\b/i.test(
@@ -303,7 +303,7 @@ export async function POST(request: Request) {
     const proposalToolInputSchema = z.object({ action: proposedActionSchema });
     const proposalTool = tool({
       description:
-        'Prepare one or more workspace changes for the user to review. This never applies the changes. Call it only when every required field is known.',
+        'Prepare one or more workspace changes for the approval queue. This never applies changes. Call exactly once when the user asks to create, add, save, preview or prepare a fully specified record.',
       inputSchema: proposalToolInputSchema,
     });
     const tools: ToolSet = {
@@ -341,6 +341,7 @@ export async function POST(request: Request) {
           : '') +
         'Follow the responseStyle field exactly. Default to the shortest complete answer: usually one short paragraph or at most four short bullets. Spoken replies must be short, conversational and easy to understand aloud. ' +
         'Use the supplied workspace context for business records and conversation history for follow-up requests. ' +
+        'Never guess a workspace fact, client, project, amount, currency, date or status. If it is not present in the supplied context, conversation or user-maintained memory, say that it is unknown or ask one focused question. ' +
         'You always have web search and web fetch available. When the user supplies a URL, fetch that exact page first. Use search when the user requests current, latest, external, research, comparison, news, portfolio, career, contact, price, market or other public information. For Infonits company facts, prefer infonits.io and the verified company profile in this prompt; do not cite unrelated companies or infer unlisted services. Do not use web tools for facts already present in the private workspace context. ' +
         'Currency accuracy is critical. baseCurrency and every totals field are LKR. Fields named amount are in the adjacent currency; fields named amountLkr are converted LKR values using that record\'s exchangeRate. Never treat an original USD, GBP, EUR, AUD or other foreign amount as LKR. Never invent or use a live exchange rate when a recorded exchangeRate or amountLkr is supplied. When displayAmount or displayAmountLkr is provided, copy that formatted value exactly. Display the original amount first, using the ISO code exactly once, for example "USD 3,000" or "LKR 993,300"—never "$3,000 USD". If useful, show a converted value separately as "LKR equivalent". Always use western three-digit grouping such as 993,300, never Indian grouping such as 9,93,300. ' +
         'Format replies for quick reading: lead with the direct answer, use short paragraphs, and use a short bullet list only when it improves clarity. Do not output headings with # symbols. Do not surround words with ** or other Markdown emphasis markers in voice responses. ' +

@@ -117,7 +117,11 @@ type ChatMessage = {
   appliedAt?: string;
   applyResult?: string;
   reviewing?: boolean;
+  dismissed?: boolean;
 };
+
+const approvalPreviewPattern =
+  /(?:\bpreview\b.*\b(?:create|save|add|apply)\b|\b(?:create|save|add)\b.*\bpreview\b|(?:preview|முன்னோட்டம்).*(?:create|உருவாக்கு|சேர்)|(?:create|உருவாக்கு|சேர்).*(?:preview|முன்னோட்டம்))/i;
 
 function actionLabel(action: AssistantAtomicAction) {
   const labels: Record<AssistantAtomicAction['type'], string> = {
@@ -132,6 +136,85 @@ function actionLabel(action: AssistantAtomicAction) {
     create_letter: 'Create service letter',
   };
   return labels[action.type];
+}
+
+function actionDetails(action: AssistantAtomicAction) {
+  const money = (amount: number, currency: string) =>
+    `${currency || 'USD'} ${amount.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+  let details: Array<{ label: string; value: string }>;
+
+  switch (action.type) {
+    case 'create_client':
+      details = [
+        { label: 'Name', value: action.name },
+        { label: 'Company', value: action.company },
+        { label: 'Email', value: action.email },
+        { label: 'Phone', value: action.phone },
+        { label: 'Country', value: action.country },
+      ];
+      break;
+    case 'create_project':
+      details = [
+        { label: 'Project', value: action.project },
+        { label: 'Client', value: action.clientName },
+        { label: 'Value', value: money(action.amount, action.currency) },
+        { label: 'Note', value: action.note },
+      ];
+      break;
+    case 'create_expense':
+      details = [
+        { label: 'Description', value: action.description },
+        { label: 'Category', value: action.category },
+        { label: 'Amount', value: money(action.amount, action.currency) },
+        { label: 'Date', value: action.date },
+      ];
+      break;
+    case 'create_invoice':
+    case 'create_quotation':
+      details = [
+        { label: 'Client', value: action.clientName },
+        { label: 'Project', value: action.projectName },
+        { label: 'Amount', value: money(action.amount, action.currency) },
+        { label: 'Description', value: action.description },
+        { label: 'Notes', value: action.notes },
+        { label: 'Bank details', value: action.includeBankDetails ? 'Included' : 'Not included' },
+      ];
+      break;
+    case 'create_payment':
+      details = [
+        { label: 'Type', value: action.paymentType },
+        { label: 'Category', value: action.category },
+        { label: 'Amount', value: money(action.amount, action.currency) },
+        { label: 'Date', value: action.date },
+        { label: 'Note', value: action.note },
+      ];
+      break;
+    case 'create_event':
+      details = [
+        { label: 'Title', value: action.title },
+        { label: 'Date', value: action.date },
+        { label: 'Type', value: action.eventType },
+      ];
+      break;
+    case 'create_renewal':
+      details = [
+        { label: 'Website', value: action.website },
+        { label: 'Domain due', value: action.domainDue },
+        { label: 'Hosting due', value: action.hostingDue },
+      ];
+      break;
+    case 'create_letter':
+      details = [
+        { label: 'Client', value: action.clientName },
+        { label: 'Subject', value: action.subject },
+        { label: 'Date', value: action.date },
+        { label: 'Prepared by', value: action.preparedBy },
+        { label: 'Body', value: action.body },
+      ];
+      break;
+  }
+
+  return details.filter(({ value }) => String(value).trim());
 }
 
 function InlineMessage({ text }: { text: string }) {
@@ -643,6 +726,7 @@ export function InfonitsAssistant({
     ) => {
       const clean = message.trim();
       if (!clean || busy) return;
+      const wantsApprovalPreview = approvalPreviewPattern.test(clean);
       setInput('');
       setError('');
       if (!options.silentUser) {
@@ -671,6 +755,7 @@ export function InfonitsAssistant({
             insight,
             model: responseModel,
             mode: completedMode,
+            reviewing: action.type !== 'none' && wantsApprovalPreview,
           };
           setMessages((current) => {
             const exists = current.some((item) => item.id === assistantId);
@@ -744,12 +829,7 @@ export function InfonitsAssistant({
           }
         }
         if (!finished || !reply.trim()) throw new Error('Nova could not finish that response.');
-        if (
-          action.type !== 'none' &&
-          /(?:\bpreview\b.*\b(?:create|save|add|apply)\b|\b(?:create|save|add)\b.*\bpreview\b|(?:preview|முன்னோட்டம்).*(?:create|உருவாக்கு|சேர்)|(?:create|உருவாக்கு|சேர்).*(?:preview|முன்னோட்டம்))/i.test(
-            clean,
-          )
-        ) {
+        if (action.type !== 'none' && wantsApprovalPreview) {
           setActiveTab('approvals');
         }
         if (
@@ -956,6 +1036,29 @@ export function InfonitsAssistant({
     );
   }
 
+  function editProposal(message: ChatMessage) {
+    if (!message.action || message.action.type === 'none') return;
+    const actions = message.action.type === 'batch' ? message.action.actions : [message.action];
+    const subject =
+      actions.length === 1 ? actionLabel(actions[0]).toLowerCase() : `${actions.length} changes`;
+    setMessages((current) =>
+      current.map((item) =>
+        item.id === message.id ? { ...item, dismissed: true, reviewing: false } : item,
+      ),
+    );
+    setActiveTab('chat');
+    setInput(`Revise this ${subject}. Change: `);
+    window.requestAnimationFrame(() => textareaRef.current?.focus());
+  }
+
+  function discardProposal(message: ChatMessage) {
+    setMessages((current) =>
+      current.map((item) =>
+        item.id === message.id ? { ...item, dismissed: true, reviewing: false } : item,
+      ),
+    );
+  }
+
   function startPrompt(prompt: string) {
     setActiveTab('chat');
     void send(prompt);
@@ -970,7 +1073,8 @@ export function InfonitsAssistant({
   }
 
   const pendingApprovals = messages.filter(
-    (message) => message.action && message.action.type !== 'none' && !message.applied,
+    (message) =>
+      message.action && message.action.type !== 'none' && !message.applied && !message.dismissed,
   );
   const appliedActions = messages
     .filter((message) => message.action && message.action.type !== 'none' && message.applied)
@@ -1045,24 +1149,46 @@ export function InfonitsAssistant({
               {message.action.type === 'batch' ? message.action.title : 'Proposed workspace change'}
             </strong>
             {actions.map((action, index) => (
-              <span key={`${action.type}-${index}`}>
-                <CheckCircle2 size={13} /> {actionLabel(action)}
-              </span>
+              <section className="assistant-action-detail-group" key={`${action.type}-${index}`}>
+                <span>
+                  <CheckCircle2 size={13} /> {actionLabel(action)}
+                </span>
+                <dl>
+                  {actionDetails(action).map((detail) => (
+                    <div key={detail.label}>
+                      <dt>{detail.label}</dt>
+                      <dd>{detail.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
             ))}
           </div>
         ) : null}
-        <button
-          type="button"
-          disabled={message.applied}
-          onClick={() => (message.reviewing ? apply(message) : review(message))}
-        >
-          {message.applied ? <CheckCircle2 size={15} /> : <Sparkles size={15} />}
-          {message.applied
-            ? 'Applied'
-            : message.reviewing
-              ? `Apply ${actions.length} change${actions.length === 1 ? '' : 's'}`
-              : 'Preview & approve'}
-        </button>
+        <div className="assistant-action-buttons">
+          <button
+            type="button"
+            disabled={message.applied}
+            onClick={() => (message.reviewing ? apply(message) : review(message))}
+          >
+            {message.applied ? <CheckCircle2 size={15} /> : <Sparkles size={15} />}
+            {message.applied
+              ? 'Applied'
+              : message.reviewing
+                ? `Apply ${actions.length} change${actions.length === 1 ? '' : 's'}`
+                : 'Preview & approve'}
+          </button>
+          {message.reviewing && !message.applied ? (
+            <>
+              <button type="button" className="secondary" onClick={() => editProposal(message)}>
+                <RefreshCw size={14} /> Edit request
+              </button>
+              <button type="button" className="ghost" onClick={() => discardProposal(message)}>
+                <X size={14} /> Discard
+              </button>
+            </>
+          ) : null}
+        </div>
       </div>
     );
   };
