@@ -253,8 +253,30 @@ export function InfonitsAssistant({
   const [language, setLanguage] = useState<NovaLanguage>('auto');
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const speechRequestRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const dailyBriefingStartedRef = useRef(false);
+
+  const stopSpeaking = useCallback(() => {
+    speechRequestRef.current?.abort();
+    speechRequestRef.current = null;
+    if (audioRef.current) {
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+      audioRef.current.pause();
+      audioRef.current.src = '';
+      audioRef.current = null;
+    }
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    utteranceRef.current = null;
+    setSpeaking(false);
+  }, []);
 
   useEffect(() => {
     try {
@@ -273,15 +295,85 @@ export function InfonitsAssistant({
     setHistoryReady(true);
     return () => {
       recognitionRef.current?.stop();
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      stopSpeaking();
     };
-  }, []);
+  }, [stopSpeaking]);
 
-  const stopSpeaking = useCallback(() => {
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-    utteranceRef.current = null;
-    setSpeaking(false);
-  }, []);
+  const speak = useCallback(
+    async (text: string) => {
+      stopSpeaking();
+      const controller = new AbortController();
+      speechRequestRef.current = controller;
+      setSpeaking(true);
+
+      const browserVoiceFallback = () => {
+        if (controller.signal.aborted || !('speechSynthesis' in window)) {
+          setSpeaking(false);
+          return;
+        }
+        const utterance = new SpeechSynthesisUtterance(text);
+        utteranceRef.current = utterance;
+        utterance.lang = speechLanguage(text, language, voice.language);
+        utterance.rate = voice.rate;
+        utterance.onend = () => {
+          if (utteranceRef.current !== utterance) return;
+          utteranceRef.current = null;
+          setSpeaking(false);
+        };
+        utterance.onerror = utterance.onend;
+        window.speechSynthesis.speak(utterance);
+      };
+
+      try {
+        const response = await fetch('/api/assistant/speech', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error('ElevenLabs speech is unavailable.');
+
+        const audioUrl = URL.createObjectURL(await response.blob());
+        if (controller.signal.aborted || speechRequestRef.current !== controller) {
+          URL.revokeObjectURL(audioUrl);
+          return;
+        }
+        speechRequestRef.current = null;
+        audioUrlRef.current = audioUrl;
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
+        audio.playbackRate = voice.rate;
+        const finish = () => {
+          if (audioRef.current !== audio) return;
+          audioRef.current = null;
+          if (audioUrlRef.current === audioUrl) {
+            URL.revokeObjectURL(audioUrl);
+            audioUrlRef.current = null;
+          }
+          setSpeaking(false);
+        };
+        audio.onended = finish;
+        audio.onerror = finish;
+        await audio.play();
+      } catch (speechError) {
+        if (speechError instanceof Error && speechError.name === 'AbortError') return;
+        if (speechRequestRef.current === controller) speechRequestRef.current = null;
+        if (audioRef.current) {
+          audioRef.current.onended = null;
+          audioRef.current.onerror = null;
+          audioRef.current.pause();
+          audioRef.current.src = '';
+          audioRef.current = null;
+        }
+        if (audioUrlRef.current) {
+          URL.revokeObjectURL(audioUrlRef.current);
+          audioUrlRef.current = null;
+        }
+        browserVoiceFallback();
+      }
+    },
+    [language, stopSpeaking, voice.language, voice.rate],
+  );
 
   useEffect(() => {
     if (!historyReady) return;
@@ -357,21 +449,7 @@ export function InfonitsAssistant({
             sources: data.sources,
           },
         ]);
-        if ((voice.autoSpeak || options.speak) && 'speechSynthesis' in window) {
-          stopSpeaking();
-          const utterance = new SpeechSynthesisUtterance(data.reply);
-          utteranceRef.current = utterance;
-          utterance.lang = speechLanguage(data.reply, language, voice.language);
-          utterance.rate = voice.rate;
-          utterance.onend = () => {
-            if (utteranceRef.current !== utterance) return;
-            utteranceRef.current = null;
-            setSpeaking(false);
-          };
-          utterance.onerror = utterance.onend;
-          setSpeaking(true);
-          window.speechSynthesis.speak(utterance);
-        }
+        if (voice.autoSpeak || options.speak) void speak(data.reply);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'Nova is unavailable.');
       } finally {
@@ -384,10 +462,8 @@ export function InfonitsAssistant({
       input,
       language,
       messages,
-      stopSpeaking,
+      speak,
       voice.autoSpeak,
-      voice.language,
-      voice.rate,
     ],
   );
 
@@ -542,7 +618,9 @@ export function InfonitsAssistant({
               <option value="en">English</option>
             </select>
           </label>
-          <i>{speaking ? 'Nova speaking' : voice.enabled ? 'Voice ready' : 'Claude connected'}</i>
+          <i>
+            {speaking ? 'Nova speaking' : voice.enabled ? 'ElevenLabs voice ready' : 'Claude connected'}
+          </i>
           <button type="button" onClick={resetConversation} title="Start a new conversation">
             <RefreshCw size={16} />
           </button>
