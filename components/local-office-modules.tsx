@@ -2529,26 +2529,21 @@ export async function createInvoicePdf(
     `${item.currency} ${value.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
   const clientName = client?.name ?? 'Client';
 
-  pdf.setFillColor(15, 37, 68);
+  pdf.setFillColor(244, 249, 255);
   pdf.rect(0, 0, 210, 43, 'F');
   pdf.setFillColor(38, 126, 230);
   pdf.rect(0, 0, 210, 4, 'F');
   try {
-    const logo = await imageDataUrl('/infonits-white-logo.png');
+    const logo = await imageDataUrl('/infonits-logo.png');
     pdf.addImage(logo, 'PNG', 16, 13, 58, 11.6);
   } catch {
-    pdf.setTextColor(255, 255, 255);
+    pdf.setTextColor(20, 56, 94);
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(24);
     pdf.text('infonits', 16, 23);
   }
-  pdf.setTextColor(152, 183, 218);
-  pdf.setFontSize(6.5);
-  pdf.text('DESIGN  x  TECHNOLOGY', 16, 32);
-  pdf.setTextColor(255, 255, 255);
+  pdf.setTextColor(20, 56, 94);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(7);
-  pdf.text('BILLING DOCUMENT', 194, 13, { align: 'right' });
   pdf.setFontSize(22);
   pdf.text('INVOICE', 194, 24, { align: 'right' });
   pdf.setFontSize(8);
@@ -2760,11 +2755,9 @@ function InvoicePreview({
         <div className="invoice-paper invoice-a4">
           <div className="invoice-a4-header">
             <div>
-              <img src="/infonits-white-logo.png" alt="Infonits" />
-              <small>DESIGN&nbsp; × &nbsp;TECHNOLOGY</small>
+              <img src="/infonits-logo.png" alt="Infonits" />
             </div>
             <div>
-              <small>BILLING DOCUMENT</small>
               <strong>INVOICE</strong>
               <span>{item.number}</span>
               <em>{item.status}</em>

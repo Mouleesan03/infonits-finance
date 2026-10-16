@@ -299,12 +299,14 @@ function FinanceInsightCard({ insight }: { insight: AssistantInsight }) {
 export function InfonitsAssistant({
   context,
   dailyBriefing = false,
+  voiceStartSignal = 0,
   onApply,
   onClose,
   voice,
 }: {
   context: object;
   dailyBriefing?: boolean;
+  voiceStartSignal?: number;
   onApply: (action: Exclude<AssistantAction, { type: 'none' }>) => string;
   onClose: () => void;
   voice: { enabled: boolean; autoSpeak: boolean; rate: number; language: string };
@@ -443,7 +445,7 @@ export function InfonitsAssistant({
           heardSpeech = true;
           lastSpeechAt = now;
         }
-        if (heardSpeech && now - lastSpeechAt > 950 && now - startedAt > 850) {
+        if (heardSpeech && now - lastSpeechAt > 680 && now - startedAt > 650) {
           stopVoiceActivityDetection();
           if (recorder.state === 'recording') recorder.stop();
           return;
@@ -743,6 +745,14 @@ export function InfonitsAssistant({
         }
         if (!finished || !reply.trim()) throw new Error('Nova could not finish that response.');
         if (
+          action.type !== 'none' &&
+          /(?:\bpreview\b.*\b(?:create|save|add|apply)\b|\b(?:create|save|add)\b.*\bpreview\b|(?:preview|முன்னோட்டம்).*(?:create|உருவாக்கு|சேர்)|(?:create|உருவாக்கு|சேர்).*(?:preview|முன்னோட்டம்))/i.test(
+            clean,
+          )
+        ) {
+          setActiveTab('approvals');
+        }
+        if (
           (voice.autoSpeak || options.speak) &&
           (!options.voiceSession || voiceSessionActiveRef.current)
         ) {
@@ -877,6 +887,11 @@ export function InfonitsAssistant({
     void unlockAudio();
     void startListening();
   }, [startListening, unlockAudio]);
+
+  useEffect(() => {
+    if (!voiceStartSignal || voiceSessionActiveRef.current) return;
+    beginVoiceSession();
+  }, [beginVoiceSession, voiceStartSignal]);
 
   const toggleVoiceMute = useCallback(() => {
     const nextMuted = !voiceMutedRef.current;
@@ -1046,7 +1061,7 @@ export function InfonitsAssistant({
             ? 'Applied'
             : message.reviewing
               ? `Apply ${actions.length} change${actions.length === 1 ? '' : 's'}`
-              : 'Review changes'}
+              : 'Preview & approve'}
         </button>
       </div>
     );
@@ -1150,9 +1165,7 @@ export function InfonitsAssistant({
           <Sparkles size={22} />
         </span>
         <div>
-          <small>PERSONAL BUSINESS ASSISTANT</small>
           <h1 id="nova-title">Nova</h1>
-          <p>Ask, analyse and prepare safe workspace actions.</p>
         </div>
         <div className="nova-header-actions">
           <label className="nova-mode-select" title="Nova response depth">

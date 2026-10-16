@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const input = requestSchema.parse(await request.json());
     const voiceId = process.env.ELEVENLABS_VOICE_ID?.trim() || defaultVoiceId;
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream?output_format=mp3_22050_32&optimize_streaming_latency=3`,
       {
         method: 'POST',
         headers: {
@@ -39,8 +39,14 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           text: input.text,
           model_id: 'eleven_flash_v2_5',
+          voice_settings: {
+            stability: 0.45,
+            similarity_boost: 0.75,
+            style: 0,
+            use_speaker_boost: true,
+          },
         }),
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(15_000),
       },
     );
 

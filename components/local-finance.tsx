@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDownRight,
   ArrowUpRight,
   AlertTriangle,
+  AudioLines,
   Bell,
   Bot,
   Archive,
@@ -207,6 +208,30 @@ const storageKey = 'infonits-finance-local-v1';
 const officeStorageKey = 'infonits-finance-office-v1';
 const previewSeedKey = 'infonits-mobile-preview-seed-version';
 const novaBriefingDateKey = 'infonits-nova-daily-briefing-date-v1';
+const novaWakeKey = 'infonits-nova-wake-enabled-v1';
+
+type NovaWakeResultEvent = {
+  resultIndex: number;
+  results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }>;
+};
+
+type NovaWakeRecognition = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: (() => void) | null;
+  onresult: ((event: NovaWakeResultEvent) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type NovaWakeWindow = Window &
+  typeof globalThis & {
+    SpeechRecognition?: new () => NovaWakeRecognition;
+    webkitSpeechRecognition?: new () => NovaWakeRecognition;
+  };
 const previewSections: Section[] = [
   'dashboard',
   'attention',
@@ -414,6 +439,19 @@ export function LocalFinance() {
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
   const [novaOpen, setNovaOpen] = useState(false);
   const [novaDailyBriefing, setNovaDailyBriefing] = useState(false);
+  const [novaVoiceStartSignal, setNovaVoiceStartSignal] = useState(0);
+  const [novaWakeEnabled, setNovaWakeEnabled] = useState(
+    () => typeof window !== 'undefined' && localStorage.getItem(novaWakeKey) === 'true',
+  );
+  const [novaWakeListening, setNovaWakeListening] = useState(false);
+  const novaWakeRecognitionRef = useRef<NovaWakeRecognition | null>(null);
+  const novaWakeSupported =
+    typeof window === 'undefined'
+      ? true
+      : Boolean(
+          (window as NovaWakeWindow).SpeechRecognition ??
+            (window as NovaWakeWindow).webkitSpeechRecognition,
+        );
   const [officeFormSignal, setOfficeFormSignal] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationTab, setNotificationTab] = useState<'notifications' | 'today'>(
@@ -424,6 +462,75 @@ export function LocalFinance() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [mobilePreview, setMobilePreview] = useState(false);
+
+  useEffect(() => {
+    if (!loaded || !novaWakeEnabled || novaOpen || !preferences.voiceEnabled) {
+      novaWakeRecognitionRef.current?.stop();
+      novaWakeRecognitionRef.current = null;
+      return;
+    }
+
+    const voiceWindow = window as NovaWakeWindow;
+    const Recognition = voiceWindow.SpeechRecognition ?? voiceWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      return;
+    }
+
+    let active = true;
+    let restartTimer = 0;
+    const recognition = new Recognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = preferences.voiceLanguage || 'en-US';
+    novaWakeRecognitionRef.current = recognition;
+    recognition.onstart = () => setNovaWakeListening(true);
+    recognition.onresult = (event) => {
+      let transcript = '';
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        transcript += ` ${event.results[index][0].transcript}`;
+      }
+      if (/\bhey\s+(?:nova|now|noah)\b/i.test(transcript)) {
+        active = false;
+        recognition.stop();
+        setNovaWakeListening(false);
+        setNovaDailyBriefing(false);
+        setNovaVoiceStartSignal((signal) => signal + 1);
+        setNovaOpen(true);
+      }
+    };
+    recognition.onerror = () => {
+      active = false;
+      setNovaWakeListening(false);
+    };
+    recognition.onend = () => {
+      setNovaWakeListening(false);
+      if (active) {
+        restartTimer = window.setTimeout(() => {
+          try {
+            recognition.start();
+          } catch {
+            // The browser can pause wake listening until the next user interaction.
+          }
+        }, 700);
+      }
+    };
+    try {
+      recognition.start();
+    } catch {
+      // The dock remains available as a manual voice-mode launcher.
+    }
+
+    return () => {
+      active = false;
+      window.clearTimeout(restartTimer);
+      recognition.onstart = null;
+      recognition.onend = null;
+      recognition.stop();
+      if (novaWakeRecognitionRef.current === recognition) {
+        novaWakeRecognitionRef.current = null;
+      }
+    };
+  }, [loaded, novaOpen, novaWakeEnabled, preferences.voiceEnabled, preferences.voiceLanguage]);
 
   useEffect(() => {
     let active = true;
@@ -2027,6 +2134,57 @@ export function LocalFinance() {
           )}
         </main>
 
+        {preferences.voiceEnabled && !novaOpen ? (
+          <aside
+            className={`nova-wake-dock ${novaWakeListening ? 'is-listening' : ''}`}
+            aria-label="Nova wake word control"
+          >
+            <button
+              type="button"
+              className="nova-wake-orb"
+              aria-pressed={novaWakeEnabled}
+              aria-label={novaWakeEnabled ? 'Disable Hey Nova' : 'Enable Hey Nova'}
+              onClick={() => {
+                if (!novaWakeSupported) {
+                  setNovaDailyBriefing(false);
+                  setNovaVoiceStartSignal((signal) => signal + 1);
+                  setNovaOpen(true);
+                  return;
+                }
+                const next = !novaWakeEnabled;
+                setNovaWakeEnabled(next);
+                localStorage.setItem(novaWakeKey, String(next));
+              }}
+            >
+              <span aria-hidden="true">
+                <i />
+                <i />
+                <i />
+                <i />
+              </span>
+            </button>
+            <button
+              type="button"
+              className="nova-wake-copy"
+              onClick={() => {
+                setNovaDailyBriefing(false);
+                setNovaVoiceStartSignal((signal) => signal + 1);
+                setNovaOpen(true);
+              }}
+            >
+              <strong>{novaWakeListening ? 'Hey Nova active' : 'Nova Voice'}</strong>
+              <small>
+                {novaWakeSupported
+                  ? novaWakeEnabled
+                    ? 'Say “Hey Nova”'
+                    : 'Tap orb to enable'
+                  : 'Tap to talk'}
+              </small>
+            </button>
+            <AudioLines size={15} aria-hidden="true" />
+          </aside>
+        ) : null}
+
         {novaOpen && (
           <div
             className="local-modal-layer nova-layer"
@@ -2039,6 +2197,7 @@ export function LocalFinance() {
             <InfonitsAssistant
               context={assistantContext}
               dailyBriefing={novaDailyBriefing}
+              voiceStartSignal={novaVoiceStartSignal}
               onApply={applyAssistantAction}
               onClose={() => {
                 setNovaOpen(false);

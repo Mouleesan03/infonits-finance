@@ -14072,39 +14072,27 @@ tfoot td {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 0 -38px 24px;
-  padding: 22px 38px 18px;
+  margin: 0 -38px 18px;
+  padding: 18px 38px 16px;
   border-top: 5px solid #2b82e6;
-  background: #0f2544;
-  color: #fff;
+  background: linear-gradient(118deg, #fff 24%, #eff7ff 70%, #d9ebff);
+  color: #14385e;
 }
 .invoice-a4-header > div:first-child img {
   width: 170px;
   height: auto;
-}
-.invoice-a4-header > div:first-child small {
-  display: block;
-  margin-top: 5px;
-  color: #8fb5df;
-  font-size: 7px;
-  letter-spacing: 0.14em;
 }
 .invoice-a4-header > div:last-child {
   display: flex;
   align-items: flex-end;
   flex-direction: column;
 }
-.invoice-a4-header > div:last-child small {
-  color: #9ebbdc;
-  font-size: 7px;
-  letter-spacing: 0.12em;
-}
 .invoice-a4-header > div:last-child > strong {
   font-size: 24px;
   letter-spacing: 0.04em;
 }
 .invoice-a4-header > div:last-child > span {
-  color: #c9d9ea;
+  color: #69819c;
   font-size: 9px;
 }
 .invoice-a4-header em {
@@ -14121,7 +14109,7 @@ tfoot td {
 .invoice-a4-meta {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 32px;
+  gap: 20px;
 }
 .invoice-a4-meta span,
 .invoice-a4-billto span,
@@ -14150,7 +14138,7 @@ tfoot td {
 .invoice-a4-meta dl {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 8px 16px;
+  gap: 5px 12px;
   margin: 0;
 }
 .invoice-a4-meta dt {
@@ -20792,7 +20780,7 @@ summary:focus-visible {
   }
   .nova-modal .assistant-header h1 {
     margin: 0;
-    font-size: 19px;
+    font-size: 22px;
     line-height: 1.15;
   }
   .nova-modal .assistant-header p {
@@ -20810,6 +20798,96 @@ summary:focus-visible {
   }
   .nova-modal .nova-header-actions > button {
     width: 32px;
+  }
+}
+
+/* Compact wake-word presence stays available without covering the dashboard. */
+.nova-wake-dock {
+  position: fixed;
+  z-index: 1180;
+  right: 18px;
+  bottom: 20px;
+  min-width: 176px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px 8px 8px;
+  border: 1px solid rgb(177 206 239 / 82%);
+  border-radius: 18px;
+  background: rgb(255 255 255 / 92%);
+  color: #184875;
+  box-shadow: 0 14px 36px rgb(23 65 112 / 18%);
+  backdrop-filter: blur(16px);
+}
+.nova-wake-orb,
+.nova-wake-copy {
+  border: 0;
+  background: transparent;
+}
+.nova-wake-orb {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(145deg, #55b9ff, #3e72e8 55%, #7e5eea);
+  box-shadow: 0 8px 20px rgb(61 111 215 / 28%);
+}
+.nova-wake-orb > span {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.nova-wake-orb i {
+  width: 3px;
+  height: 8px;
+  border-radius: 99px;
+  background: currentColor;
+}
+.nova-wake-dock.is-listening .nova-wake-orb {
+  animation: nova-orb-breathe 1.7s ease-in-out infinite;
+}
+.nova-wake-dock.is-listening .nova-wake-orb i {
+  animation: assistant-voice-bar 0.72s ease-in-out infinite alternate;
+}
+.nova-wake-dock.is-listening .nova-wake-orb i:nth-child(2) {
+  animation-delay: -0.35s;
+}
+.nova-wake-dock.is-listening .nova-wake-orb i:nth-child(3) {
+  animation-delay: -0.55s;
+}
+.nova-wake-dock.is-listening .nova-wake-orb i:nth-child(4) {
+  animation-delay: -0.2s;
+}
+.nova-wake-copy {
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+}
+.nova-wake-copy strong,
+.nova-wake-copy small {
+  display: block;
+}
+.nova-wake-copy strong {
+  font-size: 11px;
+}
+.nova-wake-copy small {
+  margin-top: 2px;
+  color: #69819a;
+  font-size: 9px;
+}
+.nova-wake-dock > svg {
+  color: #5b80a8;
+}
+
+@media (max-width: 720px) {
+  .nova-wake-dock {
+    right: 12px;
+    bottom: calc(74px + env(safe-area-inset-bottom));
+    min-width: 158px;
   }
 }
 
@@ -20979,6 +21057,10 @@ summary:focus-visible {
   .local-nova-orb > i,
   .nova-voice-orb,
   .nova-voice-orb i {
+    animation: none;
+  }
+  .nova-wake-dock.is-listening .nova-wake-orb,
+  .nova-wake-dock.is-listening .nova-wake-orb i {
     animation: none;
   }
 }
