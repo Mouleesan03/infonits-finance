@@ -85,6 +85,13 @@ export type AssistantAction =
 
 type AssistantSource = { title: string; url: string };
 
+type AssistantStreamEvent =
+  | { type: 'text-delta'; delta: string }
+  | { type: 'action'; action: AssistantAction }
+  | { type: 'source'; source: AssistantSource }
+  | { type: 'finish'; model: 'fast' | 'smart' }
+  | { type: 'error'; error: string };
+
 type ChatMessage = {
   id: string;
   role: 'assistant' | 'user';
@@ -556,6 +563,45 @@ export function InfonitsAssistant({
       }
       setBusy(true);
       try {
+        const assistantId = crypto.randomUUID();
+        let reply = '';
+        let action: AssistantAction = { type: 'none' };
+        let sources: AssistantSource[] = [];
+        let assistantAdded = false;
+        let finished = false;
+        const updateAssistant = () => {
+          const nextMessage: ChatMessage = {
+            id: assistantId,
+            role: 'assistant',
+            text: reply,
+            action,
+            sources,
+          };
+          setMessages((current) =>
+            assistantAdded
+              ? current.map((item) => (item.id === assistantId ? nextMessage : item))
+              : [...current, nextMessage],
+          );
+          assistantAdded = true;
+        };
+        const handleEvent = (event: AssistantStreamEvent) => {
+          if (event.type === 'text-delta') {
+            reply += event.delta;
+            updateAssistant();
+          } else if (event.type === 'action') {
+            action = event.action;
+            updateAssistant();
+          } else if (event.type === 'source') {
+            if (!sources.some((source) => source.url === event.source.url)) {
+              sources = [...sources, event.source];
+              updateAssistant();
+            }
+          } else if (event.type === 'finish') {
+            finished = true;
+          } else if (event.type === 'error') {
+            throw new Error(event.error);
+          }
+        };
         const response = await fetch('/api/assistant', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -570,30 +616,36 @@ export function InfonitsAssistant({
               .map((item) => ({ role: item.role, text: item.text })),
           }),
         });
-        const data = (await response.json()) as {
-          reply?: string;
-          action?: AssistantAction;
-          sources?: AssistantSource[];
-          error?: string;
-        };
-        if (!response.ok || !data.reply || !data.action) {
+        const contentType = response.headers.get('content-type') || '';
+        if (!response.ok || !contentType.includes('application/x-ndjson')) {
+          const data = (await response.json().catch(() => ({}))) as { error?: string };
           throw new Error(data.error || 'Nova could not answer right now.');
         }
-        setMessages((current) => [
-          ...current,
-          {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            text: data.reply!,
-            action: data.action,
-            sources: data.sources,
-          },
-        ]);
+        if (!response.body) throw new Error('Nova returned an empty response.');
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffered = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          buffered += decoder.decode(value, { stream: !done });
+          const lines = buffered.split('\n');
+          buffered = done ? '' : (lines.pop() ?? '');
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            handleEvent(JSON.parse(line) as AssistantStreamEvent);
+          }
+          if (done) {
+            if (buffered.trim()) handleEvent(JSON.parse(buffered) as AssistantStreamEvent);
+            break;
+          }
+        }
+        if (!finished || !reply.trim()) throw new Error('Nova could not finish that response.');
         if (
           (voice.autoSpeak || options.speak) &&
           (!options.voiceSession || voiceSessionActiveRef.current)
         ) {
-          void speak(data.reply);
+          void speak(reply);
         }
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'Nova is unavailable.');

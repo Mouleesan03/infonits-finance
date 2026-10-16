@@ -1,5 +1,5 @@
 import { anthropic, type AnthropicLanguageModelOptions } from '@ai-sdk/anthropic';
-import { generateText } from 'ai';
+import { streamText, tool, type ToolSet } from 'ai';
 import { z } from 'zod';
 import { authorize } from '@/lib/supabase/server';
 
@@ -69,8 +69,7 @@ const atomicActionSchema = z.discriminatedUnion('type', [
     date: z.string(),
   }),
 ]);
-const actionSchema = z.union([
-  z.object({ type: z.literal('none') }),
+const proposedActionSchema = z.union([
   atomicActionSchema,
   z.object({
     type: z.literal('batch'),
@@ -168,35 +167,25 @@ const requestSchema = z.object({
     .strict(),
 });
 
-const responseSchema = z.object({
-  reply: z.string().min(1).max(1400),
-  action: actionSchema,
-});
+type AssistantAction = z.infer<typeof proposedActionSchema> | { type: 'none' };
 
-function parseAssistantResponse(text: string) {
-  const trimmed = text.trim();
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim();
-  const candidate = fenced ?? trimmed.slice(trimmed.indexOf('{'), trimmed.lastIndexOf('}') + 1);
+function needsSmartModel(message: string) {
+  const complexRequest =
+    /\b(analy[sz]e|analysis|forecast|strategy|report|compare|research|investigate|recommend|proposal|quotation|invoice|letter|cash.?flow|all|batch|monthly)\b/i;
+  const workspaceChange =
+    /\b(create|add|record|prepare|draft|schedule|update)\b/i.test(message) &&
+    /\b(client|project|expense|invoice|quotation|payment|event|renewal|letter|record)\b/i.test(
+      message,
+    );
+  return complexRequest.test(message) || workspaceChange || message.split(/\s+/).length > 55;
+}
+
+function validWebSource(source: { title?: string; url: string }) {
   try {
-    const decoded: unknown = JSON.parse(candidate);
-    const parsed = responseSchema.safeParse(decoded);
-    if (parsed.success) return parsed.data;
-    if (
-      decoded &&
-      typeof decoded === 'object' &&
-      'reply' in decoded &&
-      typeof decoded.reply === 'string' &&
-      decoded.reply.trim()
-    ) {
-      return { reply: decoded.reply.trim(), action: { type: 'none' } as const };
-    }
+    return ['http:', 'https:'].includes(new URL(source.url).protocol);
   } catch {
-    // A useful text answer must never be discarded because an action payload is malformed.
+    return false;
   }
-  return {
-    reply: trimmed || 'I could not complete that request. Please try again.',
-    action: { type: 'none' } as const,
-  };
 }
 
 export async function POST(request: Request) {
@@ -226,23 +215,30 @@ export async function POST(request: Request) {
       /\b(search|online|web|internet|latest|current|today|news|price|compare|research|find)\b/i.test(
         input.message,
       );
-    const { text, sources } = await generateText({
-      model: anthropic('claude-haiku-5-5'),
-      maxOutputTokens: 1_800,
+    const smartModel = needsSmartModel(input.message);
+    const modelId = smartModel ? 'claude-sonnet-4-6' : 'claude-haiku-5-5';
+    const proposalTool = tool({
+      description:
+        'Prepare one or more workspace changes for the user to review. This never applies the changes. Call it only when every required field is known.',
+      inputSchema: proposedActionSchema,
+    });
+    const tools: ToolSet = { propose_workspace_action: proposalTool };
+    if (wantsWebSearch) {
+      tools.web_search = anthropic.tools.webSearch_20260318({
+        maxUses: 3,
+        responseInclusion: 'full',
+      });
+    }
+    const result = streamText({
+      model: anthropic(modelId),
+      maxOutputTokens: smartModel ? 1_800 : 1_200,
       providerOptions: {
         anthropic: {
-          effort: 'low',
+          effort: smartModel ? 'medium' : 'low',
           thinking: { type: 'disabled' },
         } satisfies AnthropicLanguageModelOptions,
       },
-      tools: wantsWebSearch
-        ? {
-            web_search: anthropic.tools.webSearch_20260318({
-              maxUses: 3,
-              responseInclusion: 'full',
-            }),
-          }
-        : undefined,
+      tools,
       instructions:
         'You are Nova, the trusted personal operations assistant inside the Infonits Finance workspace. ' +
         languageInstruction +
@@ -252,13 +248,11 @@ export async function POST(request: Request) {
         'You may propose one supported workspace action or a batch of 2 to 10 actions when the user explicitly asks for several records or a monthly set. ' +
         'Use batch only when every item is ready to review, and give the batch a short descriptive title. Batch actions should use existing clients and projects so they can be applied safely. ' +
         'Never claim an action has already happened: the user must review and apply it in the UI. ' +
-        'If required details such as amount, client, or date are missing, ask one focused question and return action type none. ' +
+        'If required details such as amount, client, or date are missing, ask one focused question and do not call the action tool. ' +
         'Use YYYY-MM-DD dates and an existing client or project name when possible. ' +
         'For an invoice or quotation, write a useful service description and include bank details only when the user asks for them. ' +
         'For a letter, draft a complete professional body. Supported action fields are: create_client(name,company,email,phone,country); create_project(project,clientName,amount,currency,note); create_expense(description,category,amount,currency,date); create_invoice or create_quotation(clientName,projectName,amount,currency,description,notes,includeBankDetails,bankDetails); create_payment(paymentType,category,note,amount,currency,date); create_event(title,date,eventType); create_renewal(website,domainDue,hostingDue); create_letter(clientName,subject,body,preparedBy,date). Always include every listed field, using an empty string or false when a detail was not requested. ' +
-        'Return only one valid JSON object with exactly two top-level fields: "reply" (a useful plain-text answer) and "action". ' +
-        'The action must be one supported action, {"type":"none"}, or a batch object with title and actions. Do not use markdown code fences. ' +
-        'For questions that do not require a record change, set action to {"type":"none"}.',
+        'Write the useful user-facing reply as normal text first. When a workspace change is fully specified, then call propose_workspace_action with the typed proposal. Do not output JSON in the reply. For questions that do not require a record change, answer normally and do not call the tool.',
       prompt: JSON.stringify({
         ...input,
         responseStyle: input.voiceMode
@@ -266,25 +260,64 @@ export async function POST(request: Request) {
           : 'Text response: stay concise and use short paragraphs.',
       }),
     });
-    const output = parseAssistantResponse(text);
 
-    return Response.json({
-      reply: output.reply,
-      action: output.action,
-      sources: sources
-        .filter((source) => source.sourceType === 'url')
-        .map((source) => ({ title: source.title || source.url, url: source.url }))
-        .filter((source) => {
-          try {
-            return ['http:', 'https:'].includes(new URL(source.url).protocol);
-          } catch {
-            return false;
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const emit = (event: object) =>
+          controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+        let reply = '';
+        let action: AssistantAction = { type: 'none' };
+        const seenSources = new Set<string>();
+        try {
+          for await (const part of result.fullStream) {
+            if (part.type === 'text-delta') {
+              reply += part.text;
+              emit({ type: 'text-delta', delta: part.text });
+            } else if (part.type === 'tool-call' && part.toolName === 'propose_workspace_action') {
+              const parsed = proposedActionSchema.safeParse(part.input);
+              if (parsed.success) {
+                action = parsed.data;
+                emit({ type: 'action', action });
+              }
+            } else if (
+              part.type === 'source' &&
+              part.sourceType === 'url' &&
+              validWebSource(part) &&
+              !seenSources.has(part.url) &&
+              seenSources.size < 5
+            ) {
+              seenSources.add(part.url);
+              emit({
+                type: 'source',
+                source: { title: part.title || part.url, url: part.url },
+              });
+            } else if (part.type === 'error') {
+              throw part.error;
+            }
           }
-        })
-        .filter(
-          (source, index, list) => list.findIndex((item) => item.url === source.url) === index,
-        )
-        .slice(0, 5),
+          if (!reply.trim()) {
+            const fallback =
+              action.type === 'none'
+                ? 'I could not complete that request. Please try again.'
+                : 'I prepared that for your review.';
+            emit({ type: 'text-delta', delta: fallback });
+          }
+          emit({ type: 'finish', model: smartModel ? 'smart' : 'fast' });
+        } catch {
+          emit({ type: 'error', error: 'Nova could not complete that request. Please try again.' });
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'application/x-ndjson; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+      },
     });
   } catch (error) {
     const message =
