@@ -1,4 +1,4 @@
-import { anthropic } from '@ai-sdk/anthropic';
+import { anthropic, type AnthropicLanguageModelOptions } from '@ai-sdk/anthropic';
 import { generateText } from 'ai';
 import { z } from 'zod';
 import { authorize } from '@/lib/supabase/server';
@@ -82,6 +82,7 @@ const actionSchema = z.union([
 const requestSchema = z.object({
   message: z.string().trim().min(1).max(800),
   language: z.enum(['auto', 'ta', 'en']).default('auto'),
+  voiceMode: z.boolean().default(false),
   history: z
     .array(
       z.object({
@@ -226,7 +227,14 @@ export async function POST(request: Request) {
         input.message,
       );
     const { text, sources } = await generateText({
-      model: anthropic('claude-sonnet-4-6'),
+      model: anthropic('claude-haiku-5-5'),
+      maxOutputTokens: 1_800,
+      providerOptions: {
+        anthropic: {
+          effort: 'low',
+          thinking: { type: 'disabled' },
+        } satisfies AnthropicLanguageModelOptions,
+      },
       tools: wantsWebSearch
         ? {
             web_search: anthropic.tools.webSearch_20260318({
@@ -238,6 +246,7 @@ export async function POST(request: Request) {
       instructions:
         'You are Nova, the trusted personal operations assistant inside the Infonits Finance workspace. ' +
         languageInstruction +
+        'Follow the responseStyle field exactly: spoken replies must be short, conversational and easy to understand aloud. ' +
         'Use the supplied workspace context for business records and conversation history for follow-up requests. ' +
         'When web search is available and the user asks for online, current, latest, research, comparison, or news information, use it and summarise the answer clearly. ' +
         'You may propose one supported workspace action or a batch of 2 to 10 actions when the user explicitly asks for several records or a monthly set. ' +
@@ -250,7 +259,12 @@ export async function POST(request: Request) {
         'Return only one valid JSON object with exactly two top-level fields: "reply" (a useful plain-text answer) and "action". ' +
         'The action must be one supported action, {"type":"none"}, or a batch object with title and actions. Do not use markdown code fences. ' +
         'For questions that do not require a record change, set action to {"type":"none"}.',
-      prompt: JSON.stringify(input),
+      prompt: JSON.stringify({
+        ...input,
+        responseStyle: input.voiceMode
+          ? 'Voice response: answer conversationally in no more than three short sentences unless essential details are required.'
+          : 'Text response: stay concise and use short paragraphs.',
+      }),
     });
     const output = parseAssistantResponse(text);
 

@@ -1654,15 +1654,18 @@ export function LocalFinance() {
             </button>
             <button
               type="button"
-              className="local-ai-shortcut"
-              aria-label="Open Nova personal assistant"
+              className="local-ai-shortcut voice-ready"
+              aria-label="Open Nova personal voice agent, ready"
               aria-expanded={novaOpen}
               onClick={() => {
                 setNovaDailyBriefing(false);
                 setNovaOpen(true);
               }}
             >
-              <Sparkles size={17} />
+              <span className="local-nova-orb" aria-hidden="true">
+                <Sparkles size={15} />
+                <i />
+              </span>
             </button>
             <div className="local-notification-wrap">
               <button
@@ -2214,7 +2217,7 @@ function WorkspaceSettings({
                   </span>
                   <div>
                     <h2>Nova personal assistant</h2>
-                    <p>Control microphone input for Claude requests.</p>
+                    <p>Press-to-talk input and ElevenLabs voice responses.</p>
                   </div>
                 </header>
                 <label className="settings-switch">

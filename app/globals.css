@@ -20286,3 +20286,166 @@ summary:focus-visible {
     padding: 0;
   }
 }
+
+/* Nova voice-agent presence and mobile press-to-talk experience. */
+.nova-agent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.nova-agent-status > span {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 999px;
+  background: #51e2aa;
+  box-shadow: 0 0 0 0 rgb(81 226 170 / 42%);
+  animation: nova-ready-pulse 1.8s ease-out infinite;
+}
+.nova-agent-status.is-working > span {
+  background: #8fd3ff;
+  animation-duration: 0.85s;
+}
+.local-nova-orb {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.local-nova-orb > i {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 7px;
+  height: 7px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #20bd82;
+  box-sizing: content-box;
+  box-shadow: 0 0 0 0 rgb(32 189 130 / 35%);
+  animation: nova-ready-pulse 2s ease-out infinite;
+}
+.assistant-mic-label,
+.nova-voice-stage {
+  display: none;
+}
+
+@keyframes nova-ready-pulse {
+  70%,
+  100% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+
+@media (max-width: 720px) {
+  .nova-modal .assistant-body {
+    position: relative;
+  }
+  .nova-voice-stage {
+    position: absolute;
+    z-index: 8;
+    inset: 0 0 72px;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 8px;
+    padding: 24px;
+    background:
+      radial-gradient(circle at 50% 42%, rgb(59 153 255 / 20%), transparent 33%),
+      linear-gradient(160deg, rgb(246 250 255 / 97%), rgb(234 243 255 / 98%));
+    backdrop-filter: blur(10px);
+  }
+  .nova-voice-stage strong {
+    margin-top: 12px;
+    color: #173d67;
+    font-size: 18px;
+  }
+  .nova-voice-stage small {
+    color: #63809e;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .nova-voice-orb {
+    width: 112px;
+    height: 112px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: 1px solid rgb(255 255 255 / 78%);
+    border-radius: 999px;
+    color: #fff;
+    background: linear-gradient(145deg, #58b7ff, #4b69e8 52%, #865fe9);
+    box-shadow:
+      0 20px 55px rgb(52 104 192 / 28%),
+      0 0 0 14px rgb(75 124 225 / 9%);
+    animation: nova-orb-breathe 1.7s ease-in-out infinite;
+  }
+  .nova-voice-orb i {
+    width: 5px;
+    height: 22px;
+    border-radius: 999px;
+    background: currentColor;
+    animation: assistant-voice-bar 0.75s ease-in-out infinite alternate;
+  }
+  .nova-voice-orb i:nth-child(2) {
+    animation-delay: -0.5s;
+  }
+  .nova-voice-orb i:nth-child(3) {
+    animation-delay: -0.25s;
+  }
+  .nova-voice-orb i:nth-child(4) {
+    animation-delay: -0.65s;
+  }
+  .nova-modal .assistant-composer:has(.assistant-mic-button) {
+    grid-template-columns: minmax(0, 1fr) minmax(116px, auto) 42px;
+  }
+  .nova-modal .assistant-composer > .assistant-mic-button {
+    width: auto;
+    min-width: 116px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 0 12px;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .assistant-mic-label {
+    display: inline;
+    font-size: 11px;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+}
+
+@keyframes nova-orb-breathe {
+  50% {
+    transform: scale(1.055);
+    box-shadow:
+      0 24px 62px rgb(52 104 192 / 34%),
+      0 0 0 20px rgb(75 124 225 / 5%);
+  }
+}
+
+@media (max-width: 350px) {
+  .nova-modal .assistant-composer:has(.assistant-mic-button) {
+    grid-template-columns: minmax(0, 1fr) 48px 42px;
+  }
+  .nova-modal .assistant-composer > .assistant-mic-button {
+    min-width: 48px;
+    padding-inline: 0;
+  }
+  .assistant-mic-label {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nova-agent-status > span,
+  .local-nova-orb > i,
+  .nova-voice-orb,
+  .nova-voice-orb i {
+    animation: none;
+  }
+}
