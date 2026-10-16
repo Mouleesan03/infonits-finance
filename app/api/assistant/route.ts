@@ -217,10 +217,11 @@ export async function POST(request: Request) {
       );
     const smartModel = needsSmartModel(input.message);
     const modelId = smartModel ? 'claude-sonnet-4-6' : 'claude-haiku-5-5';
+    const proposalToolInputSchema = z.object({ action: proposedActionSchema });
     const proposalTool = tool({
       description:
         'Prepare one or more workspace changes for the user to review. This never applies the changes. Call it only when every required field is known.',
-      inputSchema: proposedActionSchema,
+      inputSchema: proposalToolInputSchema,
     });
     const tools: ToolSet = { propose_workspace_action: proposalTool };
     if (wantsWebSearch) {
@@ -275,9 +276,9 @@ export async function POST(request: Request) {
               reply += part.text;
               emit({ type: 'text-delta', delta: part.text });
             } else if (part.type === 'tool-call' && part.toolName === 'propose_workspace_action') {
-              const parsed = proposedActionSchema.safeParse(part.input);
+              const parsed = proposalToolInputSchema.safeParse(part.input);
               if (parsed.success) {
-                action = parsed.data;
+                action = parsed.data.action;
                 emit({ type: 'action', action });
               }
             } else if (
