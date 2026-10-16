@@ -3,6 +3,19 @@ import { streamText, tool, type ToolSet } from 'ai';
 import { z } from 'zod';
 import { authorize } from '@/lib/supabase/server';
 
+const currencySchema = z.enum([
+  'LKR',
+  'USD',
+  'GBP',
+  'EUR',
+  'AUD',
+  'CAD',
+  'INR',
+  'AED',
+  'SGD',
+  'JPY',
+]);
+
 const atomicActionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('create_client'),
@@ -17,7 +30,7 @@ const atomicActionSchema = z.discriminatedUnion('type', [
     project: z.string().min(1),
     clientName: z.string(),
     amount: z.number().positive(),
-    currency: z.string(),
+    currency: currencySchema,
     note: z.string(),
   }),
   z.object({
@@ -25,7 +38,7 @@ const atomicActionSchema = z.discriminatedUnion('type', [
     description: z.string().min(1),
     category: z.string(),
     amount: z.number().positive(),
-    currency: z.string(),
+    currency: currencySchema,
     date: z.string(),
   }),
   z.object({
@@ -33,7 +46,7 @@ const atomicActionSchema = z.discriminatedUnion('type', [
     clientName: z.string().min(1),
     projectName: z.string(),
     amount: z.number().positive(),
-    currency: z.string(),
+    currency: currencySchema,
     description: z.string(),
     notes: z.string(),
     includeBankDetails: z.boolean(),
@@ -45,7 +58,7 @@ const atomicActionSchema = z.discriminatedUnion('type', [
     category: z.string(),
     note: z.string(),
     amount: z.number().positive(),
-    currency: z.string(),
+    currency: currencySchema,
     date: z.string(),
   }),
   z.object({
@@ -94,6 +107,8 @@ const requestSchema = z.object({
   context: z
     .object({
       today: z.string(),
+      baseCurrency: z.literal('LKR').default('LKR'),
+      exchangeRates: z.record(z.string(), z.number().positive()).default({ LKR: 1 }),
       totals: z.record(z.string(), z.number()).optional(),
       clients: z.array(z.object({ id: z.string(), name: z.string() })).max(100),
       projects: z.array(z.object({ id: z.string(), name: z.string() })).max(100),
@@ -104,7 +119,9 @@ const requestSchema = z.object({
             client: z.string(),
             status: z.string(),
             amount: z.number(),
-            currency: z.string(),
+            currency: currencySchema,
+            exchangeRate: z.number().positive().optional(),
+            amountLkr: z.number().nonnegative().optional(),
             project: z.string().optional(),
             dueDate: z.string().optional(),
           }),
@@ -116,7 +133,9 @@ const requestSchema = z.object({
             description: z.string(),
             category: z.string(),
             amount: z.number(),
-            currency: z.string(),
+            currency: currencySchema,
+            exchangeRate: z.number().positive().optional(),
+            amountLkr: z.number().nonnegative().optional(),
             date: z.string(),
           }),
         )
@@ -129,7 +148,9 @@ const requestSchema = z.object({
             category: z.string(),
             note: z.string(),
             amount: z.number(),
-            currency: z.string(),
+            currency: currencySchema,
+            exchangeRate: z.number().positive().optional(),
+            amountLkr: z.number().nonnegative().optional(),
             date: z.string(),
             status: z.string(),
           }),
@@ -169,6 +190,16 @@ const requestSchema = z.object({
 
 type AssistantAction = z.infer<typeof proposedActionSchema> | { type: 'none' };
 
+const infonitsKnowledge = `
+Verified Infonits company profile (source: https://infonits.io and https://infonits.io/about-us/):
+- Infonits (Pvt) Ltd is a design and technology company based in Jaffna, Sri Lanka, founded in 2014 by Selvachandran Chandramouleesan.
+- It serves clients globally and builds useful, scalable digital products for startups, growing businesses and organisations.
+- Core services: website and e-commerce development; custom full-stack applications, dashboards, portals and digital workflows; iOS, Android and cross-platform mobile applications; brand identity, graphic design and UI/UX design.
+- Public website highlights 500+ delivered projects, 300+ clients and continued support after launch.
+- Working approach: Understand, Design, Build and Improve, with strategy, design and engineering kept in one connected workflow.
+- Public website: https://infonits.io/. Use web search for current portfolio, news, careers, contact details or anything that may have changed.
+`;
+
 function needsSmartModel(message: string) {
   const complexRequest =
     /\b(analy[sz]e|analysis|forecast|strategy|report|compare|research|investigate|recommend|proposal|quotation|invoice|letter|cash.?flow|all|batch|monthly)\b/i;
@@ -177,7 +208,13 @@ function needsSmartModel(message: string) {
     /\b(client|project|expense|invoice|quotation|payment|event|renewal|letter|record)\b/i.test(
       message,
     );
-  return complexRequest.test(message) || workspaceChange || message.split(/\s+/).length > 55;
+  const externalResearch = /https?:\/\/|www\.|\.(?:com|io|org|net)\b|இணைய|தேடு|ஆராய|சமீப|தற்போதைய/i;
+  return (
+    complexRequest.test(message) ||
+    workspaceChange ||
+    externalResearch.test(message) ||
+    message.split(/\s+/).length > 55
+  );
 }
 
 function validWebSource(source: { title?: string; url: string }) {
@@ -211,10 +248,6 @@ export async function POST(request: Request) {
         : input.language === 'en'
           ? 'Reply in clear, concise English. '
           : 'Reply in the same language as the user. If the user mixes Tamil and English, respond in natural Tamil-English while keeping business terms clear. ';
-    const wantsWebSearch =
-      /\b(search|online|web|internet|latest|current|today|news|price|compare|research|find)\b/i.test(
-        input.message,
-      );
     const smartModel = needsSmartModel(input.message);
     const modelId = smartModel ? 'claude-sonnet-4-6' : 'claude-haiku-5-5';
     const proposalToolInputSchema = z.object({ action: proposedActionSchema });
@@ -223,13 +256,13 @@ export async function POST(request: Request) {
         'Prepare one or more workspace changes for the user to review. This never applies the changes. Call it only when every required field is known.',
       inputSchema: proposalToolInputSchema,
     });
-    const tools: ToolSet = { propose_workspace_action: proposalTool };
-    if (wantsWebSearch) {
-      tools.web_search = anthropic.tools.webSearch_20260318({
+    const tools: ToolSet = {
+      propose_workspace_action: proposalTool,
+      web_search: anthropic.tools.webSearch_20260318({
         maxUses: 3,
         responseInclusion: 'full',
-      });
-    }
+      }),
+    };
     const result = streamText({
       model: anthropic(modelId),
       maxOutputTokens: smartModel ? 1_800 : 1_200,
@@ -243,9 +276,12 @@ export async function POST(request: Request) {
       instructions:
         'You are Nova, the trusted personal operations assistant inside the Infonits Finance workspace. ' +
         languageInstruction +
+        infonitsKnowledge +
         'Follow the responseStyle field exactly: spoken replies must be short, conversational and easy to understand aloud. ' +
         'Use the supplied workspace context for business records and conversation history for follow-up requests. ' +
-        'When web search is available and the user asks for online, current, latest, research, comparison, or news information, use it and summarise the answer clearly. ' +
+        'You always have web search available. Use it when the user asks to search the internet or requests current, latest, external, research, comparison, news, portfolio, career, contact, price, market or public information. Do not use web search for facts already present in the private workspace context. ' +
+        'Currency accuracy is critical. baseCurrency and every totals field are LKR. Fields named amount are in the adjacent currency; fields named amountLkr are converted LKR values using that record\'s exchangeRate. Never treat an original USD, GBP, EUR, AUD or other foreign amount as LKR. Never invent or use a live exchange rate when a recorded exchangeRate or amountLkr is supplied. Display the original amount first, using the ISO code exactly once, for example "USD 3,000" or "LKR 993,300"—never "$3,000 USD". If useful, show a converted value separately as "LKR equivalent". ' +
+        'Format replies for quick reading: lead with the direct answer, use short paragraphs, and use a short bullet list only when it improves clarity. Do not output headings with # symbols. Do not surround words with ** or other Markdown emphasis markers in voice responses. ' +
         'You may propose one supported workspace action or a batch of 2 to 10 actions when the user explicitly asks for several records or a monthly set. ' +
         'Use batch only when every item is ready to review, and give the batch a short descriptive title. Batch actions should use existing clients and projects so they can be applied safely. ' +
         'Never claim an action has already happened: the user must review and apply it in the UI. ' +

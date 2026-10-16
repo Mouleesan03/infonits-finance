@@ -10381,15 +10381,30 @@ tr:hover .cell-edit,
   font-size: 12px;
   line-height: 1.5;
 }
-.nova-live-voice-main > p {
-  width: min(390px, 100%);
-  max-height: 86px;
-  overflow: hidden;
+.nova-live-transcript {
+  width: min(560px, 100%);
+  max-height: 160px;
+  overflow-y: auto;
   margin: 22px 0 0;
   color: #dce7f7;
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.65;
   text-wrap: balance;
+}
+.nova-live-transcript .assistant-message-copy,
+.nova-live-transcript .assistant-message-copy p {
+  margin: 0;
+}
+.nova-live-transcript .assistant-message-copy {
+  display: grid;
+  gap: 7px;
+}
+.nova-live-transcript .assistant-message-copy p {
+  justify-content: center;
+  text-align: center;
+}
+.nova-live-transcript strong {
+  color: #fff;
 }
 .nova-live-voice > footer {
   display: flex;
@@ -10463,8 +10478,9 @@ tr:hover .cell-edit,
   .nova-live-voice-main > small {
     font-size: 13px;
   }
-  .nova-live-voice-main > p {
-    font-size: 14px;
+  .nova-live-transcript {
+    max-height: 150px;
+    font-size: 16px;
   }
   .nova-live-voice > footer {
     padding-bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
@@ -15370,7 +15386,7 @@ tfoot td {
   font-size: 11px;
 }
 .assistant-messages article > div {
-  font-size: 13.5px;
+  font-size: 15px;
   line-height: 1.6;
 }
 .assistant-messages article button,
@@ -15477,7 +15493,7 @@ tfoot td {
   }
   .assistant-messages article > div {
     max-width: calc(100% - 40px);
-    font-size: 14px;
+    font-size: 15px;
   }
   .assistant-capabilities > span {
     min-height: 48px;

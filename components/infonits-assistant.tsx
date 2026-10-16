@@ -224,6 +224,17 @@ function speechLanguage(text: string, language: NovaLanguage, fallback: string) 
   return /[\u0B80-\u0BFF]/.test(text) ? 'ta-IN' : fallback;
 }
 
+function plainSpeechText(text: string) {
+  return text
+    .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^\s*[-*•]\s+/gm, '')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\n{2,}/g, '. ')
+    .trim();
+}
+
 export function InfonitsAssistant({
   context,
   dailyBriefing = false,
@@ -407,6 +418,7 @@ export function InfonitsAssistant({
 
   const speak = useCallback(
     async (text: string) => {
+      const spokenText = plainSpeechText(text);
       stopSpeaking();
       const controller = new AbortController();
       speechRequestRef.current = controller;
@@ -417,9 +429,9 @@ export function InfonitsAssistant({
           setSpeaking(false);
           return;
         }
-        const utterance = new SpeechSynthesisUtterance(text);
+        const utterance = new SpeechSynthesisUtterance(spokenText);
         utteranceRef.current = utterance;
-        utterance.lang = speechLanguage(text, language, voice.language);
+        utterance.lang = speechLanguage(spokenText, language, voice.language);
         utterance.rate = voice.rate;
         utterance.onend = () => {
           if (utteranceRef.current !== utterance) return;
@@ -434,7 +446,7 @@ export function InfonitsAssistant({
         const response = await fetch('/api/assistant/speech', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text }),
+          body: JSON.stringify({ text: spokenText }),
           signal: controller.signal,
         });
         if (!response.ok) throw new Error('ElevenLabs speech is unavailable.');
@@ -950,13 +962,17 @@ export function InfonitsAssistant({
             </button>
             <strong>{voiceStatus[voiceSessionPhase].title}</strong>
             <small>{voiceStatus[voiceSessionPhase].hint}</small>
-            <p>
-              {voiceSessionPhase === 'error'
-                ? error
-                : latestMessage?.id === 'welcome'
-                  ? 'Start talking whenever you’re ready.'
-                  : latestMessage?.text}
-            </p>
+            <div className="nova-live-transcript">
+              <FormattedMessage
+                text={
+                  voiceSessionPhase === 'error'
+                    ? error
+                    : latestMessage?.id === 'welcome'
+                      ? 'Start talking whenever you’re ready.'
+                      : (latestMessage?.text ?? '')
+                }
+              />
+            </div>
           </div>
           <footer>
             <button

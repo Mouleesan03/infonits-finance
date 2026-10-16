@@ -860,12 +860,14 @@ export function LocalFinance() {
   const assistantContext = useMemo(
     () => ({
       today: today(),
+      baseCurrency: 'LKR' as const,
+      exchangeRates: fxRates,
       totals: {
-        projectValue: totals.value,
-        received: totals.received,
-        workCost: totals.work,
-        expenses: totals.expenses,
-        estimatedProfit: totals.net,
+        projectValueLkr: totals.value,
+        receivedLkr: totals.received,
+        workCostLkr: totals.work,
+        expensesLkr: totals.expenses,
+        estimatedProfitLkr: totals.net,
       },
       clients: clients.map((client) => ({ id: client.id, name: clientLabel(client) })),
       projects: effectiveRows.map((row) => ({ id: row.id, name: row.project })),
@@ -883,6 +885,8 @@ export function LocalFinance() {
           status: document.status,
           amount: document.amount,
           currency: document.currency,
+          exchangeRate: document.exchangeRate,
+          amountLkr: localValue(document.amount, document.exchangeRate),
           project: effectiveRows.find((row) => row.id === document.projectId)?.project ?? '',
           dueDate: document.dueDate,
         })),
@@ -891,6 +895,8 @@ export function LocalFinance() {
         category: expense.category,
         amount: expense.amount,
         currency: expense.currency,
+        exchangeRate: expense.exchangeRate,
+        amountLkr: localValue(expense.amount, expense.exchangeRate),
         date: expense.date,
       })),
       recentPayments: officeOverview.payments.slice(0, 20).map((payment) => ({
@@ -899,6 +905,8 @@ export function LocalFinance() {
         note: payment.note,
         amount: payment.amount,
         currency: payment.currency,
+        exchangeRate: payment.exchangeRate,
+        amountLkr: localValue(payment.amount, payment.exchangeRate),
         date: payment.date,
         status: payment.status,
       })),
@@ -921,7 +929,7 @@ export function LocalFinance() {
         date: letter.date,
       })),
     }),
-    [clients, effectiveRows, expenses, officeOverview, totals],
+    [clients, effectiveRows, expenses, fxRates, officeOverview, totals],
   );
   const globalSearchItems = useMemo(
     () => [
