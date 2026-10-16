@@ -120,8 +120,10 @@ const requestSchema = z.object({
             status: z.string(),
             amount: z.number(),
             currency: currencySchema,
+            displayAmount: z.string().optional(),
             exchangeRate: z.number().positive().optional(),
             amountLkr: z.number().nonnegative().optional(),
+            displayAmountLkr: z.string().optional(),
             project: z.string().optional(),
             dueDate: z.string().optional(),
           }),
@@ -134,8 +136,10 @@ const requestSchema = z.object({
             category: z.string(),
             amount: z.number(),
             currency: currencySchema,
+            displayAmount: z.string().optional(),
             exchangeRate: z.number().positive().optional(),
             amountLkr: z.number().nonnegative().optional(),
+            displayAmountLkr: z.string().optional(),
             date: z.string(),
           }),
         )
@@ -149,8 +153,10 @@ const requestSchema = z.object({
             note: z.string(),
             amount: z.number(),
             currency: currencySchema,
+            displayAmount: z.string().optional(),
             exchangeRate: z.number().positive().optional(),
             amountLkr: z.number().nonnegative().optional(),
+            displayAmountLkr: z.string().optional(),
             date: z.string(),
             status: z.string(),
           }),
@@ -250,6 +256,7 @@ export async function POST(request: Request) {
           : 'Reply in the same language as the user. If the user mixes Tamil and English, respond in natural Tamil-English while keeping business terms clear. ';
     const smartModel = needsSmartModel(input.message);
     const modelId = smartModel ? 'claude-sonnet-4-6' : 'claude-haiku-5-5';
+    const officialInfonitsRequest = /(?:https?:\/\/)?(?:www\.)?infonits\.io\b/i.test(input.message);
     const proposalToolInputSchema = z.object({ action: proposedActionSchema });
     const proposalTool = tool({
       description:
@@ -260,6 +267,12 @@ export async function POST(request: Request) {
       propose_workspace_action: proposalTool,
       web_search: anthropic.tools.webSearch_20260318({
         maxUses: 3,
+        ...(officialInfonitsRequest ? { allowedDomains: ['infonits.io'] } : {}),
+        responseInclusion: 'full',
+      }),
+      web_fetch: anthropic.tools.webFetch_20260318({
+        maxUses: 2,
+        ...(officialInfonitsRequest ? { allowedDomains: ['infonits.io'] } : {}),
         responseInclusion: 'full',
       }),
     };
@@ -279,8 +292,8 @@ export async function POST(request: Request) {
         infonitsKnowledge +
         'Follow the responseStyle field exactly: spoken replies must be short, conversational and easy to understand aloud. ' +
         'Use the supplied workspace context for business records and conversation history for follow-up requests. ' +
-        'You always have web search available. Use it when the user asks to search the internet or requests current, latest, external, research, comparison, news, portfolio, career, contact, price, market or public information. Do not use web search for facts already present in the private workspace context. ' +
-        'Currency accuracy is critical. baseCurrency and every totals field are LKR. Fields named amount are in the adjacent currency; fields named amountLkr are converted LKR values using that record\'s exchangeRate. Never treat an original USD, GBP, EUR, AUD or other foreign amount as LKR. Never invent or use a live exchange rate when a recorded exchangeRate or amountLkr is supplied. Display the original amount first, using the ISO code exactly once, for example "USD 3,000" or "LKR 993,300"—never "$3,000 USD". If useful, show a converted value separately as "LKR equivalent". ' +
+        'You always have web search and web fetch available. When the user supplies a URL, fetch that exact page first. Use search when the user requests current, latest, external, research, comparison, news, portfolio, career, contact, price, market or other public information. For Infonits company facts, prefer infonits.io and the verified company profile in this prompt; do not cite unrelated companies or infer unlisted services. Do not use web tools for facts already present in the private workspace context. ' +
+        'Currency accuracy is critical. baseCurrency and every totals field are LKR. Fields named amount are in the adjacent currency; fields named amountLkr are converted LKR values using that record\'s exchangeRate. Never treat an original USD, GBP, EUR, AUD or other foreign amount as LKR. Never invent or use a live exchange rate when a recorded exchangeRate or amountLkr is supplied. When displayAmount or displayAmountLkr is provided, copy that formatted value exactly. Display the original amount first, using the ISO code exactly once, for example "USD 3,000" or "LKR 993,300"—never "$3,000 USD". If useful, show a converted value separately as "LKR equivalent". Always use western three-digit grouping such as 993,300, never Indian grouping such as 9,93,300. ' +
         'Format replies for quick reading: lead with the direct answer, use short paragraphs, and use a short bullet list only when it improves clarity. Do not output headings with # symbols. Do not surround words with ** or other Markdown emphasis markers in voice responses. ' +
         'You may propose one supported workspace action or a batch of 2 to 10 actions when the user explicitly asks for several records or a monthly set. ' +
         'Use batch only when every item is ready to review, and give the batch a short descriptive title. Batch actions should use existing clients and projects so they can be applied safely. ' +
@@ -321,6 +334,8 @@ export async function POST(request: Request) {
               part.type === 'source' &&
               part.sourceType === 'url' &&
               validWebSource(part) &&
+              (!officialInfonitsRequest ||
+                ['infonits.io', 'www.infonits.io'].includes(new URL(part.url).hostname)) &&
               !seenSources.has(part.url) &&
               seenSources.size < 5
             ) {

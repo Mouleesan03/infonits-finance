@@ -338,6 +338,8 @@ const compactNumber = (value: number) =>
   }).format(value);
 const compactMoney = (value: number) => `LKR ${compactNumber(value)}`;
 const compactCurrency = (value: number, currency: string) => `${currency} ${compactNumber(value)}`;
+const assistantCurrency = (value: number, currency: string) =>
+  `${currency} ${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value)}`;
 const shortDate = (value: string, includeYear = true) => {
   if (!value) return '';
   const date = new Date(`${value}T00:00:00`);
@@ -885,8 +887,13 @@ export function LocalFinance() {
           status: document.status,
           amount: document.amount,
           currency: document.currency,
+          displayAmount: assistantCurrency(document.amount, document.currency),
           exchangeRate: document.exchangeRate,
           amountLkr: localValue(document.amount, document.exchangeRate),
+          displayAmountLkr: assistantCurrency(
+            localValue(document.amount, document.exchangeRate),
+            'LKR',
+          ),
           project: effectiveRows.find((row) => row.id === document.projectId)?.project ?? '',
           dueDate: document.dueDate,
         })),
@@ -895,8 +902,13 @@ export function LocalFinance() {
         category: expense.category,
         amount: expense.amount,
         currency: expense.currency,
+        displayAmount: assistantCurrency(expense.amount, expense.currency),
         exchangeRate: expense.exchangeRate,
         amountLkr: localValue(expense.amount, expense.exchangeRate),
+        displayAmountLkr: assistantCurrency(
+          localValue(expense.amount, expense.exchangeRate),
+          'LKR',
+        ),
         date: expense.date,
       })),
       recentPayments: officeOverview.payments.slice(0, 20).map((payment) => ({
@@ -905,8 +917,13 @@ export function LocalFinance() {
         note: payment.note,
         amount: payment.amount,
         currency: payment.currency,
+        displayAmount: assistantCurrency(payment.amount, payment.currency),
         exchangeRate: payment.exchangeRate,
         amountLkr: localValue(payment.amount, payment.exchangeRate),
+        displayAmountLkr: assistantCurrency(
+          localValue(payment.amount, payment.exchangeRate),
+          'LKR',
+        ),
         date: payment.date,
         status: payment.status,
       })),
