@@ -20,22 +20,6 @@ import {
   X,
 } from 'lucide-react';
 
-type SpeechRecognitionResultEventLike = {
-  results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }>;
-};
-type SpeechRecognitionErrorEventLike = { error?: string };
-type SpeechRecognitionLike = {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: ((event: SpeechRecognitionResultEventLike) => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-};
-type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
-
 export type AssistantAtomicAction =
   | {
       type: 'create_client';
@@ -248,10 +232,13 @@ export function InfonitsAssistant({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [listening, setListening] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [historyReady, setHistoryReady] = useState(false);
   const [language, setLanguage] = useState<NovaLanguage>('auto');
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const recordingCancelledRef = useRef(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
@@ -278,6 +265,18 @@ export function InfonitsAssistant({
     setSpeaking(false);
   }, []);
 
+  const stopRecording = useCallback((cancel = false) => {
+    if (cancel) recordingCancelledRef.current = true;
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    else {
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+      mediaRecorderRef.current = null;
+    }
+    setListening(false);
+  }, []);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(novaHistoryKey);
@@ -294,10 +293,10 @@ export function InfonitsAssistant({
     }
     setHistoryReady(true);
     return () => {
-      recognitionRef.current?.stop();
+      stopRecording(true);
       stopSpeaking();
     };
-  }, [stopSpeaking]);
+  }, [stopRecording, stopSpeaking]);
 
   const speak = useCallback(
     async (text: string) => {
@@ -395,13 +394,14 @@ export function InfonitsAssistant({
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        stopRecording(true);
         stopSpeaking();
         onClose();
       }
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [onClose, stopSpeaking]);
+  }, [onClose, stopRecording, stopSpeaking]);
 
   const send = useCallback(
     async (message = input, options: { speak?: boolean; silentUser?: boolean } = {}) => {
@@ -456,15 +456,7 @@ export function InfonitsAssistant({
         setBusy(false);
       }
     },
-    [
-      busy,
-      context,
-      input,
-      language,
-      messages,
-      speak,
-      voice.autoSpeak,
-    ],
+    [busy, context, input, language, messages, speak, voice.autoSpeak],
   );
 
   useEffect(() => {
@@ -474,52 +466,91 @@ export function InfonitsAssistant({
     void send(dailyBriefingPrompt, { silentUser: true });
   }, [dailyBriefing, historyReady, send]);
 
-  function toggleListening() {
+  async function toggleListening() {
     if (listening) {
-      recognitionRef.current?.stop();
+      stopRecording();
       return;
     }
-    const speechWindow = window as typeof window & {
-      SpeechRecognition?: SpeechRecognitionConstructor;
-      webkitSpeechRecognition?: SpeechRecognitionConstructor;
-    };
-    const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
-    if (!Recognition) {
-      setError('Voice input is not supported by this browser. You can still type your request.');
+    if (busy || transcribing) return;
+    if (!navigator.mediaDevices?.getUserMedia || !('MediaRecorder' in window)) {
+      setError(
+        'Voice recording is not supported by this browser. You can still type your request.',
+      );
       return;
     }
-    const recognition = new Recognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = language === 'ta' ? 'ta-IN' : language === 'en' ? 'en-US' : voice.language;
-    recognition.onresult = (event) => {
-      const results = Array.from(event.results);
-      const transcript = results
-        .map((result) => result[0]?.transcript ?? '')
-        .join(' ')
-        .trim();
-      if (!transcript) return;
-      setInput(transcript);
-      const finalResult = results.length > 0 && results.every((result) => result.isFinal);
-      if (finalResult) void send(transcript, { speak: true });
-    };
-    recognition.onerror = (event) => {
-      const message =
-        event.error === 'not-allowed' || event.error === 'service-not-allowed'
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      const preferredType = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm'].find((type) =>
+        MediaRecorder.isTypeSupported(type),
+      );
+      const recorder = new MediaRecorder(stream, preferredType ? { mimeType: preferredType } : {});
+      const chunks: Blob[] = [];
+      mediaStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      recordingCancelledRef.current = false;
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunks.push(event.data);
+      };
+      recorder.onerror = () => {
+        recordingCancelledRef.current = true;
+        stream.getTracks().forEach((track) => track.stop());
+        mediaRecorderRef.current = null;
+        mediaStreamRef.current = null;
+        setListening(false);
+        setError('The microphone stopped unexpectedly. Please try again.');
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+        mediaRecorderRef.current = null;
+        mediaStreamRef.current = null;
+        setListening(false);
+        if (recordingCancelledRef.current) return;
+
+        const mimeType = recorder.mimeType || preferredType || 'audio/webm';
+        const recording = new Blob(chunks, { type: mimeType });
+        if (!recording.size) {
+          setError('No speech was recorded. Tap the microphone and try again.');
+          return;
+        }
+
+        setTranscribing(true);
+        setError('');
+        try {
+          const form = new FormData();
+          const extension = mimeType.includes('mp4')
+            ? 'm4a'
+            : mimeType.includes('ogg')
+              ? 'ogg'
+              : 'webm';
+          form.append('file', recording, `nova-voice.${extension}`);
+          form.append('language', language);
+          const response = await fetch('/api/assistant/transcribe', { method: 'POST', body: form });
+          const data = (await response.json()) as { text?: string; error?: string };
+          if (!response.ok || !data.text) {
+            throw new Error(data.error || 'Nova could not transcribe that recording.');
+          }
+          setInput(data.text);
+          await send(data.text, { speak: true });
+        } catch (caught) {
+          setError(caught instanceof Error ? caught.message : 'Nova could not hear that clearly.');
+        } finally {
+          setTranscribing(false);
+        }
+      };
+      setError('');
+      setListening(true);
+      recorder.start();
+    } catch (caught) {
+      const denied = caught instanceof DOMException && caught.name === 'NotAllowedError';
+      setError(
+        denied
           ? 'Microphone access is blocked. Allow microphone access in your browser settings and try again.'
-          : event.error === 'no-speech'
-            ? 'No speech was detected. Move closer to the microphone and tap it when you are ready.'
-            : event.error === 'audio-capture'
-              ? 'No microphone was found. Check your device microphone and try again.'
-              : 'Voice input stopped before it could finish. Your typed message is still available.';
-      setError(message);
+          : 'No microphone was found. Check your device microphone and try again.',
+      );
       setListening(false);
-    };
-    recognition.onend = () => setListening(false);
-    recognitionRef.current = recognition;
-    setError('');
-    setListening(true);
-    recognition.start();
+    }
   }
 
   function apply(message: ChatMessage) {
@@ -543,6 +574,7 @@ export function InfonitsAssistant({
   }
 
   function resetConversation() {
+    stopRecording(true);
     stopSpeaking();
     setMessages([novaWelcome]);
     setInput('');
@@ -619,7 +651,11 @@ export function InfonitsAssistant({
             </select>
           </label>
           <i>
-            {speaking ? 'Nova speaking' : voice.enabled ? 'ElevenLabs voice ready' : 'Claude connected'}
+            {speaking
+              ? 'Nova speaking'
+              : voice.enabled
+                ? 'ElevenLabs voice ready'
+                : 'Claude connected'}
           </i>
           <button type="button" onClick={resetConversation} title="Start a new conversation">
             <RefreshCw size={16} />
@@ -627,6 +663,7 @@ export function InfonitsAssistant({
           <button
             type="button"
             onClick={() => {
+              stopRecording(true);
               stopSpeaking();
               onClose();
             }}
@@ -734,10 +771,19 @@ export function InfonitsAssistant({
                 <button
                   type="button"
                   className={`assistant-mic-button ${listening ? 'listening' : ''}`}
-                  aria-label={listening ? 'Stop listening' : 'Speak to Nova'}
-                  onClick={toggleListening}
+                  aria-label={
+                    transcribing
+                      ? 'Transcribing voice'
+                      : listening
+                        ? 'Stop and send recording'
+                        : 'Speak to Nova'
+                  }
+                  disabled={busy || transcribing}
+                  onClick={() => void toggleListening()}
                 >
-                  {listening ? (
+                  {transcribing ? (
+                    <LoaderCircle className="spin" size={17} />
+                  ) : listening ? (
                     <span className="assistant-voice-wave" aria-hidden="true">
                       <i />
                       <i />
@@ -754,7 +800,11 @@ export function InfonitsAssistant({
               </button>
             </form>
             <small className="assistant-footnote">
-              Nova only applies workspace changes after your review and approval.
+              {listening
+                ? 'Listening… tap the microphone again when you finish speaking.'
+                : transcribing
+                  ? 'Nova is transcribing your voice with ElevenLabs…'
+                  : 'Nova only applies workspace changes after your review and approval.'}
             </small>
           </>
         ) : null}
