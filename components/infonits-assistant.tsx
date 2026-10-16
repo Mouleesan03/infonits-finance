@@ -567,7 +567,6 @@ export function InfonitsAssistant({
         let reply = '';
         let action: AssistantAction = { type: 'none' };
         let sources: AssistantSource[] = [];
-        let assistantAdded = false;
         let finished = false;
         const updateAssistant = () => {
           const nextMessage: ChatMessage = {
@@ -577,12 +576,12 @@ export function InfonitsAssistant({
             action,
             sources,
           };
-          setMessages((current) =>
-            assistantAdded
+          setMessages((current) => {
+            const exists = current.some((item) => item.id === assistantId);
+            return exists
               ? current.map((item) => (item.id === assistantId ? nextMessage : item))
-              : [...current, nextMessage],
-          );
-          assistantAdded = true;
+              : [...current, nextMessage];
+          });
         };
         const handleEvent = (event: AssistantStreamEvent) => {
           if (event.type === 'text-delta') {
