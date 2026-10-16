@@ -18,6 +18,7 @@
   backdrop-filter: blur(8px);
 }
 .nova-modal.assistant-page {
+  position: relative;
   width: min(540px, calc(100vw - 32px));
   height: min(720px, calc(100dvh - 32px));
   min-height: 0;
@@ -10219,6 +10220,263 @@ tr:hover .cell-edit,
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Nova live voice conversation. */
+.nova-live-voice {
+  --voice-accent: #63a9ff;
+  position: absolute;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(circle at 50% 42%, rgb(77 103 212 / 32%), transparent 29%),
+    radial-gradient(circle at 78% 12%, rgb(104 81 207 / 18%), transparent 25%),
+    linear-gradient(165deg, #111b34 0%, #090f20 52%, #050914 100%);
+}
+.nova-live-voice-listening {
+  --voice-accent: #69b9ff;
+}
+.nova-live-voice-thinking {
+  --voice-accent: #a98aff;
+}
+.nova-live-voice-speaking {
+  --voice-accent: #81e0cf;
+}
+.nova-live-voice-muted,
+.nova-live-voice-error {
+  --voice-accent: #9da9bb;
+}
+.nova-live-voice > header {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+}
+.nova-live-voice > header > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+}
+.nova-live-voice > header > span > svg {
+  padding: 7px;
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: 11px;
+  box-sizing: content-box;
+  background: rgb(255 255 255 / 8%);
+}
+.nova-live-voice > header > button {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 999px;
+  color: #fff;
+  background: rgb(255 255 255 / 8%);
+}
+.nova-live-voice-main {
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  padding: 20px 28px;
+  text-align: center;
+}
+.nova-live-orb {
+  position: relative;
+  width: 178px;
+  height: 178px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 999px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 35% 25%, rgb(255 255 255 / 36%), transparent 22%),
+    radial-gradient(
+      circle at 50% 65%,
+      color-mix(in srgb, var(--voice-accent) 80%, #4d51c8),
+      #4b4cb1 72%
+    );
+  box-shadow:
+    0 30px 75px color-mix(in srgb, var(--voice-accent) 24%, transparent),
+    inset 0 0 40px rgb(255 255 255 / 11%);
+  transition:
+    background 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
+}
+.nova-live-orb:hover {
+  transform: scale(1.02);
+}
+.nova-live-rings,
+.nova-live-rings::before,
+.nova-live-rings::after {
+  position: absolute;
+  inset: -1px;
+  border: 1px solid color-mix(in srgb, var(--voice-accent) 42%, transparent);
+  border-radius: inherit;
+  content: '';
+  animation: nova-live-ring 2.4s ease-out infinite;
+}
+.nova-live-rings::before {
+  animation-delay: 0.8s;
+}
+.nova-live-rings::after {
+  animation-delay: 1.6s;
+}
+.nova-live-wave {
+  height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.nova-live-wave i {
+  width: 6px;
+  min-height: 8px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 0 14px rgb(255 255 255 / 22%);
+  transition: height 80ms linear;
+}
+.nova-live-voice-thinking .nova-live-wave i,
+.nova-live-voice-speaking .nova-live-wave i,
+.nova-live-voice-connecting .nova-live-wave i {
+  animation: nova-live-bar 0.8s ease-in-out infinite alternate;
+}
+.nova-live-wave i:nth-child(2) {
+  animation-delay: -0.5s !important;
+}
+.nova-live-wave i:nth-child(3) {
+  animation-delay: -0.2s !important;
+}
+.nova-live-wave i:nth-child(4) {
+  animation-delay: -0.65s !important;
+}
+.nova-live-wave i:nth-child(5) {
+  animation-delay: -0.35s !important;
+}
+.nova-live-voice-muted .nova-live-orb,
+.nova-live-voice-error .nova-live-orb {
+  opacity: 0.72;
+  filter: saturate(0.45);
+}
+.nova-live-voice-main > strong {
+  margin-top: 34px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+.nova-live-voice-main > small {
+  margin-top: 7px;
+  color: #aebbd0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.nova-live-voice-main > p {
+  width: min(390px, 100%);
+  max-height: 86px;
+  overflow: hidden;
+  margin: 22px 0 0;
+  color: #dce7f7;
+  font-size: 13px;
+  line-height: 1.65;
+  text-wrap: balance;
+}
+.nova-live-voice > footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 28px;
+  padding: 16px 20px 28px;
+}
+.nova-live-voice > footer > button {
+  min-width: 62px;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  color: #d9e5f5;
+  font-size: 10px;
+  font-weight: 750;
+}
+.nova-live-voice > footer > button > svg {
+  width: 54px;
+  height: 54px;
+  padding: 16px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 999px;
+  box-sizing: border-box;
+  background: rgb(255 255 255 / 9%);
+}
+.nova-live-voice > footer > button:hover > svg,
+.nova-live-voice > footer > button.active > svg {
+  background: rgb(255 255 255 / 17%);
+}
+.nova-live-voice > footer > button.end > svg {
+  border-color: rgb(255 101 109 / 48%);
+  background: #d94750;
+}
+
+@keyframes nova-live-ring {
+  0% {
+    opacity: 0.58;
+    transform: scale(0.98);
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: scale(1.36);
+  }
+}
+@keyframes nova-live-bar {
+  from {
+    transform: scaleY(0.42);
+  }
+  to {
+    transform: scaleY(1.06);
+  }
+}
+
+@media (max-width: 720px) {
+  .nova-live-voice > header {
+    padding: max(14px, env(safe-area-inset-top)) 16px 10px;
+  }
+  .nova-live-orb {
+    width: min(46vw, 184px);
+    height: min(46vw, 184px);
+  }
+  .nova-live-voice-main {
+    padding-inline: 24px;
+  }
+  .nova-live-voice-main > strong {
+    margin-top: 38px;
+    font-size: 24px;
+  }
+  .nova-live-voice-main > small {
+    font-size: 13px;
+  }
+  .nova-live-voice-main > p {
+    font-size: 14px;
+  }
+  .nova-live-voice > footer {
+    padding-bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nova-live-rings,
+  .nova-live-rings::before,
+  .nova-live-rings::after,
+  .nova-live-wave i {
+    animation: none !important;
   }
 }
 .official-brand {

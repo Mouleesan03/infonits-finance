@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  AudioLines,
   ArrowUp,
   Bot,
   CalendarClock,
@@ -12,7 +13,8 @@ import {
   ListChecks,
   LoaderCircle,
   MessageCircle,
-  Mic,
+  MicOff,
+  PhoneOff,
   Plus,
   RefreshCw,
   Square,
@@ -207,6 +209,7 @@ const quickActions = [
 
 type NovaTab = 'chat' | 'briefing' | 'actions' | 'approvals';
 type NovaLanguage = 'auto' | 'ta' | 'en';
+type VoiceSessionPhase = 'connecting' | 'listening' | 'thinking' | 'speaking' | 'muted' | 'error';
 
 function speechLanguage(text: string, language: NovaLanguage, fallback: string) {
   if (language === 'ta') return 'ta-IN';
@@ -235,13 +238,19 @@ export function InfonitsAssistant({
   const [listening, setListening] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [voiceSessionActive, setVoiceSessionActive] = useState(false);
+  const [voiceMuted, setVoiceMuted] = useState(false);
+  const [voiceLevel, setVoiceLevel] = useState(0);
   const [historyReady, setHistoryReady] = useState(false);
   const [language, setLanguage] = useState<NovaLanguage>('auto');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recordingCancelledRef = useRef(false);
   const startingRecordingRef = useRef(false);
-  const ignoreNextMicClickRef = useRef(false);
+  const voiceSessionActiveRef = useRef(false);
+  const voiceMutedRef = useRef(false);
+  const voiceActivityFrameRef = useRef<number | null>(null);
+  const voiceActivitySourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -250,6 +259,16 @@ export function InfonitsAssistant({
   const speechRequestRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const dailyBriefingStartedRef = useRef(false);
+
+  const stopVoiceActivityDetection = useCallback(() => {
+    if (voiceActivityFrameRef.current !== null) {
+      cancelAnimationFrame(voiceActivityFrameRef.current);
+      voiceActivityFrameRef.current = null;
+    }
+    voiceActivitySourceRef.current?.disconnect();
+    voiceActivitySourceRef.current = null;
+    setVoiceLevel(0);
+  }, []);
 
   const stopSpeaking = useCallback(() => {
     speechRequestRef.current?.abort();
@@ -276,18 +295,22 @@ export function InfonitsAssistant({
     setSpeaking(false);
   }, []);
 
-  const stopRecording = useCallback((cancel = false) => {
-    if (cancel) recordingCancelledRef.current = true;
-    if (startingRecordingRef.current) recordingCancelledRef.current = true;
-    const recorder = mediaRecorderRef.current;
-    if (recorder && recorder.state !== 'inactive') recorder.stop();
-    else {
-      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-      mediaStreamRef.current = null;
-      mediaRecorderRef.current = null;
-    }
-    setListening(false);
-  }, []);
+  const stopRecording = useCallback(
+    (cancel = false) => {
+      if (cancel) recordingCancelledRef.current = true;
+      if (startingRecordingRef.current) recordingCancelledRef.current = true;
+      const recorder = mediaRecorderRef.current;
+      stopVoiceActivityDetection();
+      if (recorder && recorder.state !== 'inactive') recorder.stop();
+      else {
+        mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+        mediaRecorderRef.current = null;
+      }
+      setListening(false);
+    },
+    [stopVoiceActivityDetection],
+  );
 
   const unlockAudio = useCallback(async () => {
     const audioWindow = window as typeof window & {
@@ -305,6 +328,52 @@ export function InfonitsAssistant({
     source.start();
   }, []);
 
+  const startVoiceActivityDetection = useCallback(
+    (stream: MediaStream, recorder: MediaRecorder) => {
+      const context = audioContextRef.current;
+      if (!context || context.state === 'closed') return;
+      stopVoiceActivityDetection();
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.35;
+      const source = context.createMediaStreamSource(stream);
+      source.connect(analyser);
+      voiceActivitySourceRef.current = source;
+      const samples = new Uint8Array(analyser.fftSize);
+      const startedAt = performance.now();
+      let lastSpeechAt = startedAt;
+      let lastPaintAt = 0;
+      let heardSpeech = false;
+
+      const sample = () => {
+        analyser.getByteTimeDomainData(samples);
+        let energy = 0;
+        for (const sampleValue of samples) {
+          const amplitude = (sampleValue - 128) / 128;
+          energy += amplitude * amplitude;
+        }
+        const rms = Math.sqrt(energy / samples.length);
+        const now = performance.now();
+        if (now - lastPaintAt > 70) {
+          setVoiceLevel(Math.min(1, Math.max(0.08, (rms - 0.012) * 14)));
+          lastPaintAt = now;
+        }
+        if (rms > 0.035) {
+          heardSpeech = true;
+          lastSpeechAt = now;
+        }
+        if (heardSpeech && now - lastSpeechAt > 950 && now - startedAt > 850) {
+          stopVoiceActivityDetection();
+          if (recorder.state === 'recording') recorder.stop();
+          return;
+        }
+        voiceActivityFrameRef.current = requestAnimationFrame(sample);
+      };
+      voiceActivityFrameRef.current = requestAnimationFrame(sample);
+    },
+    [stopVoiceActivityDetection],
+  );
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(novaHistoryKey);
@@ -321,6 +390,7 @@ export function InfonitsAssistant({
     }
     setHistoryReady(true);
     return () => {
+      voiceSessionActiveRef.current = false;
       stopRecording(true);
       stopSpeaking();
       void audioContextRef.current?.close();
@@ -432,6 +502,15 @@ export function InfonitsAssistant({
     [language, stopSpeaking, voice.language, voice.rate],
   );
 
+  const endVoiceSession = useCallback(() => {
+    voiceSessionActiveRef.current = false;
+    voiceMutedRef.current = false;
+    setVoiceSessionActive(false);
+    setVoiceMuted(false);
+    stopRecording(true);
+    stopSpeaking();
+  }, [stopRecording, stopSpeaking]);
+
   useEffect(() => {
     if (!historyReady) return;
     localStorage.setItem(novaHistoryKey, JSON.stringify(messages.slice(-40)));
@@ -452,17 +531,19 @@ export function InfonitsAssistant({
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        stopRecording(true);
-        stopSpeaking();
-        onClose();
+        if (voiceSessionActiveRef.current) endVoiceSession();
+        else onClose();
       }
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [onClose, stopRecording, stopSpeaking]);
+  }, [endVoiceSession, onClose]);
 
   const send = useCallback(
-    async (message = input, options: { speak?: boolean; silentUser?: boolean } = {}) => {
+    async (
+      message = input,
+      options: { speak?: boolean; silentUser?: boolean; voiceSession?: boolean } = {},
+    ) => {
       const clean = message.trim();
       if (!clean || busy) return;
       setInput('');
@@ -508,7 +589,12 @@ export function InfonitsAssistant({
             sources: data.sources,
           },
         ]);
-        if (voice.autoSpeak || options.speak) void speak(data.reply);
+        if (
+          (voice.autoSpeak || options.speak) &&
+          (!options.voiceSession || voiceSessionActiveRef.current)
+        ) {
+          void speak(data.reply);
+        }
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'Nova is unavailable.');
       } finally {
@@ -525,12 +611,8 @@ export function InfonitsAssistant({
     void send(dailyBriefingPrompt, { silentUser: true });
   }, [dailyBriefing, historyReady, send]);
 
-  async function toggleListening() {
-    if (listening) {
-      stopRecording();
-      return;
-    }
-    if (busy || transcribing) return;
+  const startListening = useCallback(async () => {
+    if (listening || busy || transcribing || startingRecordingRef.current) return;
     if (!navigator.mediaDevices?.getUserMedia || !('MediaRecorder' in window)) {
       setError(
         'Voice recording is not supported by this browser. You can still type your request.',
@@ -561,6 +643,7 @@ export function InfonitsAssistant({
       };
       recorder.onerror = () => {
         recordingCancelledRef.current = true;
+        stopVoiceActivityDetection();
         stream.getTracks().forEach((track) => track.stop());
         mediaRecorderRef.current = null;
         mediaStreamRef.current = null;
@@ -568,6 +651,7 @@ export function InfonitsAssistant({
         setError('The microphone stopped unexpectedly. Please try again.');
       };
       recorder.onstop = async () => {
+        stopVoiceActivityDetection();
         stream.getTracks().forEach((track) => track.stop());
         mediaRecorderRef.current = null;
         mediaStreamRef.current = null;
@@ -577,7 +661,7 @@ export function InfonitsAssistant({
         const mimeType = recorder.mimeType || preferredType || 'audio/webm';
         const recording = new Blob(chunks, { type: mimeType });
         if (!recording.size) {
-          setError('No speech was recorded. Tap the microphone and try again.');
+          setError('Nova did not hear any speech. Tap Try again when you are ready.');
           return;
         }
 
@@ -597,8 +681,8 @@ export function InfonitsAssistant({
           if (!response.ok || !data.text) {
             throw new Error(data.error || 'Nova could not transcribe that recording.');
           }
-          setInput(data.text);
-          await send(data.text, { speak: true });
+          if (!voiceSessionActiveRef.current) return;
+          await send(data.text, { speak: true, voiceSession: true });
         } catch (caught) {
           setError(caught instanceof Error ? caught.message : 'Nova could not hear that clearly.');
         } finally {
@@ -607,7 +691,8 @@ export function InfonitsAssistant({
       };
       setError('');
       setListening(true);
-      recorder.start();
+      recorder.start(250);
+      startVoiceActivityDetection(stream, recorder);
     } catch (caught) {
       startingRecordingRef.current = false;
       const denied = caught instanceof DOMException && caught.name === 'NotAllowedError';
@@ -618,7 +703,66 @@ export function InfonitsAssistant({
       );
       setListening(false);
     }
-  }
+  }, [
+    busy,
+    language,
+    listening,
+    send,
+    startVoiceActivityDetection,
+    stopVoiceActivityDetection,
+    transcribing,
+  ]);
+
+  const beginVoiceSession = useCallback(() => {
+    if (voiceSessionActiveRef.current) return;
+    voiceSessionActiveRef.current = true;
+    voiceMutedRef.current = false;
+    setVoiceSessionActive(true);
+    setVoiceMuted(false);
+    setActiveTab('chat');
+    setError('');
+    void unlockAudio();
+    void startListening();
+  }, [startListening, unlockAudio]);
+
+  const toggleVoiceMute = useCallback(() => {
+    const nextMuted = !voiceMutedRef.current;
+    voiceMutedRef.current = nextMuted;
+    setVoiceMuted(nextMuted);
+    if (nextMuted) stopRecording(true);
+    else {
+      setError('');
+      void startListening();
+    }
+  }, [startListening, stopRecording]);
+
+  useEffect(() => {
+    if (
+      !voiceSessionActive ||
+      !voiceSessionActiveRef.current ||
+      voiceMuted ||
+      voiceMutedRef.current ||
+      listening ||
+      transcribing ||
+      busy ||
+      speaking ||
+      error ||
+      startingRecordingRef.current
+    ) {
+      return;
+    }
+    const timer = window.setTimeout(() => void startListening(), 260);
+    return () => window.clearTimeout(timer);
+  }, [
+    busy,
+    error,
+    listening,
+    speaking,
+    startListening,
+    transcribing,
+    voiceMuted,
+    voiceSessionActive,
+  ]);
 
   function apply(message: ChatMessage) {
     if (!message.action || message.action.type === 'none') return;
@@ -641,8 +785,7 @@ export function InfonitsAssistant({
   }
 
   function resetConversation() {
-    stopRecording(true);
-    stopSpeaking();
+    endVoiceSession();
     setMessages([novaWelcome]);
     setInput('');
     setError('');
@@ -652,6 +795,26 @@ export function InfonitsAssistant({
   const pendingApprovals = messages.filter(
     (message) => message.action && message.action.type !== 'none' && !message.applied,
   );
+  const latestMessage = messages.at(-1);
+  const voiceSessionPhase: VoiceSessionPhase = error
+    ? 'error'
+    : voiceMuted
+      ? 'muted'
+      : speaking
+        ? 'speaking'
+        : listening
+          ? 'listening'
+          : transcribing || busy
+            ? 'thinking'
+            : 'connecting';
+  const voiceStatus: Record<VoiceSessionPhase, { title: string; hint: string }> = {
+    connecting: { title: 'Connecting', hint: 'Getting Nova ready…' },
+    listening: { title: 'Listening', hint: 'Speak naturally. Nova sends when you pause.' },
+    thinking: { title: 'Thinking', hint: 'Nova is preparing a response…' },
+    speaking: { title: 'Speaking', hint: 'Tap the orb to interrupt and speak.' },
+    muted: { title: 'Microphone muted', hint: 'Unmute when you are ready.' },
+    error: { title: 'Voice paused', hint: error || 'Try the microphone again.' },
+  };
 
   const actionReview = (message: ChatMessage) => {
     if (!message.action || message.action.type === 'none') return null;
@@ -695,6 +858,86 @@ export function InfonitsAssistant({
       aria-labelledby="nova-title"
       onMouseDown={(event) => event.stopPropagation()}
     >
+      {voiceSessionActive ? (
+        <div
+          className={`nova-live-voice nova-live-voice-${voiceSessionPhase}`}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Nova voice conversation"
+        >
+          <header>
+            <span>
+              <Sparkles size={18} />
+              <b>Nova Voice</b>
+            </span>
+            <button type="button" onClick={endVoiceSession} aria-label="End voice conversation">
+              <X size={19} />
+            </button>
+          </header>
+          <div className="nova-live-voice-main">
+            <button
+              type="button"
+              className="nova-live-orb"
+              aria-label={speaking ? 'Interrupt Nova' : voiceStatus[voiceSessionPhase].title}
+              onClick={() => {
+                if (speaking) stopSpeaking();
+                else if (voiceSessionPhase === 'error') {
+                  setError('');
+                  void startListening();
+                }
+              }}
+            >
+              <span className="nova-live-rings" aria-hidden="true" />
+              <span className="nova-live-wave" aria-hidden="true">
+                {[0.72, 1, 0.82, 1.12, 0.76].map((weight, index) => (
+                  <i
+                    key={weight + index}
+                    style={{ height: `${14 + voiceLevel * 38 * weight}px` }}
+                  />
+                ))}
+              </span>
+            </button>
+            <strong>{voiceStatus[voiceSessionPhase].title}</strong>
+            <small>{voiceStatus[voiceSessionPhase].hint}</small>
+            <p>
+              {voiceSessionPhase === 'error'
+                ? error
+                : latestMessage?.id === 'welcome'
+                  ? 'Start talking whenever you’re ready.'
+                  : latestMessage?.text}
+            </p>
+          </div>
+          <footer>
+            <button
+              type="button"
+              className={voiceMuted ? 'active' : ''}
+              onClick={toggleVoiceMute}
+              aria-label={voiceMuted ? 'Unmute microphone' : 'Mute microphone'}
+            >
+              {voiceMuted ? <MicOff size={20} /> : <AudioLines size={20} />}
+              <span>{voiceMuted ? 'Unmute' : 'Mute'}</span>
+            </button>
+            {voiceSessionPhase === 'error' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setError('');
+                  voiceMutedRef.current = false;
+                  setVoiceMuted(false);
+                  void startListening();
+                }}
+              >
+                <RefreshCw size={20} />
+                <span>Try again</span>
+              </button>
+            ) : null}
+            <button type="button" className="end" onClick={endVoiceSession}>
+              <PhoneOff size={20} />
+              <span>End</span>
+            </button>
+          </footer>
+        </div>
+      ) : null}
       <header className="assistant-header">
         <span>
           <Sparkles size={22} />
@@ -737,8 +980,7 @@ export function InfonitsAssistant({
           <button
             type="button"
             onClick={() => {
-              stopRecording(true);
-              stopSpeaking();
+              endVoiceSession();
               onClose();
             }}
             aria-label="Close Nova"
@@ -822,18 +1064,6 @@ export function InfonitsAssistant({
               ) : null}
               {error ? <p className="assistant-error">{error}</p> : null}
             </div>
-            {listening ? (
-              <div className="nova-voice-stage" aria-live="polite">
-                <div className="nova-voice-orb" aria-hidden="true">
-                  <i />
-                  <i />
-                  <i />
-                  <i />
-                </div>
-                <strong>Listening</strong>
-                <small>Release to send</small>
-              </div>
-            ) : null}
             <form
               className="assistant-composer"
               onSubmit={(event) => {
@@ -872,55 +1102,13 @@ export function InfonitsAssistant({
               ) : voice.enabled ? (
                 <button
                   type="button"
-                  className={`assistant-mic-button ${listening ? 'listening' : ''}`}
-                  aria-label={
-                    transcribing
-                      ? 'Transcribing voice'
-                      : listening
-                        ? 'Release to send recording'
-                        : 'Hold to speak to Nova'
-                  }
+                  className="assistant-mic-button"
+                  aria-label="Start Nova voice mode"
                   disabled={busy || transcribing}
-                  onPointerDown={(event) => {
-                    void unlockAudio();
-                    if (event.pointerType !== 'touch') return;
-                    event.preventDefault();
-                    ignoreNextMicClickRef.current = true;
-                    event.currentTarget.setPointerCapture(event.pointerId);
-                    if (!listening) void toggleListening();
-                  }}
-                  onPointerUp={(event) => {
-                    if (event.pointerType !== 'touch') return;
-                    event.preventDefault();
-                    stopRecording();
-                  }}
-                  onPointerCancel={(event) => {
-                    if (event.pointerType === 'touch') stopRecording();
-                  }}
-                  onClick={() => {
-                    if (ignoreNextMicClickRef.current) {
-                      ignoreNextMicClickRef.current = false;
-                      return;
-                    }
-                    void unlockAudio();
-                    void toggleListening();
-                  }}
+                  onClick={beginVoiceSession}
                 >
-                  {transcribing ? (
-                    <LoaderCircle className="spin" size={17} />
-                  ) : listening ? (
-                    <span className="assistant-voice-wave" aria-hidden="true">
-                      <i />
-                      <i />
-                      <i />
-                      <i />
-                    </span>
-                  ) : (
-                    <Mic size={18} />
-                  )}
-                  <span className="assistant-mic-label">
-                    {listening ? 'Release to send' : 'Hold to talk'}
-                  </span>
+                  <AudioLines size={18} />
+                  <span className="assistant-mic-label">Voice mode</span>
                 </button>
               ) : null}
               <button
@@ -933,11 +1121,9 @@ export function InfonitsAssistant({
               </button>
             </form>
             <small className="assistant-footnote">
-              {listening
-                ? 'Listening… release to send.'
-                : transcribing
-                  ? 'Nova is transcribing your voice with ElevenLabs…'
-                  : 'Nova only applies workspace changes after your review and approval.'}
+              {transcribing
+                ? 'Nova is transcribing your voice with ElevenLabs…'
+                : 'Nova only applies workspace changes after your review and approval.'}
             </small>
           </>
         ) : null}
