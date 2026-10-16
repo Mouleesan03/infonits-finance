@@ -20554,6 +20554,50 @@ summary:focus-visible {
   backdrop-filter: blur(8px);
 }
 
+@media (min-width: 721px) {
+  .nova-modal.assistant-page {
+    width: min(820px, calc(100vw - 48px));
+    height: min(860px, calc(100dvh - 32px));
+  }
+  .nova-modal .assistant-header {
+    grid-template-columns: 40px minmax(190px, 1fr) auto;
+    gap: 10px;
+    padding: 10px 14px;
+  }
+  .nova-modal .assistant-header > span {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+  .nova-modal .assistant-header small {
+    display: block;
+    font-size: 8px;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .nova-modal .assistant-header h1 {
+    margin: 0;
+    font-size: 19px;
+    line-height: 1.15;
+  }
+  .nova-modal .assistant-header p {
+    overflow: hidden;
+    margin-top: 1px;
+    font-size: 9px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .nova-modal .nova-language-select,
+  .nova-modal .nova-header-actions > button {
+    height: 32px;
+  }
+  .nova-modal .nova-header-actions > button {
+    width: 32px;
+  }
+}
+
 @media (max-width: 720px) {
   .local-modal-layer.nova-layer {
     place-items: stretch;
