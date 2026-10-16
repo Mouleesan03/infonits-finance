@@ -48,6 +48,31 @@
   color: #d9e9f8;
   background: rgb(255 255 255 / 9%);
 }
+.nova-mode-select {
+  display: flex;
+  height: 34px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 10px;
+  color: #d9e9f8;
+  background: rgb(255 255 255 / 9%);
+}
+.nova-mode-select select {
+  width: 48px;
+  border: 0;
+  outline: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 750;
+}
+.nova-mode-select option {
+  color: #203852;
+  background: #fff;
+}
 .nova-language-select select {
   width: 66px;
   border: 0;
@@ -90,7 +115,7 @@
 }
 .nova-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
   padding: 8px 12px;
   border-bottom: 1px solid #e0e8f1;
@@ -163,6 +188,186 @@
   margin: 3px 0 0;
   color: #71839a;
   font-size: 11px;
+}
+.nova-finance-insight {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 13px;
+  border: 1px solid #cfe0f4;
+  border-radius: 13px;
+  background: linear-gradient(145deg, #f8fbff, #edf5ff);
+}
+.nova-finance-insight > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nova-finance-insight > header > span {
+  display: grid;
+  gap: 2px;
+}
+.nova-finance-insight > header strong {
+  color: #173d67;
+  font-size: 14px;
+}
+.nova-finance-insight > header small,
+.nova-finance-insight > footer {
+  color: #6a7f97;
+  font-size: 10px;
+}
+.nova-finance-insight > header i {
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #8a5a12;
+  background: #fff2cf;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+}
+.nova-finance-insight > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.nova-finance-insight > div > span {
+  display: grid;
+  gap: 2px;
+  padding: 8px 9px;
+  border: 1px solid #dce8f5;
+  border-radius: 9px;
+  background: rgb(255 255 255 / 72%);
+}
+.nova-finance-insight > div small {
+  color: #75889e;
+  font-size: 9px;
+}
+.nova-finance-insight > div strong {
+  color: #1d3c5e;
+  font-size: 12px;
+}
+.nova-answer-meta,
+.nova-follow-ups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 9px;
+}
+.nova-answer-meta span {
+  padding: 3px 7px;
+  border: 1px solid #d9e5f2;
+  border-radius: 999px;
+  color: #60758d;
+  background: #f8fbff;
+  font-size: 8.5px;
+  font-weight: 750;
+}
+.assistant-messages article .nova-follow-ups button {
+  margin: 0;
+  padding: 5px 8px;
+  border: 1px solid #d4e2f2;
+  background: #f8fbff;
+  font-size: 9px !important;
+}
+.nova-action-history {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e8f1;
+}
+.nova-action-history > header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #294663;
+}
+.nova-action-history > article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 11px;
+  border: 1px solid #dce6f1;
+  border-radius: 11px;
+  background: #f9fbfd;
+}
+.nova-action-history > article > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.nova-action-history article strong {
+  color: #29425f;
+  font-size: 11px;
+}
+.nova-action-history article small {
+  color: #7a8ca0;
+  font-size: 9px;
+}
+.nova-action-history article button {
+  flex: 0 0 auto;
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: #176bc5;
+  background: #edf5ff;
+  font-size: 9px;
+  font-weight: 800;
+}
+.nova-knowledge > label {
+  display: grid;
+  gap: 7px;
+  color: #304a67;
+  font-size: 12px;
+  font-weight: 800;
+}
+.nova-knowledge textarea {
+  min-height: 210px;
+  resize: vertical;
+  padding: 13px;
+  border: 1px solid #d5e1ee;
+  border-radius: 12px;
+  outline: none;
+  color: #2c415b;
+  background: #fbfdff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.65;
+}
+.nova-knowledge textarea:focus {
+  border-color: #8ebbe9;
+  box-shadow: 0 0 0 3px rgb(55 133 216 / 10%);
+}
+.nova-knowledge > label > small {
+  color: #7a8da3;
+  font-size: 9px;
+  font-weight: 600;
+  text-align: right;
+}
+.nova-knowledge-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 15px;
+}
+.nova-knowledge-cards > span {
+  display: grid;
+  gap: 4px;
+  padding: 11px;
+  border: 1px solid #dfe8f2;
+  border-radius: 11px;
+  background: #f9fbfd;
+}
+.nova-knowledge-cards strong {
+  color: #2d4765;
+  font-size: 10px;
+}
+.nova-knowledge-cards small {
+  color: #71849a;
+  font-size: 9px;
+  line-height: 1.5;
 }
 .nova-choice-grid {
   display: grid;
@@ -275,6 +480,7 @@
     height: 42px;
   }
   .nova-header-actions > i,
+  .nova-mode-select,
   .nova-header-actions > button:first-of-type {
     display: none;
   }
@@ -314,6 +520,14 @@
   .nova-choice-grid > button,
   .nova-action-grid > button {
     min-height: 98px;
+  }
+  .nova-finance-insight > div,
+  .nova-knowledge-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .nova-action-history > article {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 
@@ -20590,6 +20804,7 @@ summary:focus-visible {
     white-space: nowrap;
   }
   .nova-modal .nova-language-select,
+  .nova-modal .nova-mode-select,
   .nova-modal .nova-header-actions > button {
     height: 32px;
   }

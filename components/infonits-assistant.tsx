@@ -5,11 +5,14 @@ import {
   AudioLines,
   ArrowUp,
   Bot,
+  Brain,
   CalendarClock,
   CheckCircle2,
   ClipboardCheck,
   FilePlus2,
   Globe2,
+  Gauge,
+  History,
   ListChecks,
   LoaderCircle,
   MessageCircle,
@@ -84,12 +87,21 @@ export type AssistantAction =
   | { type: 'batch'; title: string; actions: AssistantAtomicAction[] };
 
 type AssistantSource = { title: string; url: string };
+type AssistantInsight = {
+  kind: 'finance';
+  title: string;
+  subtitle: string;
+  status: string;
+  facts: Array<{ label: string; value: string }>;
+  origin: string;
+};
 
 type AssistantStreamEvent =
   | { type: 'text-delta'; delta: string }
   | { type: 'action'; action: AssistantAction }
   | { type: 'source'; source: AssistantSource }
-  | { type: 'finish'; model: 'fast' | 'smart' }
+  | { type: 'insight'; insight: AssistantInsight }
+  | { type: 'finish'; model: 'fast' | 'smart'; mode: NovaResponseMode }
   | { type: 'error'; error: string };
 
 type ChatMessage = {
@@ -98,7 +110,12 @@ type ChatMessage = {
   text: string;
   action?: AssistantAction;
   sources?: AssistantSource[];
+  insight?: AssistantInsight;
+  model?: 'fast' | 'smart';
+  mode?: NovaResponseMode;
   applied?: boolean;
+  appliedAt?: string;
+  applyResult?: string;
   reviewing?: boolean;
 };
 
@@ -158,6 +175,8 @@ function FormattedMessage({ text }: { text: string }) {
 
 const novaHistoryKey = 'infonits-nova-history-v1';
 const novaLanguageKey = 'infonits-nova-language-v1';
+const novaModeKey = 'infonits-nova-response-mode-v1';
+const novaMemoryKey = 'infonits-nova-memory-v1';
 const dailyBriefingPrompt =
   'Give me a short morning briefing using the live workspace data. Start with a friendly greeting, then list overdue payments, today tasks, renewals and website issues in priority order. Finish with the three best actions for today.';
 const novaWelcome: ChatMessage = {
@@ -184,6 +203,12 @@ const briefingPrompts = [
     detail: 'Clients who need contact and the reason for each follow-up.',
     prompt:
       'Which clients should I follow up with today? Prioritise overdue invoices and upcoming commitments and explain why.',
+  },
+  {
+    title: 'Risk and anomaly scan',
+    detail: 'Unusual expenses, stalled collections and urgent operational risks.',
+    prompt:
+      'Scan the workspace for unusual expenses, stalled collections, overdue commitments and operational anomalies. Rank only the important risks and recommend the next action for each.',
   },
 ];
 
@@ -214,8 +239,9 @@ const quickActions = [
   },
 ];
 
-type NovaTab = 'chat' | 'briefing' | 'actions' | 'approvals';
+type NovaTab = 'chat' | 'briefing' | 'actions' | 'approvals' | 'knowledge';
 type NovaLanguage = 'auto' | 'ta' | 'en';
+type NovaResponseMode = 'quick' | 'deep';
 type VoiceSessionPhase = 'connecting' | 'listening' | 'thinking' | 'speaking' | 'muted' | 'error';
 
 function speechLanguage(text: string, language: NovaLanguage, fallback: string) {
@@ -233,6 +259,41 @@ function plainSpeechText(text: string) {
     .replace(/`([^`]+)`/g, '$1')
     .replace(/\n{2,}/g, '. ')
     .trim();
+}
+
+function sourceConfidence(sources: AssistantSource[]) {
+  if (!sources.length) return null;
+  const official = sources.every((source) => {
+    try {
+      return ['infonits.io', 'www.infonits.io'].includes(new URL(source.url).hostname);
+    } catch {
+      return false;
+    }
+  });
+  return official ? 'Official web' : 'External web';
+}
+
+function FinanceInsightCard({ insight }: { insight: AssistantInsight }) {
+  return (
+    <section className="nova-finance-insight" aria-label={`${insight.title} finance summary`}>
+      <header>
+        <span>
+          <strong>{insight.title}</strong>
+          <small>{insight.subtitle}</small>
+        </span>
+        <i>{insight.status}</i>
+      </header>
+      <div>
+        {insight.facts.map((fact) => (
+          <span key={fact.label}>
+            <small>{fact.label}</small>
+            <strong>{fact.value}</strong>
+          </span>
+        ))}
+      </div>
+      <footer>{insight.origin}</footer>
+    </section>
+  );
 }
 
 export function InfonitsAssistant({
@@ -261,6 +322,8 @@ export function InfonitsAssistant({
   const [voiceLevel, setVoiceLevel] = useState(0);
   const [historyReady, setHistoryReady] = useState(false);
   const [language, setLanguage] = useState<NovaLanguage>('auto');
+  const [responseMode, setResponseMode] = useState<NovaResponseMode>('quick');
+  const [memory, setMemory] = useState('');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recordingCancelledRef = useRef(false);
@@ -403,6 +466,9 @@ export function InfonitsAssistant({
       if (savedLanguage === 'auto' || savedLanguage === 'ta' || savedLanguage === 'en') {
         setLanguage(savedLanguage);
       }
+      const savedMode = localStorage.getItem(novaModeKey);
+      if (savedMode === 'quick' || savedMode === 'deep') setResponseMode(savedMode);
+      setMemory(localStorage.getItem(novaMemoryKey) ?? '');
     } catch {
       localStorage.removeItem(novaHistoryKey);
     }
@@ -541,6 +607,16 @@ export function InfonitsAssistant({
   }, [historyReady, language]);
 
   useEffect(() => {
+    if (!historyReady) return;
+    localStorage.setItem(novaModeKey, responseMode);
+  }, [historyReady, responseMode]);
+
+  useEffect(() => {
+    if (!historyReady) return;
+    localStorage.setItem(novaMemoryKey, memory);
+  }, [historyReady, memory]);
+
+  useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
     textarea.style.height = 'auto';
@@ -579,6 +655,9 @@ export function InfonitsAssistant({
         let reply = '';
         let action: AssistantAction = { type: 'none' };
         let sources: AssistantSource[] = [];
+        let insight: AssistantInsight | undefined;
+        let responseModel: 'fast' | 'smart' | undefined;
+        let completedMode: NovaResponseMode | undefined;
         let finished = false;
         const updateAssistant = () => {
           const nextMessage: ChatMessage = {
@@ -587,6 +666,9 @@ export function InfonitsAssistant({
             text: reply,
             action,
             sources,
+            insight,
+            model: responseModel,
+            mode: completedMode,
           };
           setMessages((current) => {
             const exists = current.some((item) => item.id === assistantId);
@@ -607,8 +689,14 @@ export function InfonitsAssistant({
               sources = [...sources, event.source];
               updateAssistant();
             }
+          } else if (event.type === 'insight') {
+            insight = event.insight;
+            updateAssistant();
           } else if (event.type === 'finish') {
             finished = true;
+            responseModel = event.model;
+            completedMode = event.mode;
+            updateAssistant();
           } else if (event.type === 'error') {
             throw new Error(event.error);
           }
@@ -619,6 +707,8 @@ export function InfonitsAssistant({
           body: JSON.stringify({
             message: clean,
             language,
+            responseMode,
+            memory,
             voiceMode: Boolean(options.speak || voice.autoSpeak),
             context,
             history: messages
@@ -664,7 +754,7 @@ export function InfonitsAssistant({
         setBusy(false);
       }
     },
-    [busy, context, input, language, messages, speak, voice.autoSpeak],
+    [busy, context, input, language, memory, messages, responseMode, speak, voice.autoSpeak],
   );
 
   useEffect(() => {
@@ -831,7 +921,16 @@ export function InfonitsAssistant({
     if (!message.action || message.action.type === 'none') return;
     const result = onApply(message.action);
     setMessages((current) => [
-      ...current.map((item) => (item.id === message.id ? { ...item, applied: true } : item)),
+      ...current.map((item) =>
+        item.id === message.id
+          ? {
+              ...item,
+              applied: true,
+              appliedAt: new Date().toISOString(),
+              applyResult: result,
+            }
+          : item,
+      ),
       { id: crypto.randomUUID(), role: 'assistant', text: result },
     ]);
   }
@@ -858,6 +957,10 @@ export function InfonitsAssistant({
   const pendingApprovals = messages.filter(
     (message) => message.action && message.action.type !== 'none' && !message.applied,
   );
+  const appliedActions = messages
+    .filter((message) => message.action && message.action.type !== 'none' && message.applied)
+    .slice(-8)
+    .reverse();
   const latestMessage = messages.at(-1);
   const voiceSessionPhase: VoiceSessionPhase = error
     ? 'error'
@@ -877,6 +980,43 @@ export function InfonitsAssistant({
     speaking: { title: 'Speaking', hint: 'Tap the orb to interrupt and speak.' },
     muted: { title: 'Microphone muted', hint: 'Unmute when you are ready.' },
     error: { title: 'Voice paused', hint: error || 'Try the microphone again.' },
+  };
+
+  const followUpsFor = (message: ChatMessage) => {
+    if (message.role !== 'assistant' || message.id === 'welcome') return [];
+    if (message.insight?.kind === 'finance') {
+      return [
+        {
+          label: 'Explain conversion',
+          prompt: `Explain the recorded currency conversion for ${message.insight.title} clearly.`,
+        },
+        {
+          label: 'Draft reminder',
+          prompt: `Draft a polite payment reminder for ${message.insight.title}. Do not apply or send anything.`,
+        },
+      ];
+    }
+    if (message.sources?.length) {
+      return [
+        {
+          label: 'Verify key facts',
+          prompt:
+            'Verify the key facts using primary or official sources and flag any uncertainty.',
+        },
+      ];
+    }
+    if (message.applied) {
+      return [
+        {
+          label: 'Review change',
+          prompt:
+            'Summarise the workspace change that was just applied and tell me what to check next.',
+        },
+      ];
+    }
+    return [
+      { label: 'Best next step', prompt: 'Based on that answer, what is the best next step?' },
+    ];
   };
 
   const actionReview = (message: ChatMessage) => {
@@ -1015,6 +1155,17 @@ export function InfonitsAssistant({
           <p>Ask, analyse and prepare safe workspace actions.</p>
         </div>
         <div className="nova-header-actions">
+          <label className="nova-mode-select" title="Nova response depth">
+            <Gauge size={13} aria-hidden="true" />
+            <select
+              aria-label="Nova response mode"
+              value={responseMode}
+              onChange={(event) => setResponseMode(event.target.value as NovaResponseMode)}
+            >
+              <option value="quick">Quick</option>
+              <option value="deep">Deep</option>
+            </select>
+          </label>
           <label className="nova-language-select">
             <Globe2 size={13} aria-hidden="true" />
             <select
@@ -1067,6 +1218,7 @@ export function InfonitsAssistant({
               ClipboardCheck,
               `Approvals${pendingApprovals.length ? ` (${pendingApprovals.length})` : ''}`,
             ],
+            ['knowledge', Brain, 'Knowledge'],
           ] as const
         ).map(([tab, Icon, label]) => (
           <button
@@ -1092,6 +1244,7 @@ export function InfonitsAssistant({
                     </span>
                   ) : null}
                   <div>
+                    {message.insight ? <FinanceInsightCard insight={message.insight} /> : null}
                     <FormattedMessage text={message.text} />
                     {message.sources && message.sources.length > 0 ? (
                       <div className="assistant-sources" aria-label="Web sources">
@@ -1103,7 +1256,35 @@ export function InfonitsAssistant({
                         ))}
                       </div>
                     ) : null}
+                    {message.role === 'assistant' && message.id !== 'welcome' ? (
+                      <div className="nova-answer-meta" aria-label="Answer confidence">
+                        {message.insight ? <span>Workspace data</span> : null}
+                        {sourceConfidence(message.sources ?? []) ? (
+                          <span>{sourceConfidence(message.sources ?? [])}</span>
+                        ) : null}
+                        {message.model ? (
+                          <span>{message.model === 'smart' ? 'Smart model' : 'Fast model'}</span>
+                        ) : null}
+                        {message.mode ? (
+                          <span>{message.mode === 'deep' ? 'Deep' : 'Quick'}</span>
+                        ) : null}
+                      </div>
+                    ) : null}
                     {actionReview(message)}
+                    {message.id === latestMessage?.id && !busy ? (
+                      <div className="nova-follow-ups" aria-label="Suggested follow-up actions">
+                        {followUpsFor(message).map((followUp) => (
+                          <button
+                            type="button"
+                            key={followUp.label}
+                            onClick={() => startPrompt(followUp.prompt)}
+                          >
+                            {followUp.label}
+                            <ArrowUp size={12} />
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
                     {message.role === 'assistant' && message.id !== 'welcome' ? (
                       <button
                         type="button"
@@ -1273,6 +1454,79 @@ export function InfonitsAssistant({
                 <p>Actions prepared by Nova will appear here for approval.</p>
               </div>
             )}
+            {appliedActions.length ? (
+              <section className="nova-action-history">
+                <header>
+                  <History size={16} />
+                  <strong>Recent Nova activity</strong>
+                </header>
+                {appliedActions.map((message) => (
+                  <article key={`history-${message.id}`}>
+                    <span>
+                      <strong>{message.applyResult || 'Workspace change applied'}</strong>
+                      <small>
+                        {message.appliedAt
+                          ? new Intl.DateTimeFormat('en-GB', {
+                              dateStyle: 'medium',
+                              timeStyle: 'short',
+                            }).format(new Date(message.appliedAt))
+                          : 'Applied by Nova'}
+                      </small>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        startPrompt(
+                          `Review this previously applied change and prepare a safe reversal plan. Do not change anything yet: ${message.applyResult || message.text}`,
+                        )
+                      }
+                    >
+                      Prepare reversal
+                    </button>
+                  </article>
+                ))}
+              </section>
+            ) : null}
+          </div>
+        ) : null}
+
+        {activeTab === 'knowledge' ? (
+          <div className="nova-panel-view nova-knowledge">
+            <div className="nova-panel-intro">
+              <Brain size={22} />
+              <div>
+                <strong>Nova knowledge</strong>
+                <p>Save business context Nova should remember across conversations.</p>
+              </div>
+            </div>
+            <label>
+              <span>Business memory</span>
+              <textarea
+                value={memory}
+                onChange={(event) => setMemory(event.target.value.slice(0, 4000))}
+                placeholder="Example: Preferred payment terms are 50% advance. Use a professional Tamil-English tone for local clients."
+                rows={10}
+              />
+              <small>
+                {memory.length.toLocaleString()} / 4,000 characters · Saved automatically
+              </small>
+            </label>
+            <div className="nova-knowledge-cards">
+              <span>
+                <strong>Built-in company profile</strong>
+                <small>
+                  Infonits services, public company facts and official website grounding.
+                </small>
+              </span>
+              <span>
+                <strong>Live workspace context</strong>
+                <small>Current clients, projects, invoices, payments, renewals and tasks.</small>
+              </span>
+              <span>
+                <strong>Internet research</strong>
+                <small>Official sources first, with external sources clearly identified.</small>
+              </span>
+            </div>
           </div>
         ) : null}
       </div>
